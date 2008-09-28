@@ -21,7 +21,7 @@ message = nil
 success_compile = nil
 Dir.chdir('scripts') do
   open('script.hsp', 'w') {|f| f.print script.encode('cp932', 'utf-8') }
-  message = IO.popen(hspcmp+['-d', 'script.hsp']) {|io| io.read }.encode('utf-8', 'cp932').gsub("\r\n", "\n")
+  message = IO.popen(hspcmp+['-d', 'script.hsp']) {|io| io.read }.encode('utf-8', 'cp932').gsub(/\r\n|\r/, "\n")
   success_compile = $?.exitstatus == 0
   File.delete('script.hsp')
 end
@@ -37,7 +37,7 @@ if success_compile
   result['ax'] = ax.each_byte.to_a.pack('U*')
 end
 
-cgi.out('type' => 'text/javascript') do
+cgi.out('type' => 'application/json') do
   result.to_json
 end
 
