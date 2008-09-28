@@ -1,0 +1,223 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="ja">
+<head profile="http://purl.org/net/ns/metaprof">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link rev="made" href="mailto:fuji.rosen@gmail.com">
+<title>HSP on JS</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.0.js" charset="utf-8"></script>
+<script type="text/javascript">
+with(HSPonJS) {
+	Evaluator.prototype.disposeException = function disposeException(e) {
+		if(e instanceof HSPError) {
+			var insn = this.sequence[this.pc];
+			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
+			msg += this.getBuiltinFuncName(insn)||'';
+			msg += "\n";
+			msg += '--> '+(e.message||ErrorMessages[e.errcode]);
+			alert(msg);
+			return;
+		}
+		if(e instanceof StopException) {
+			resizeTextarea(this.resultTextarea);
+			return;
+		}
+		if(e instanceof WaitException) {
+			var self = this;
+			this.timeoutID = setTimeout(function(){self.timeoutID = undefined; self.evaluate();}, e.msec);
+			return;
+		}
+		throw e;
+	};
+	Evaluator.prototype.quit = function quit() {
+		if(this.timeoutID != undefined) {
+			clearTimeout(this.timeoutID);
+		}
+	};
+	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
+		this.scanArgs(arguments, '.?');
+		if(val) {
+			this.resultTextarea.value += CP932.decode(val.toStrValue()._value) + "\n";
+		} else {
+			this.resultTextarea.value += "\n";
+		}
+	};
+	BuiltinFuncs[Token.Type.EXTCMD][0x13] = function cls(n) {
+		this.scanArgs(arguments, 'N');
+		this.resultTextarea.value = '';
+	};
+}
+
+
+function resizeTextarea(textarea) {
+	textarea.setAttribute('rows', textarea.value.split("\n").length);
+}
+
+$(function(){
+	var evaluators = [];
+	$('textarea').each(function(i) {
+		var textarea = this;
+		resizeTextarea(textarea);
+		var runButton = document.createElement('button');
+		runButton.setAttribute('type', 'button');
+		runButton.appendChild(document.createTextNode('Run!'));
+		var resetButton = document.createElement('button');
+		resetButton.setAttribute('type', 'button');
+		resetButton.style.display = 'none';
+		resetButton.appendChild(document.createTextNode('reset'));
+		var resultTextarea = document.createElement('textarea');
+		resultTextarea.setAttribute('cols', 100);
+		resultTextarea.setAttribute('rows', 2);
+		resultTextarea.style.display = 'none';
+		$(runButton).click(function(){
+			var script = textarea.value;
+			resultTextarea.value = '';
+			if(evaluators[i]) {
+				evaluators[i].quit();
+				evaluators[i] = null;
+			}
+			$.post('compile.cgi', {script: script}, function(jsonData){
+				var data = eval('('+jsonData+')');
+				if (!data.success) {
+					alert(data.message);
+					return;
+				}
+				var axdata = new HSPonJS.AXData(data.ax);
+				var sequence = new HSPonJS.Compiler(axdata).compile();
+				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
+				evaluator.resultTextarea = resultTextarea;
+				if(evaluators[i]) {
+					evaluators[i].quit();
+					evaluators[i] = null;
+				}
+				evaluators[i] = evaluator;
+				resultTextarea.style.display = '';
+				resetButton.style.display = '';
+				evaluator.evaluate();
+			});
+		});
+		$(resetButton).click(function(){
+			if(evaluators[i]) {
+				evaluators[i].quit();
+				evaluators[i] = null;
+			}
+			resultTextarea.style.display = 'none';
+			resetButton.style.display = 'none';
+			resultTextarea.value = '';
+		});
+		$(textarea)
+			.after(resultTextarea)
+			.after(resetButton)
+			.after(runButton)
+			.keyup(function(){resizeTextarea(this);});
+	});
+});
+</script>
+<style type="text/css">
+textarea { width: 100%; }
+</style>
+</head>
+<body>
+<h1>HSP on JS</h1>
+<p>HSP on JS は JavaScript による HSP インタプリタの実装です。以下のサンプルを実際に実行してみてください。</p>
+<p>対応している機能は少ないですが、これから実装していく予定です。 HTML5 Canvas を使って GUI 命令にも対応できたらいいなあと思っています。</p>
+<h2>Hello, world!</h2>
+<textarea cols="100" rows="10">
+mes "Hello, world!"
+mes "こんにちは！"</textarea>
+<h2>カウンタ</h2>
+<textarea cols="100" rows="10">
+repeat
+	cls
+	mes cnt
+	wait 10
+loop</textarea>
+<h2>カウンタ2</h2>
+<p>上のカウンタと同時に動かすことができます</p>
+<textarea cols="100" rows="10">
+repeat
+	cls
+	mes cnt
+	wait 10
+loop</textarea>
+<h2>乱数</h2>
+<p>HSP と同じ結果の乱数を取得することができます</p>
+<textarea cols="100" rows="10">
+repeat 20
+	mes rnd(32768)
+loop</textarea>
+<h2>フィボナッチ数の列挙</h2>
+<textarea cols="100" rows="10">
+a = 1
+b = 1
+repeat 20
+	mes a
+	c = a + b
+	a = b
+	b = c
+loop</textarea>
+<h2>エラトステネスのふるい</h2>
+<textarea cols="100" rows="10">
+; http://sprocket.babyblue.jp/html/hsplet3/eratosthenes.htm より
+MAXS = 100 ; Length
+dim ipn, MAXS + 2
+
+; Eratosthenes pn-gen
+repeat MAXS-2, 2
+	v = cnt
+	; if no-marked :
+	if ipn(v) = 0 {
+		; set mark
+		repeat MAXS/v-1, 2
+			ipn(cnt * v) = 1
+		loop
+	}
+loop
+
+
+; monitor
+repeat MAXS, 2
+	if ipn(cnt) = 0 {
+		mes cnt
+	}
+loop</textarea>
+<h2>多次元配列</h2>
+<textarea cols="100" rows="10">
+sdim a,, 3, 3
+a.0.0 = "あ", "い", "う"
+a.0.1 = "か", "き", "く"
+a.0.2 = "さ", "し", "す"
+repeat 3 : y = cnt
+	repeat 3 : x = cnt
+		mes "a."+x+"."+y+" = "+a.x.y
+	loop
+loop</textarea>
+<h2>ラベル型変数</h2>
+<p>HSP のサンプル new\label_type.hsp より</p>
+<textarea cols="100" rows="10">
+	;	ラベル型変数のテスト
+	;
+	a=*test
+	a(1)=*test2
+	mes "TYPE="+vartype(a)
+	mes "USE="+varuse(a)
+	gosub a
+	gosub a(1)
+	mes "OK"
+	stop
+*test
+	mes "JUMP OK"
+	return
+*test2
+	mes "JUMP OK2"
+	return</textarea>
+<h2>使用ライブラリ</h2>
+<ul>
+<li><a href="http://jquery.com/">jQuery</a> (このサンプル集で使用。HSP on JS コアでは使用していません。）
+<li><a href="http://jsfromhell.com/classes/binary-parser">Binary Parser</a>（HSP on JS コアで改造して使用。HSPオブジェクトファイルのバイナリからの読み込みなど）
+<li><a href="http://nurucom-archives.hp.infoseek.co.jp/digital/escape-codec-library.html">Escape Codec Library</a>（HSP on JS コアで改造して使用。CP932(Shift_JIS)のエンコードデコードに）
+</ul>
+</body>
+</html>

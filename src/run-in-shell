@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby1.9
+message = IO.popen('hspcmp -d t.hsp'){|io|io.read}
+if $?.exitstatus != 0
+  puts message.encode(Encoding.default_external, 'cp932')
+  exit 1
+end
+
+dump = open('t.ax','rb'){|f|f.each_byte.each_slice(16).map{|i|"'%s'"%i.map{|j|'\x%02x'%j}.join}.join(",\n")}
+a = open('run-in-shell.js','rb'){|f|f.read}
+replaced = false
+a = a.gsub(/^([ \t]*var data = \[\n).*?^([ \t]*\])/m) {replaced = true;"#{$1}#{dump}\n#{$2}"}
+warn 'not replaced' unless replaced
+open('run-in-shell.js', 'wb'){|f| f.write a}
+
+filenames = %w[
+binary-parser.js
+cp932.js
+utils.js
+vcrandom.js
+exception.js
+axdata.js
+instruction.js
+builtin-func-names.js
+builtin-funcs.js
+vartype.js
+value.js
+label.js
+str-value.js
+double-value.js
+int-value.js
+jump-type.js
+hsp-array.js
+label-array.js
+str-array.js
+double-array.js
+int-array.js
+variable.js
+variable-agent.js
+compiler.js
+evaluator.js
+run-in-shell.js
+]
+
+if ARGV.delete('--for-win32-rhino')
+  open('for-win32-rhino.js','wb:cp932') do |out|
+    filenames.each do |filename|
+      open(filename, 'rb:utf-8') {|f| out.puts f.read }
+    end
+  end
+  system('rhino -w -f for-win32-rhino.js')
+  exit
+end
+
+if ARGV.delete('--rhino')
+  system(*%w[rhino -w]+filenames.map{|i|["-f", i]}.flatten)
+else 
+  system(*%w[js -s -w]+filenames.map{|i|["-f", i]}.flatten)
+end
+

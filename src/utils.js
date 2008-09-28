@@ -1,0 +1,23 @@
+var Utils = {
+	getCStr: function getCStr(str, index) {
+		var end = str.indexOf("\0", index);
+		if(end < 0) end = str.length;
+		return str.slice(index, end);
+	},
+	objectExtend: function objectExtend(dest, src) {
+		for(var p in src) {
+			dest[p] = src[p];
+		}
+		return dest;
+	},
+	aryPopN: function aryPopN(ary, n) {
+		var result = ary.slice(ary.length - n);
+		ary.length -= n;
+		return result;
+	}
+};
+
+if(typeof HSPonJS != 'undefined') {
+	HSPonJS.Utils = Utils;
+}
+

@@ -1,0 +1,5 @@
+a = $deadbeaf
+repeat 4
+	mes peek(a, cnt)
+loop
+mes peek(a, -1)
