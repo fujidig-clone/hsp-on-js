@@ -78,6 +78,12 @@ VariableAgent.prototype = {
 	},
 	setbyte: function setbyte(bytesOffset, val) {
 		return this.variable.setbyte(this.indices, bytesOffset, val);
+	},
+	getbytes: function getbytes(bytesOffset, length) {
+		return this.variable.getbytes(this.indices, bytesOffset, length);
+	},
+	setbytes: function setbytes(bytesOffset, buf) {
+		return this.variable.setbytes(this.indices, bytesOffset, buf);
 	}
 };
 

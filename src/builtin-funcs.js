@@ -236,7 +236,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		v.setbyte(offset, val);
 		v.setbyte(offset + 1, val >> 8);
 	},
-	0x1c: function wpoke(v, offset, val) {
+	0x1c: function lpoke(v, offset, val) {
 		this.scanArgs(arguments, 'vNN');
 		offset = offset ? offset.toIntValue()._value : 0;
 		val = val ? val.toIntValue()._value : 0;
@@ -244,6 +244,20 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		v.setbyte(offset + 1, val >> 8);
 		v.setbyte(offset + 2, val >> 16);
 		v.setbyte(offset + 3, val >> 24);
+	},
+	0x20: function memcpy(destVar, srcVar, length, destOffset, srcOffset) {
+		this.scanArgs(arguments, 'vvNNN');
+		length = length ? length.toIntValue()._value : 0;
+		destOffset = destOffset ? destOffset.toIntValue()._value : 0;
+		srcOffset = srcOffset ? srcOffset.toIntValue()._value : 0;
+		destVar.setbytes(destOffset, srcVar.getbytes(srcOffset, length));
+	},
+	0x21: function memset(v, val, length, offset) {
+		this.scanArgs(arguments, 'vNNN');
+		val = val ? val.toIntValue()._value : 0;
+		length = length ? length.toIntValue()._value : 0;
+		offset = offset ? offset.toIntValue()._value : 0;
+		v.setbytes(offset, Utils.strTimes(String.fromCharCode(val), length));
 	},
 	0x27: function randomize(seed) {
 		this.scanArgs(arguments, 'N');

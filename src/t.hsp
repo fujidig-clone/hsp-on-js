@@ -1,13 +1,7 @@
-;#define hex(%1) strf("%%x", %1)
-#define hex(%1) str(%1, 16)
+memset a, 0xff, 4
+mes a
 
-wpoke a, 0, 0x1122
-mes hex(a)
-mes hex(peek(a,0))
-mes hex(peek(a,1))
-
-a = 0, 0
-lpoke a, 1, 0x44332211
-mes hex(a)
-mes hex(a.1)
+a = 0x44332211, 0x55
+memcpy a, a, 4, 0, 1
+mes str(a, 16)
 

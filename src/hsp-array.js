@@ -92,6 +92,18 @@ HSPArray.prototype = {
 	setbyte: function setbyte(indices, bytesOffset, val) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ書き込みに対応していません"); 
+	},
+	getbytes: function getbytes(indices, bytesOffset, length) {
+		var result = "";
+		for(var i = 0; i < length; i ++) {
+			result += String.fromCharCode(this.getbyte(indices, bytesOffset + i));
+		}
+		return result;
+	},
+	setbytes: function setbytes(indices, bytesOffset, buf) {
+		for(var i = 0; i < buf.length; i ++) {
+			this.setbyte(indices, bytesOffset + i, buf.charCodeAt(i));
+		}
 	}
 };
 

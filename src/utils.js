@@ -14,6 +14,13 @@ var Utils = {
 		var result = ary.slice(ary.length - n);
 		ary.length -= n;
 		return result;
+	},
+	strTimes: function strTimes(str, n) {
+		var result = ''
+		for(var i = 0; i < n; i ++) {
+			result += str;
+		}
+		return result;
 	}
 };
 
