@@ -320,6 +320,9 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		this.scanArgs(arguments, 'n');
 		var date = new Date;
 		switch(n.toIntValue()._value) {
+		case -1:
+			// DLL 関数呼び出しエミュレートを実装して timeGetTime が使えるようになるまでのつなぎ
+			return new DoubleValue(+date);
 		case 0:
 			return new IntValue(date.getFullYear());
 		case 1:

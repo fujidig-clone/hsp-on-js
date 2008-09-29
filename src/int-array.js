@@ -24,7 +24,7 @@ Utils.objectExtend(IntArray.prototype, {
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		return this.values[i]._value >> (bytesOffset % 4 * 8) & 0xff;
 	},
@@ -33,7 +33,7 @@ Utils.objectExtend(IntArray.prototype, {
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		var value = this.values[i]._value;
 		value &= ~(0xff << (bytesOffset % 4 * 8));

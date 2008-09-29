@@ -47,7 +47,7 @@ Utils.objectExtend(StrArray.prototype, {
 		var offset = this.getOffset(indices);
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		if(!(0 <= bytesOffset && bytesOffset < this.values[offset].length)) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		return this.values[offset].charCodeAt(bytesOffset);
 	},
@@ -56,9 +56,26 @@ Utils.objectExtend(StrArray.prototype, {
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		var str = this.values[offset];
 		if(!(0 <= bytesOffset && bytesOffset < str.length)) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		this.values[offset] = str.slice(0, bytesOffset) + String.fromCharCode(val & 0xff) + str.slice(bytesOffset + 1);
+	},
+	getbytes: function getbytes(indices, bytesOffset, length) {
+		var offset = this.getOffset(indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		if(!(0 <= bytesOffset && bytesOffset + length <= this.values[offset].length)) {
+			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
+		}
+		return this.values[offset].substr(bytesOffset, length);
+	},
+	setbytes: function setbytes(indices, bytesOffset, buf) {
+		var offset = this.getOffset(indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		var str = this.values[offset];
+		if(!(0 <= bytesOffset && bytesOffset + buf.length <= str.length)) {
+			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
+		}
+		this.values[offset] = str.slice(0, bytesOffset) + buf + str.slice(bytesOffset + buf.length);
 	}
 });
 
