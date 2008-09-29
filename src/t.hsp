@@ -1,7 +1,3 @@
-memset a, 0xff, 4
+sdim a, 100
+memset a, '*', 65
 mes a
-
-a = 0x44332211, 0x55
-memcpy a, a, 4, 0, 1
-mes str(a, 16)
-

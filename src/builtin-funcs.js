@@ -115,11 +115,14 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 	},
 	0x0a: function sdim(v, strLength, l0, l1, l2, l3) {
 		this.scanArgs(arguments, 'aNNNNN');
+		strLength = strLength ? strLength.toIntValue()._value : 64;
 		l0 = l0 ? l0.toIntValue()._value : 0;
 		l1 = l1 ? l1.toIntValue()._value : 0;
 		l2 = l2 ? l2.toIntValue()._value : 0;
 		l3 = l3 ? l3.toIntValue()._value : 0;
-		v.variable.dim(VarType.STR, l0, l1, l2, l3);
+		var ary = new StrArray();
+		ary.strDim(strLength, l0, l1, l2, l3);
+		v.variable.value = ary;
 	},
 	0x0b: function foreach(label) {
 		this.scanArgs(arguments, 'l');

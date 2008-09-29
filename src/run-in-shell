@@ -51,6 +51,10 @@ if ARGV.delete('--for-win32-rhino')
   exit
 end
 
+if ARGV.delete('--shell')
+  filenames << '-'
+end
+
 if ARGV.delete('--rhino')
   system(*%w[rhino -w]+filenames.map{|i|["-f", i]}.flatten)
 else 

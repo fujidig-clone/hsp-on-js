@@ -107,6 +107,26 @@ HSPArray.prototype = {
 	}
 };
 
+HSPArray.lengthToIndices = function lengthToIndices(l0, l1, l2, l3) {
+	var indices = [l0, l1, l2, l3];
+	// 後ろから 0 を取り除く
+	var i = indices.length - 1;
+	while(i >= 0) {
+		if(indices[i]) break;
+		indices.pop();
+		i --;
+	}
+	for(var i = 0; i < indices.length; i ++) {
+		if(indices[i] < 0) {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '配列の要素数に負の数が指定されています');
+		}
+		if(indices[i] != 0) {
+			indices[i] --;
+		}
+	}
+	return indices;
+}
+
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.HSPArray = HSPArray;
 }
