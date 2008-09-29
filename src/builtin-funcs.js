@@ -309,6 +309,22 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		}
 		return new IntValue(v.getbyte(n));
 	},
+	0x00a: function wpeek(v, n) {
+		this.scanArgs(arguments, 'vN');
+		n = n ? n.toIntValue()._value : 0;
+		if(n < 0) {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		}
+		return new IntValue(v.getbyte(n) | v.getbyte(n + 1) << 8);
+	},
+	0x00b: function lpeek(v, n) {
+		this.scanArgs(arguments, 'vN');
+		n = n ? n.toIntValue()._value : 0;
+		if(n < 0) {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		}
+		return new IntValue(v.getbyte(n) | v.getbyte(n + 1) << 8 | v.getbyte(n + 2) << 16 | v.getbyte(n + 3) << 24);
+	},
 	0x00d: function varuse(v) {
 		this.scanArgs(arguments, 'v');
 		var using = v.isUsing();
@@ -328,8 +344,15 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		max = max.toIntValue()._value;
 		return new IntValue(Math.min(Math.max(min, val), max));
 	},
-	0x100: function str(val) {
-		this.scanArgs(arguments, '.');
+	0x100: function str(val, base) {
+		this.scanArgs(arguments, '.N');
+		if(base) {
+			// 16 進数の変換用。strf を実装するまでのつなぎ
+			val = val.toIntValue()._value;
+			base = base.toIntValue()._value;
+			if(val < 0) val += 0x100000000;
+			return new StrValue(val.toString(base));
+		}
 		return val.toStrValue();
 	},
 	0x180: function sin(val) {
