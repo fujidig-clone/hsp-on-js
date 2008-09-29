@@ -1,32 +1,13 @@
 ;#define hex(%1) strf("%%x", %1)
 #define hex(%1) str(%1, 16)
 
-
-a = $44332211, $88776655
+wpoke a, 0, 0x1122
+mes hex(a)
 mes hex(peek(a,0))
 mes hex(peek(a,1))
-mes hex(peek(a,2))
-mes hex(peek(a,3))
-mes hex(peek(a,4))
-mes hex(peek(a,5))
-mes hex(peek(a,6))
-mes hex(peek(a,7))
 
-mes 
-
-mes hex(wpeek(a,0))
-mes hex(wpeek(a,1))
-mes hex(wpeek(a,2))
-mes hex(wpeek(a,3))
-mes hex(wpeek(a,4))
-mes hex(wpeek(a,5))
-mes hex(wpeek(a,6))
-
-mes 
-
-mes hex(lpeek(a,0))
-mes hex(lpeek(a,1))
-mes hex(lpeek(a,2))
-mes hex(lpeek(a,3))
-mes hex(lpeek(a,4))
+a = 0, 0
+lpoke a, 1, 0x44332211
+mes hex(a)
+mes hex(a.1)
 

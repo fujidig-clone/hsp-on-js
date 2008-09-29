@@ -88,6 +88,10 @@ HSPArray.prototype = {
 	getbyte: function getbyte(indices, bytesOffset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません"); 
+	},
+	setbyte: function setbyte(indices, bytesOffset, val) {
+		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
+		                   VarTypeNames[this.getType()]+" 型はメモリ書き込みに対応していません"); 
 	}
 };
 

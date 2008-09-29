@@ -27,6 +27,18 @@ Utils.objectExtend(IntArray.prototype, {
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 		}
 		return this.values[i]._value >> (bytesOffset % 4 * 8) & 0xff;
+	},
+	setbyte: function setbyte(indices, bytesOffset, val) {
+		var offset = this.getOffset(indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		var i = offset + (bytesOffset >> 2);
+		if(!(0 <= i && i < this.values.length)) {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		}
+		var value = this.values[i]._value;
+		value &= ~(0xff << (bytesOffset % 4 * 8));
+		value |= (val & 0xff) << (bytesOffset % 4 * 8);
+		this.values[i] = new IntValue(value);
 	}
 });
 

@@ -89,6 +89,9 @@ Variable.prototype = {
 	},
 	getbyte: function getbyte(indices, bytesOffset) {
 		return this.value.getbyte(indices, bytesOffset);
+	},
+	setbyte: function setbyte(indices, bytesOffset, val) {
+		return this.value.setbyte(indices, bytesOffset, val);
 	}
 };
 

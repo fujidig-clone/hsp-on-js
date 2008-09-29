@@ -223,6 +223,28 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 };
 
 BuiltinFuncs[Token.Type.INTCMD] = {
+	0x1a: function poke(v, offset, val) {
+		this.scanArgs(arguments, 'vNN');
+		offset = offset ? offset.toIntValue()._value : 0;
+		val = val ? val.toIntValue()._value : 0;
+		v.setbyte(offset, val);
+	},
+	0x1b: function wpoke(v, offset, val) {
+		this.scanArgs(arguments, 'vNN');
+		offset = offset ? offset.toIntValue()._value : 0;
+		val = val ? val.toIntValue()._value : 0;
+		v.setbyte(offset, val);
+		v.setbyte(offset + 1, val >> 8);
+	},
+	0x1c: function wpoke(v, offset, val) {
+		this.scanArgs(arguments, 'vNN');
+		offset = offset ? offset.toIntValue()._value : 0;
+		val = val ? val.toIntValue()._value : 0;
+		v.setbyte(offset, val);
+		v.setbyte(offset + 1, val >> 8);
+		v.setbyte(offset + 2, val >> 16);
+		v.setbyte(offset + 3, val >> 24);
+	},
 	0x27: function randomize(seed) {
 		this.scanArgs(arguments, 'N');
 		this.random.srand(seed ? seed.toIntValue()._value : +new Date);
