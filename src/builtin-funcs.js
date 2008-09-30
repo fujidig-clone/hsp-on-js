@@ -34,13 +34,13 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		if(val) {
 			switch(val.getType()) {
 			case VarType.STR:
-				this.refstr = val.toStrValue();
+				this.refstr.assign([], val.toStrValue());
 				break;
 			case VarType.DOUBLE:
-				this.refdval = val.toDoubleValue();
+				this.refdval.assign([], val.toDoubleValue());
 				break;
 			case VarType.INT:
-				this.stat = val.toIntValue();
+				this.stat.assign([], val.toIntValue());
 				break;
 			default:
 				throw new HSPError(ErrorCode.TYPE_MISMATCH);
@@ -166,6 +166,20 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		this.scanArgs(arguments, '');
 		throw new StopException;
 	},
+	0x16: function mref(v, id) {
+		this.scanArgs(arguments, 'aN');
+		id = id ? id.toIntValue()._value : 0;
+		switch(id) {
+		case 64:
+			v.variable.value = this.stat;
+			break;
+		case 65:
+			v.variable.value = this.refstr;
+			break;
+		default:
+			throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);
+		}
+	},
 	0x18: function exgoto(v, mode, b, label) {
 		this.scanArgs(arguments, 'vnnl');
 		this.scanArg(v, 'i');
@@ -203,7 +217,7 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 		return new IntValue(0);
 	},
 	0x03: function stat() {
-		return this.stat;
+		return this.stat.at([]);
 	},
 	0x04: function cnt() {
 		if(this.loopStack.length == 0) {
@@ -218,10 +232,10 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 		return new IntValue(this.frameStack.length);
 	},
 	0x0c: function refstr() {
-		return this.refstr;
+		return this.refstr.at([]);
 	},
 	0x0d: function refdval() {
-		return this.refdval;
+		return this.refdval.at([]);
 	}
 };
 

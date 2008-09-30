@@ -9,9 +9,9 @@ function Evaluator(axdata, sequence) {
 	}
 	this.loopStack = [];
 	this.frameStack = [];
-	this.stat = new IntValue(0);
-	this.refdval = new DoubleValue(0);
-	this.refstr = new StrValue('');
+	this.stat = new IntArray();
+	this.refdval = new DoubleArray();
+	this.refstr = new StrArray();
 	this.random = new VCRandom();
 }
 

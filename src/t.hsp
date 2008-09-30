@@ -1,9 +1,37 @@
-size = 10000
-sdim src, size
-sdim dest, size
+#define set(%1) gosub *@f : if 0 : *@ : return %1
 
-time = gettime(-1)
-memcpy dest, src, size
-time = int(gettime(-1) - time)
-mes time
+gosub *show
+set 1
+gosub *show
+set 3.14
+gosub *show
+set "foo"
+gosub *show
+
+mref stat_agent, 64
+mes "stat_agent = "+stat_agent
+stat_agent = 123
+gosub *show
+set 456
+mes "stat_agent = "+stat_agent
+stat_agent = "bar"
+gosub *show
+set 789
+mes "stat_agent = "+stat_agent
+stat_agent = 111
+gosub *show
+
+mref refstr_agent, 65
+mes "refstr_agent = "+refstr_agent
+refstr_agent = "baz"
+gosub *show
+
+stop
+
+*show
+mes "stat = "+stat
+mes "refstr = "+refstr
+mes "refdval = "+refdval
+mes
+return
 
