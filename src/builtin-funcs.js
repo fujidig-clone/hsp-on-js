@@ -34,13 +34,13 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		if(val) {
 			switch(val.getType()) {
 			case VarType.STR:
-				this.refstr.assign([], val.toStrValue());
+				this.refstr.assign(0, val.toStrValue());
 				break;
 			case VarType.DOUBLE:
-				this.refdval.assign([], val.toDoubleValue());
+				this.refdval.assign(0, val.toDoubleValue());
 				break;
 			case VarType.INT:
-				this.stat.assign([], val.toIntValue());
+				this.stat.assign(0, val.toIntValue());
 				break;
 			default:
 				throw new HSPError(ErrorCode.TYPE_MISMATCH);
@@ -217,7 +217,7 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 		return new IntValue(0);
 	},
 	0x03: function stat() {
-		return this.stat.at([]);
+		return this.stat.at(0);
 	},
 	0x04: function cnt() {
 		if(this.loopStack.length == 0) {
@@ -232,10 +232,10 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 		return new IntValue(this.frameStack.length);
 	},
 	0x0c: function refstr() {
-		return this.refstr.at([]);
+		return this.refstr.at(0);
 	},
 	0x0d: function refdval() {
-		return this.refdval.at([]);
+		return this.refdval.at(0);
 	}
 };
 

@@ -5,85 +5,95 @@ function VariableAgent(variable, indices) {
 
 VariableAgent.prototype = {
 	add: function add(rhs) {
-		return this.variable.at(this.indices).add(rhs);
+		return this.toValue().add(rhs);
 	},
 	sub: function sub(rhs) {
-		return this.variable.at(this.indices).sub(rhs);
+		return this.toValue().sub(rhs);
 	},
 	mul: function mul(rhs) {
-		return this.variable.at(this.indices).mul(rhs);
+		return this.toValue().mul(rhs);
 	},
 	div: function div(rhs) {
-		return this.variable.at(this.indices).div(rhs);
+		return this.toValue().div(rhs);
 	},
 	mod: function mod(rhs) {
-		return this.variable.at(this.indices).mod(rhs);
+		return this.toValue().mod(rhs);
 	},
 	and: function and(rhs) {
-		return this.variable.at(this.indices).and(rhs);
+		return this.toValue().and(rhs);
 	},
 	or: function or(rhs) {
-		return this.variable.at(this.indices).or(rhs);
+		return this.toValue().or(rhs);
 	},
 	xor: function xor(rhs) {
-		return this.variable.at(this.indices).xor(rhs);
+		return this.toValue().xor(rhs);
 	},
 	eq: function eq(rhs) {
-		return this.variable.at(this.indices).eq(rhs);
+		return this.toValue().eq(rhs);
 	},
 	ne: function ne(rhs) {
-		return this.variable.at(this.indices).ne(rhs);
+		return this.toValue().ne(rhs);
 	},
 	gt: function gt(rhs) {
-		return this.variable.at(this.indices).gt(rhs);
+		return this.toValue().gt(rhs);
 	},
 	lt: function lt(rhs) {
-		return this.variable.at(this.indices).lt(rhs);
+		return this.toValue().lt(rhs);
 	},
 	gteq: function gteq(rhs) {
-		return this.variable.at(this.indices).gteq(rhs);
+		return this.toValue().gteq(rhs);
 	},
 	lteq: function lteq(rhs) {
-		return this.variable.at(this.indices).lteq(rhs);
+		return this.toValue().lteq(rhs);
 	},
 	rsh: function rhs(rhs) {
-		return this.variable.at(this.indices).rsh(rhs);
+		return this.toValue().rsh(rhs);
 	},
 	lsh: function lhs(rhs) {
-		return this.variable.at(this.indices).lsh(rhs);
+		return this.toValue().lsh(rhs);
 	},
 	getType: function getType() {
-		return this.variable.at(this.indices).getType();
+		return this.toValue().getType();
 	},
 	toIntValue: function toIntValue() {
-		return this.variable.at(this.indices).toIntValue();
+		return this.toValue().toIntValue();
 	},
 	toDoubleValue: function toDoubleValue() {
-		return this.variable.at(this.indices).toDoubleValue();
+		return this.toValue().toDoubleValue();
 	},
 	toStrValue: function toStrValue() {
-		return this.variable.at(this.indices).toStrValue();
+		return this.toValue().toStrValue();
 	},
 	assign: function assign(rhs) {
 		return this.variable.assign(this.indices, rhs);
 	},
 	toValue: function toValue() {
-		return this.variable.at(this.indices);
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return this.variable.at(offset);
 	},
 	isUsing: function isUsing() {
-		return this.variable.at(this.indices).isUsing();
+		return this.toValue().isUsing();
 	},
 	getbyte: function getbyte(bytesOffset) {
-		return this.variable.getbyte(this.indices, bytesOffset);
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return this.variable.getbyte(offset, bytesOffset);
 	},
 	setbyte: function setbyte(bytesOffset, val) {
-		return this.variable.setbyte(this.indices, bytesOffset, val);
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return this.variable.setbyte(offset, bytesOffset, val);
 	},
 	getbytes: function getbytes(bytesOffset, length) {
-		return this.variable.getbytes(this.indices, bytesOffset, length);
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return this.variable.getbytes(offset, bytesOffset, length);
 	},
 	setbytes: function setbytes(bytesOffset, buf) {
-		return this.variable.setbytes(this.indices, bytesOffset, buf);
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return this.variable.setbytes(offset, bytesOffset, buf);
 	}
 };
 

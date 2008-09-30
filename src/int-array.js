@@ -19,18 +19,14 @@ Utils.objectExtend(IntArray.prototype, {
 	getType: function getType() {
 		return VarType.INT;
 	},
-	getbyte: function getbyte(indices, bytesOffset) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	getbyte: function getbyte(offset, bytesOffset) {
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		return this.values[i]._value >> (bytesOffset % 4 * 8) & 0xff;
 	},
-	setbyte: function setbyte(indices, bytesOffset, val) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	setbyte: function setbyte(offset, bytesOffset, val) {
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);

@@ -6,9 +6,8 @@ function HSPArray() {
 }
 
 HSPArray.prototype = {
-	assign: function assign(indices, rhs) {
-		this.expand(indices);
-		this.values[this.getOffset(indices)] = rhs.toValue();
+	assign: function assign(offset, rhs) {
+		this.values[offset] = rhs.toValue();
 	},
 	expand: function expand(indices) {
 		if(indices.length > 4) { 
@@ -76,33 +75,31 @@ HSPArray.prototype = {
 		if(this.l3) length *= this.l3;
 		return length;
 	},
-	at: function at(indices) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	at: function at(offset) {
 		return this.values[offset];
 	},
 	getL0: function getL0() { return this.l0; },
 	getL1: function getL1() { return this.l1; },
 	getL2: function getL2() { return this.l2; },
 	getL3: function getL3() { return this.l3; },
-	getbyte: function getbyte(indices, bytesOffset) {
+	getbyte: function getbyte(offset, bytesOffset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません"); 
 	},
-	setbyte: function setbyte(indices, bytesOffset, val) {
+	setbyte: function setbyte(offset, bytesOffset, val) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ書き込みに対応していません"); 
 	},
-	getbytes: function getbytes(indices, bytesOffset, length) {
+	getbytes: function getbytes(offset, bytesOffset, length) {
 		var result = "";
 		for(var i = 0; i < length; i ++) {
-			result += String.fromCharCode(this.getbyte(indices, bytesOffset + i));
+			result += String.fromCharCode(this.getbyte(offset, bytesOffset + i));
 		}
 		return result;
 	},
-	setbytes: function setbytes(indices, bytesOffset, buf) {
+	setbytes: function setbytes(offset, bytesOffset, buf) {
 		for(var i = 0; i < buf.length; i ++) {
-			this.setbyte(indices, bytesOffset + i, buf.charCodeAt(i));
+			this.setbyte(offset, bytesOffset + i, buf.charCodeAt(i));
 		}
 	}
 };

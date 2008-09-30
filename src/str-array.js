@@ -6,9 +6,7 @@ function StrArray() {
 StrArray.prototype = new HSPArray();
 
 Utils.objectExtend(StrArray.prototype, {
-	assign: function assign(indices, rhs) {
-		this.expand(indices);
-		var offset = this.getOffset(indices);
+	assign: function assign(offset, rhs) {
 		var value = this.values[offset];
 		rhs = rhs.toStrValue();
 		value = rhs._value + "\0" + value.slice(rhs._value.length + 1);
@@ -24,9 +22,7 @@ Utils.objectExtend(StrArray.prototype, {
 		}
 		return isExpanded;
 	},
-	at: function at(indices) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	at: function at(offset) {
 		return new StrValue(Utils.getCStr(this.values[offset]));
 	},
 	getType: function getType() {
@@ -43,34 +39,26 @@ Utils.objectExtend(StrArray.prototype, {
 			this.values[i] = Utils.strTimes("\0", strLength);
 		}
 	},
-	getbyte: function getbyte(indices, bytesOffset) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	getbyte: function getbyte(offset, bytesOffset) {
 		if(!(0 <= bytesOffset && bytesOffset < this.values[offset].length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		return this.values[offset].charCodeAt(bytesOffset);
 	},
-	setbyte: function setbyte(indices, bytesOffset, val) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	setbyte: function setbyte(offset, bytesOffset, val) {
 		var str = this.values[offset];
 		if(!(0 <= bytesOffset && bytesOffset < str.length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		this.values[offset] = str.slice(0, bytesOffset) + String.fromCharCode(val & 0xff) + str.slice(bytesOffset + 1);
 	},
-	getbytes: function getbytes(indices, bytesOffset, length) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	getbytes: function getbytes(offset, bytesOffset, length) {
 		if(!(0 <= bytesOffset && bytesOffset + length <= this.values[offset].length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		return this.values[offset].substr(bytesOffset, length);
 	},
-	setbytes: function setbytes(indices, bytesOffset, buf) {
-		var offset = this.getOffset(indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+	setbytes: function setbytes(offset, bytesOffset, buf) {
 		var str = this.values[offset];
 		if(!(0 <= bytesOffset && bytesOffset + buf.length <= str.length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);

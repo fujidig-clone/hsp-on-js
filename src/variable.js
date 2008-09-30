@@ -27,7 +27,9 @@ Variable.prototype = {
 				throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[rhs.getType()]+' 型の値は変数に代入できません');
 			}
 		}
-		return this.value.assign(indices, rhs);
+		this.value.expand(indices);
+		var offset = this.value.getOffset(indices);
+		return this.value.assign(offset, rhs);
 	},
 	expand: function expand(indices) {
 		return this.value.expand(indices);
@@ -35,8 +37,8 @@ Variable.prototype = {
 	getType: function getType() {
 		return this.value.getType();
 	},
-	at: function at(indices) {
-		return this.value.at(indices);
+	at: function at(offset) {
+		return this.value.at(offset);
 	},
 	getL0: function getL0() {
 		return this.value.getL0();
@@ -72,17 +74,17 @@ Variable.prototype = {
 		ary.expand(indices);
 		this.value = ary;
 	},
-	getbyte: function getbyte(indices, bytesOffset) {
-		return this.value.getbyte(indices, bytesOffset);
+	getbyte: function getbyte(offset, bytesOffset) {
+		return this.value.getbyte(offset, bytesOffset);
 	},
-	setbyte: function setbyte(indices, bytesOffset, val) {
-		return this.value.setbyte(indices, bytesOffset, val);
+	setbyte: function setbyte(offset, bytesOffset, val) {
+		return this.value.setbyte(offset, bytesOffset, val);
 	},
-	getbytes: function getbytes(indices, bytesOffset, length) {
-		return this.value.getbytes(indices, bytesOffset, length);
+	getbytes: function getbytes(offset, bytesOffset, length) {
+		return this.value.getbytes(offset, bytesOffset, length);
 	},
-	setbytes: function setbytes(indices, bytesOffset, buf) {
-		return this.value.setbytes(indices, bytesOffset, buf);
+	setbytes: function setbytes(offset, bytesOffset, buf) {
+		return this.value.setbytes(offset, bytesOffset, buf);
 	}
 };
 
