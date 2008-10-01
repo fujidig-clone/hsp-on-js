@@ -389,6 +389,14 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		}
 		return new IntValue(using);
 	},
+	0x00f: function instr(str, fromIndex, pattern) {
+		this.scanArgs(arguments, 'sNs');
+		fromIndex = fromIndex ? fromIndex.toIntValue()._value : 0;
+		pattern = pattern.toStrValue()._value;
+		var index = str.toStrValue().indexOf(pattern, fromIndex);
+		if(index >= 0) index -= fromIndex;
+		return new IntValue(index);
+	},
 	0x010: function abs(val) {
 		this.scanArgs(arguments, 'n');
 		return new IntValue(Math.abs(val.toIntValue()._value));
@@ -410,6 +418,17 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 			return new StrValue(val.toString(base));
 		}
 		return val.toStrValue();
+	},
+	0x101: function strmid(str, index, length) {
+		this.scanArgs(arguments, 'snn');
+		str = str.toStrValue()._value;
+		index = index.toIntValue()._value;
+		length = length.toIntValue()._value;
+		if(index < 0) {
+			index = str.length - length;
+			if(index < 0) index = 0;
+		}
+		return new StrValue(str.substr(index, length));
 	},
 	0x180: function sin(val) {
 		this.scanArgs(arguments, 'n');

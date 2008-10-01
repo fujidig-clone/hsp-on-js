@@ -47,6 +47,23 @@ Utils.objectExtend(StrValue.prototype, {
 	},
 	toString: function toString() {
 		return '<StrValue:'+this._value+'>';
+	},
+	indexOf: function indexOf(pattern, fromIndex) {
+		var str = this._value;
+		var length = str.length;
+		var pos = fromIndex;
+		if(pattern.length == 0) return -1;
+		while(pos < length) {
+			if(str.substr(pos, pattern.length) == pattern) {
+				return pos;
+			}
+			var c = str.charCodeAt(pos);
+			pos ++;
+			if((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC)) {
+				pos ++;
+			}
+		}
+		return -1;
 	}
 });
 
