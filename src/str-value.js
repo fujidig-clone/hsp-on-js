@@ -52,9 +52,10 @@ Utils.objectExtend(StrValue.prototype, {
 		var str = this._value;
 		var length = str.length;
 		var pos = fromIndex;
-		if(pattern.length == 0) return -1;
-		while(pos < length) {
-			if(str.substr(pos, pattern.length) == pattern) {
+		var patternLength = pattern.length;
+		if(patternLength == 0) return -1;
+		while(pos + patternLength <= length) {
+			if(str.substr(pos, patternLength) == pattern) {
 				return pos;
 			}
 			var c = str.charCodeAt(pos);
