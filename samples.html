@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.0.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.1.js" charset="utf-8"></script>
 <script type="text/javascript">
 with(HSPonJS) {
 	Evaluator.prototype.disposeException = function disposeException(e) {
@@ -213,6 +213,42 @@ loop</textarea>
 *test2
 	mes "JUMP OK2"
 	return</textarea>
+<h2>バイナリデータの検索</h2>
+<p><a href="http://rpen.blogspot.com/2007/08/blog-post.html">HSP3のスクリプトを垂れ流すブログ: バイナリデータの検索</a>より</p>
+<textarea cols="100" rows="10">
+// 文字列でやっているが、文字列以外のバイナリデータでも原理は同じ。
+    sTarget = "Hot Soup Processor"  // 検索されるバイナリデータ（この中から検索するバイナリデータを探す）
+    sSerch  = "oce"                 // 検索するバイナリデータ
+
+    // ここから検索処理。
+    // バイナリデータではstrlenは使えないので、何らかの方法で大きさを調べてください。
+    repeat strlen( sTarget ) - ( strlen( sSerch ) - 1 )
+        _cnt = cnt : iResult = cnt
+        repeat strlen( sSerch )
+            if peek( sTarget, _cnt + cnt ) != peek( sSerch, cnt ) { // peekで1バイトずつ比較する
+                iResult = -1
+                break
+            }
+        loop
+        if ( iResult >= 0 ) : break                     // 見つかったので検索終了
+    loop
+    // 検索処理ここまで。
+
+    if ( iResult >= 0 ) {
+        // バイナリデータが見つかった場合
+        sdim sMarker, strlen( sTarget ) + 1
+        memset sMarker, ' ', strlen( sTarget )
+        memset sMarker, '^', strlen( sSerch ), iResult  // 見つけた文字列の部分にマークする
+
+        mes sTarget
+        mes sMarker
+        mes sSerch + "を" + iResult + "バイトめに見つけました。"
+        mes "instr()の結果（" + instr( sTarget, 0, sSerch ) + "）と一緒でしょ？"
+    } else {
+        // バイナリデータが見つからなかった場合
+        mes "見つかりませんでした。"
+    }
+    stop</textarea>
 <h2>使用ライブラリ</h2>
 <ul>
 <li><a href="http://jquery.com/">jQuery</a> (このサンプル集で使用。HSP on JS コアでは使用していません。）
