@@ -287,8 +287,9 @@ loop</textarea>
 <textarea cols="100" rows="10">
 sdim buf, 10000
 bload "samples.html", buf // この HTML ファイル自身の内容を取得
-ins = instr(buf, 0, "&lt;h1")
-mes strmid(buf, ins, 100)</textarea>
+ins = instr(buf, 0, "&lt;body")
+ins2 = instr(buf, ins, "&lt;h2")
+mes strmid(buf, ins, ins2)</textarea>
 <h2>使用ライブラリ</h2>
 <ul>
 <li><a href="http://jquery.com/">jQuery</a> (このサンプル集で使用。HSP on JS コアでは使用していません。）
