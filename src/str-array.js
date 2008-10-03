@@ -64,6 +64,9 @@ Utils.objectExtend(StrArray.prototype, {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		this.values[offset] = str.slice(0, bytesOffset) + buf + str.slice(bytesOffset + buf.length);
+	},
+	getByteSize: function getByteSize(offset) {
+		return this.values[offset].length;
 	}
 });
 

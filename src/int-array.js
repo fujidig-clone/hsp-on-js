@@ -35,6 +35,9 @@ Utils.objectExtend(IntArray.prototype, {
 		value &= ~(0xff << (bytesOffset % 4 * 8));
 		value |= (val & 0xff) << (bytesOffset % 4 * 8);
 		this.values[i] = new IntValue(value);
+	},
+	getByteSize: function getByteSize(offset) {
+		return (this.values.length - offset) * 4;
 	}
 });
 

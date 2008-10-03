@@ -7,8 +7,23 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.1.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.2.js" charset="utf-8"></script>
 <script type="text/javascript">
+function XHRReadURL(url, success, error) {
+	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+	xhr.open("GET", url, true);
+	xhr.onreadystatechange = function(){
+		if(xhr.readyState != 4) return;
+		if(200 <= xhr.status && xhr.status < 300) {
+			setTimeout(function(){success(xhr)}, 0);
+		} else if(xhr.status) {
+			setTimeout(function(){error(xhr)}, 0);
+		}
+	};
+	xhr.send(null);
+	return xhr;
+}
+
 with(HSPonJS) {
 	Evaluator.prototype.disposeException = function disposeException(e) {
 		if(e instanceof HSPError) {
@@ -16,7 +31,7 @@ with(HSPonJS) {
 			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
 			msg += this.getBuiltinFuncName(insn)||'';
 			msg += "\n";
-			msg += '--> '+(e.message||ErrorMessages[e.errcode]);
+			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
 			alert(msg);
 			return;
 		}
@@ -29,11 +44,33 @@ with(HSPonJS) {
 			this.timeoutID = setTimeout(function(){self.timeoutID = undefined; self.evaluate();}, e.msec);
 			return;
 		}
+		if(e instanceof FileReadException) {
+			var self = this;
+			self.fileReadXHR = XHRReadURL(
+				e.path,
+				function(xhr){
+					self.fileReadXHR = null;
+					self.catchHSPException(function(){ e.success.call(self, xhr.responseText); });
+					self.pc ++;
+					self.evaluate();
+				},
+				function() {
+					self.fileReadXHR = null;
+					self.catchHSPException(function(){ e.error.call(self); });
+					self.pc ++;
+					self.evaluate();
+				});
+			return;
+		}
 		throw e;
 	};
 	Evaluator.prototype.quit = function quit() {
 		if(this.timeoutID != undefined) {
 			clearTimeout(this.timeoutID);
+		}
+		if(this.fileReadXHR) {
+			this.fileReadXHR.abort();
+			this.fileReadXHR = null;
 		}
 	};
 	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
@@ -57,6 +94,12 @@ function resizeTextarea(textarea) {
 
 $(function(){
 	var evaluators = [];
+	function quitEvaluator(i) {
+		if(evaluators[i]) {
+			evaluators[i].quit();
+			evaluators[i] = null;
+		}
+	}
 	$('textarea').each(function(i) {
 		var textarea = this;
 		resizeTextarea(textarea);
@@ -74,10 +117,7 @@ $(function(){
 		$(runButton).click(function(){
 			var script = textarea.value;
 			resultTextarea.value = '';
-			if(evaluators[i]) {
-				evaluators[i].quit();
-				evaluators[i] = null;
-			}
+			quitEvaluator(i);
 			$.post('compile.cgi', {script: script}, function(jsonData){
 				var data = eval('('+jsonData+')');
 				if (!data.success) {
@@ -88,10 +128,7 @@ $(function(){
 				var sequence = new HSPonJS.Compiler(axdata).compile();
 				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
 				evaluator.resultTextarea = resultTextarea;
-				if(evaluators[i]) {
-					evaluators[i].quit();
-					evaluators[i] = null;
-				}
+				quitEvaluator(i);
 				evaluators[i] = evaluator;
 				resultTextarea.style.display = '';
 				resetButton.style.display = '';
@@ -99,10 +136,7 @@ $(function(){
 			});
 		});
 		$(resetButton).click(function(){
-			if(evaluators[i]) {
-				evaluators[i].quit();
-				evaluators[i] = null;
-			}
+			quitEvaluator(i);
 			resultTextarea.style.display = 'none';
 			resetButton.style.display = 'none';
 			resultTextarea.value = '';
@@ -249,6 +283,12 @@ loop</textarea>
         mes "見つかりませんでした。"
     }
     stop</textarea>
+<h2>ファイル読み込み</h2>
+<textarea cols="100" rows="10">
+sdim buf, 10000
+bload "samples.html", buf // この HTML ファイル自身の内容を取得
+ins = instr(buf, 0, "&lt;h1")
+mes strmid(buf, ins, 100)</textarea>
 <h2>使用ライブラリ</h2>
 <ul>
 <li><a href="http://jquery.com/">jQuery</a> (このサンプル集で使用。HSP on JS コアでは使用していません。）

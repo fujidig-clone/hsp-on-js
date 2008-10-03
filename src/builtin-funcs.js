@@ -225,6 +225,9 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 		}
 		return new IntValue(this.loopStack[this.loopStack.length - 1].cnt);
 	},
+	0x06: function strsize() {
+		return this.strsize;
+	},
 	0x07: function looplev() {
 		return new IntValue(this.loopStack.length);
 	},
@@ -240,6 +243,27 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 };
 
 BuiltinFuncs[Token.Type.INTCMD] = {
+	0x11: function exist(path) {
+		this.scanArgs(arguments, 's');
+		path = path.toStrValue()._value;
+		throw new FileReadException(
+			path,
+			function(data) { this.strsize = new IntValue(data.length); },
+			function() { this.strsize = new IntValue(-1); });
+	},
+	0x16: function bload(path, v) {
+		this.scanArgs(arguments, 'sv');
+		path = path.toStrValue()._value;
+		throw new FileReadException(
+			path,
+			function(data) {
+				var size = v.getByteSize();
+				v.setbytes(0, CP932.encode(data).substr(0, size));
+			},
+			function() {
+				throw new HSPError(ErrorCode.FILE_IO);
+			});
+	},
 	0x1a: function poke(v, offset, val) {
 		this.scanArgs(arguments, 'vNN');
 		offset = offset ? offset.toIntValue()._value : 0;

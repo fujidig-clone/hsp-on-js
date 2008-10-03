@@ -101,6 +101,10 @@ HSPArray.prototype = {
 		for(var i = 0; i < buf.length; i ++) {
 			this.setbyte(offset, bytesOffset + i, buf.charCodeAt(i));
 		}
+	},
+	getByteSize: function getByteSize(offset) {
+		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
+		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません"); 
 	}
 };
 

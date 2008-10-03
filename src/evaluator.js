@@ -12,6 +12,7 @@ function Evaluator(axdata, sequence) {
 	this.stat = new IntArray();
 	this.refdval = new DoubleArray();
 	this.refstr = new StrArray();
+	this.strsize = new IntValue(0);
 	this.random = new VCRandom();
 }
 
@@ -22,6 +23,16 @@ Evaluator.prototype = {
 				var insn = this.sequence[this.pc];
 				this.dispatch(insn);
 			}
+		} catch(e) {
+			if(!(e instanceof HSPException)) {
+				throw e;
+			}
+			this.disposeException(e);
+		}
+	},
+	catchHSPException: function catchHSPException(callback) {
+		try {
+			callback();
 		} catch(e) {
 			if(!(e instanceof HSPException)) {
 				throw e;

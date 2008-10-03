@@ -85,6 +85,9 @@ Variable.prototype = {
 	},
 	setbytes: function setbytes(offset, bytesOffset, buf) {
 		return this.value.setbytes(offset, bytesOffset, buf);
+	},
+	getByteSize: function getByteSize(offset) {
+		return this.value.getByteSize(offset);
 	}
 };
 

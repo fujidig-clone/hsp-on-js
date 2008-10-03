@@ -88,7 +88,7 @@ var ErrorMessages = [
 	"外部DLLの呼び出しに失敗しました",				// 38
 	"外部オブジェクトの呼び出しに失敗しました",		// 39
 	"関数の戻り値が設定されていません。",			// 40
-	"関数を命令として記述しています。¥n(HSP2から関数化された名前を使用している可能性があります)",			// 41
+	"関数を命令として記述しています。\n(HSP2から関数化された名前を使用している可能性があります)",			// 41
 	"*"
 ];
 
@@ -101,6 +101,14 @@ function WaitException(msec) {
 	this.msec = msec;
 }
 WaitException.prototype = new HSPException;
+
+function FileReadException(path, success, error) {
+	this.path = path;
+	this.success = success;
+	this.error = error;
+}
+FileReadException.prototype = new HSPException;
+
 
 function HSPError(errcode, message) {
 	this.errcode = errcode;
@@ -115,6 +123,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.HSPException = HSPException;
 	HSPonJS.WaitException = WaitException;
 	HSPonJS.StopException = StopException;
+	HSPonJS.FileReadException = FileReadException;
 	HSPonJS.HSPError = HSPError;
 }
 
