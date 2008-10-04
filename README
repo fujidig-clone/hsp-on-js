@@ -1,8 +1,21 @@
 HSP on JS
+============
 
 HSP on JS は JavaScript による HSP インタプリタの実装です。
 以下の URL からサンプルを実行することができます。
 http://www.fujidig.com/hsp-on-js/samples.html
+
+= 実行方法 =
+run-in-shell を実行します。
+これは t.hsp を hspcmp でコンパイルし、その内容を run-in-shell.js に埋め込んで実行します。
+ruby1.9, hspcmp, SpiderMonkey シェルが必要です。
+
+= パッケージの作り方 =
+create-package を実行します。
+これは *.js を一つのファイルに連結します。
+さらに、命令ディスパッチコードの命令コードをマジックナンバーに置換します。
+出力ファイル名のデフォルトは hsp-on-js-core.js で -o オプションで変更できます。 
+ruby1.9 が必要です。
 
 -----
 fujidig / FUJI
