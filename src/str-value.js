@@ -6,6 +6,14 @@ function StrValue(str) {
 	this._value = '' + str;
 }
 
+StrValue.EMPTY_STR = new StrValue('');
+StrValue.of = function of(str) {
+	if(str.length == 0) {
+		return StrValue.EMPTY_STR;
+	}
+	return new StrValue(str);
+}
+
 StrValue.prototype = new Value;
 
 Utils.objectExtend(StrValue.prototype, {

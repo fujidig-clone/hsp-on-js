@@ -4,6 +4,14 @@ function DoubleValue(value) {
 
 DoubleValue.prototype = new Value;
 
+DoubleValue.ZERO = new DoubleValue(0);
+DoubleValue.of = function of(value) {
+	if(value == 0) {
+		return DoubleValue.ZERO;
+	}
+	return new DoubleValue(value);
+};
+
 Utils.objectExtend(DoubleValue.prototype, {
 	add: function add(rhs) {
 		return new DoubleValue(this._value + rhs.toDoubleValue()._value);

@@ -4,6 +4,21 @@ function IntValue(value) {
 
 IntValue.prototype = new Value;
 
+(function(){
+	var cache = new Array(256);
+	for(var i = 0; i < 256; i ++) {
+		cache[i] = new IntValue(i-128);
+	}
+	
+	IntValue.of = function of(value) {
+		value = value|0;
+		if(-128 <= value && value <= 127) {
+			return cache[value+128];
+		}
+		return new IntValue(value);
+	}
+})();
+
 Utils.objectExtend(IntValue.prototype, {
 	add: function add(rhs) {
 		return new IntValue(this._value + rhs.toIntValue()._value);
