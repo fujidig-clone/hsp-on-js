@@ -10,8 +10,9 @@ Utils.objectExtend(IntArray.prototype, {
 		var isExpanded = HSPArray.prototype.expand.call(this, indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
+			var zero = new IntValue(0);
 			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = new IntValue(0);
+				this.values[i] = zero;
 			}
 		}
 		return isExpanded;

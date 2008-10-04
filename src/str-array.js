@@ -1,9 +1,10 @@
 function StrArray() {
 	HSPArray.call(this);
-	this.values = [Utils.strTimes("\0", 64)];
+	this.values = [StrArray.DEFAULT];
 }
 
 StrArray.prototype = new HSPArray();
+StrArray.DEFAULT = Utils.strTimes("\0", 64);
 
 Utils.objectExtend(StrArray.prototype, {
 	assign: function assign(offset, rhs) {
@@ -16,8 +17,9 @@ Utils.objectExtend(StrArray.prototype, {
 		var isExpanded = HSPArray.prototype.expand.call(this, indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
+			var str = StrArray.DEFAULT;
 			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = Utils.strTimes("\0", 64);
+				this.values[i] = str;
 			}
 		}
 		return isExpanded;
@@ -29,14 +31,18 @@ Utils.objectExtend(StrArray.prototype, {
 		return VarType.STR;
 	},
 	strDim: function strDim(strLength, l0, l1, l2, l3) {
-		if(strLength == undefined || strLength < 64) {
+		var str;
+		if(strLength == undefined || strLength <= 64) {
 			strLength = 64;
+			str = StrArray.DEFAULT;
+		} else {
+			str = Utils.strTimes("\0", strLength);
 		}
 		var indices = HSPArray.lengthToIndices(l0, l1, l2, l3);
 		HSPArray.prototype.expand.call(this, indices);
 		var len = this.allLength();
 		for(var i = 0; i < len; i ++) {
-			this.values[i] = Utils.strTimes("\0", strLength);
+			this.values[i] = str;
 		}
 	},
 	getbyte: function getbyte(offset, bytesOffset) {
