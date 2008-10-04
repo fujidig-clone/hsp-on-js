@@ -30,9 +30,14 @@ Evaluator.prototype = {
 			this.disposeException(e);
 		}
 	},
-	catchHSPException: function catchHSPException(callback) {
+	resume: function resume(callback) {
 		try {
-			callback();
+			if(callback) callback();
+			this.pc ++;
+			while(true) {
+				var insn = this.sequence[this.pc];
+				this.dispatch(insn);
+			}
 		} catch(e) {
 			if(!(e instanceof HSPException)) {
 				throw e;

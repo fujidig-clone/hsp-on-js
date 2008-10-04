@@ -102,7 +102,6 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 	0x07: function wait(n) {
 		this.scanArgs(arguments, 'N');
 		var msec = (n ? n.toIntValue()._value : 100) * 10;
-		this.pc ++;
 		throw new WaitException(msec);
 	},
 	0x09: function dim(v, l0, l1, l2, l3) {

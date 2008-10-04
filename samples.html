@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.2.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.3.js" charset="utf-8"></script>
 <script type="text/javascript">
 function XHRReadURL(url, success, error) {
 	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
@@ -41,7 +41,10 @@ with(HSPonJS) {
 		}
 		if(e instanceof WaitException) {
 			var self = this;
-			this.timeoutID = setTimeout(function(){self.timeoutID = undefined; self.evaluate();}, e.msec);
+			this.timeoutID = setTimeout(function(){
+				self.timeoutID = undefined;
+				self.resume();
+			}, e.msec);
 			return;
 		}
 		if(e instanceof FileReadException) {
@@ -50,15 +53,11 @@ with(HSPonJS) {
 				e.path,
 				function(xhr){
 					self.fileReadXHR = null;
-					self.catchHSPException(function(){ e.success.call(self, xhr.responseText); });
-					self.pc ++;
-					self.evaluate();
+					self.resume(function(){ e.success.call(self, xhr.responseText); });
 				},
 				function() {
 					self.fileReadXHR = null;
-					self.catchHSPException(function(){ e.error.call(self); });
-					self.pc ++;
-					self.evaluate();
+					self.resume(function(){ e.error.call(self); });
 				});
 			return;
 		}
