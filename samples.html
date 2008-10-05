@@ -9,16 +9,21 @@
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
 <script type="text/javascript" src="hsp-on-js-core-0.0.3.js" charset="utf-8"></script>
 <script type="text/javascript">
+HSPonJS.emptyFunction = function(){};
+
 function XHRReadURL(url, success, error) {
 	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
 	xhr.open("GET", url, true);
 	xhr.onreadystatechange = function(){
-		if(xhr.readyState != 4) return;
+		if(!(xhr && xhr.readyState == 4)) return;
 		if(200 <= xhr.status && xhr.status < 300) {
-			setTimeout(function(){success(xhr)}, 0);
+			var data = xhr.responseText;
+			setTimeout(function(){success(data)}, 0);
 		} else if(xhr.status) {
-			setTimeout(function(){error(xhr)}, 0);
+			setTimeout(function(){error()}, 0);
 		}
+		xhr.onreadystatechange = HSPonJS.emptyFunction;
+		xhr = null;
 	};
 	xhr.send(null);
 	return xhr;
@@ -51,9 +56,9 @@ with(HSPonJS) {
 			var self = this;
 			self.fileReadXHR = XHRReadURL(
 				e.path,
-				function(xhr){
+				function(data){
 					self.fileReadXHR = null;
-					self.resume(function(){ e.success.call(self, xhr.responseText); });
+					self.resume(function(){ e.success.call(self, data); });
 				},
 				function() {
 					self.fileReadXHR = null;
