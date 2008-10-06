@@ -1,12 +1,12 @@
-mes instr("abc", 0, "a")
-mes instr("abc", 0, "c")
-mes instr("abc", 1, "a")
-mes instr("abc", 1, "bc")
-mes instr("abc", 0, "abcd")
+mes "prepare"
+size = 500000
+sdim a, size + 1
+memset a, '*', size
+mes "start"
+st = gettime(-1)
+repeat 100
+	len = strlen(a)
+loop
+ed = gettime(-1)
+mes int(ed - st)
 
-mes
-
-mes instr("abc", 0, "")
-mes instr("abc", 2, "")
-mes instr("abc", 10, "")
-mes instr("abc", 100, "")
