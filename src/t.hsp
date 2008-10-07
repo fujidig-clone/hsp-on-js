@@ -1,12 +1,11 @@
-mes "prepare"
-size = 500000
-sdim a, size + 1
-memset a, '*', size
-mes "start"
-st = gettime(-1)
-repeat 100
-	len = strlen(a)
-loop
-ed = gettime(-1)
-mes int(ed - st)
+buf = "ABC,DEF,EFG"
+i = 0
 
+repeat 4
+	getstr ln, buf, i, ','
+	i += strsize
+	mes "ln = " + ln
+	mes "strsize = " + strsize
+	mes "stat = " + stat
+	mes
+loop

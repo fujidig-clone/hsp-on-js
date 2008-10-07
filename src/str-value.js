@@ -6,6 +6,8 @@ function StrValue(str) {
 	this._value = '' + str;
 }
 
+StrValue.prototype = new Value;
+
 StrValue.EMPTY_STR = new StrValue('');
 StrValue.of = function of(str) {
 	if(str.length == 0) {
@@ -13,8 +15,6 @@ StrValue.of = function of(str) {
 	}
 	return new StrValue(str);
 }
-
-StrValue.prototype = new Value;
 
 Utils.objectExtend(StrValue.prototype, {
 	add: function add(rhs) {

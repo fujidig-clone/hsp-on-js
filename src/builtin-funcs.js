@@ -285,6 +285,35 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		v.setbyte(offset + 2, val >> 16);
 		v.setbyte(offset + 3, val >> 24);
 	},
+	0x1d: function getstr(v, src, index, separator, length) {
+		this.scanArgs(arguments, 'vvNNN');
+		index = index ? index.toIntValue()._value : 0;
+		separator = separator ? separator.toIntValue()._value & 0xff : 0;
+		length = length ? length.toIntValue()._value : 1024;
+		var result = "";
+		var i = 0;
+		var c;
+		while(i < length) {
+			c = src.getbyte(index + i);
+			if(c == 0) break;
+			i ++;
+			if(c == separator) {
+				break;
+			}
+			if(c == 13) {
+				if(src.getbyte(index + i) == 10) i ++;
+				break;
+			}
+			result += String.fromCharCode(c);
+			if((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC)) {
+				result += String.fromCharCode(src.getbyte(index + i));
+				i ++;
+			}
+		}
+		v.assign(new StrValue(result));
+		this.strsize = new IntValue(i);
+		this.stat.assign(0, new IntValue(c));
+	},
 	0x20: function memcpy(destVar, srcVar, length, destOffset, srcOffset) {
 		this.scanArgs(arguments, 'vvNNN');
 		length = length ? length.toIntValue()._value : 0;
