@@ -336,9 +336,23 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		offset = offset ? offset.toIntValue()._value : 0;
 		v.setbytes(offset, Utils.strTimes(String.fromCharCode(val), length));
 	},
+	0x22: function notesel(v) {
+		this.scanArgs(arguments, 'v');
+		if(v.getType() != VarType.STR) {
+			v.assign(StrValue.EMPTY_STR);
+		}
+		var offset = v.variable.value.getOffset(v.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		var buf = v.variable.value.values[offset];
+		this.noteStack.push(buf);
+	},
 	0x27: function randomize(seed) {
 		this.scanArgs(arguments, 'N');
 		this.random.srand(seed ? seed.toIntValue()._value : +new Date);
+	},
+	0x28: function noteunsel() {
+		this.scanArgs(arguments, '');
+		this.noteStack.pop();
 	}
 };
 
@@ -448,6 +462,21 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 			throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[v.getType()] + ' 型は varuse をサポートしていません');
 		}
 		return new IntValue(using);
+	},
+	0x00e: function noteinfo(n) {
+		this.scanArgs(arguments, 'N');
+		n = n ? n.toIntValue()._value : 0;
+		switch(n) {
+		case 0: // notemax
+			var lines = this.getNote().getValue()._value.split(/\r\n|\n|\r/);
+			var len = lines.length;
+			if(!lines[len-1]) len --;
+			return new IntValue(len);
+		case 1: // notesize
+			return new IntValue(this.getNote().getValue()._value.length);
+		default:
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		}
 	},
 	0x00f: function instr(str, fromIndex, pattern) {
 		this.scanArgs(arguments, 'sNs');

@@ -9,6 +9,7 @@ function Evaluator(axdata, sequence) {
 	}
 	this.loopStack = [];
 	this.frameStack = [];
+	this.noteStack = [];
 	this.stat = new IntArray();
 	this.refdval = new DoubleArray();
 	this.refstr = new StrArray();
@@ -201,6 +202,12 @@ Evaluator.prototype = {
 		}
 		this.frameStack.push(new Frame(this.pc + 1));
 		this.pc = label.pos - 1;
+	},
+	getNote: function getNote() {
+		if(this.noteStack.length == 0) {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		}
+		return this.noteStack[this.noteStack.length - 1];
 	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
