@@ -54,6 +54,9 @@ Utils.objectExtend(StrArray.prototype, {
 	},
 	getByteSize: function getByteSize(offset) {
 		return this.values[offset].getByteSize();
+	},
+	expandByteSize: function expandByteSize(offset, size) {
+		this.values[offset].expandByteSize(size);
 	}
 });
 

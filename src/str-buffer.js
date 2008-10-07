@@ -51,6 +51,10 @@ StrBuffer.prototype = {
 	},
 	getByteSize: function getByteSize() {
 		return this._str.length;
+	},
+	expandByteSize: function expandByteSize(size) {
+		if(this._str.length >= size) return;
+		this._str += Utils.strTimes("\0", size - this._str.length);
 	}
 };
 

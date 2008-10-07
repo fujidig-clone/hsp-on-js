@@ -105,6 +105,10 @@ HSPArray.prototype = {
 	getByteSize: function getByteSize(offset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません"); 
+	},
+	expandByteSize: function expandByteSize(offset, size) {
+		throw new HSPError(ErrorCode.TYPE_MISMATCH,
+		                   VarTypeNames[this.getType()]+" 型はメモリ領域の拡張に対応していません"); 
 	}
 };
 

@@ -317,6 +317,11 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		this.strsize = new IntValue(i);
 		this.stat.assign(0, new IntValue(c));
 	},
+	0x1f: function memexpand(v, size) {
+		this.scanArgs(arguments, 'vN');
+		size = size ? size.toIntValue()._value : 0;
+		v.expandByteSize(size);
+	},
 	0x20: function memcpy(destVar, srcVar, length, destOffset, srcOffset) {
 		this.scanArgs(arguments, 'vvNNN');
 		length = length ? length.toIntValue()._value : 0;

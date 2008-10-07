@@ -88,6 +88,9 @@ Variable.prototype = {
 	},
 	getByteSize: function getByteSize(offset) {
 		return this.value.getByteSize(offset);
+	},
+	expandByteSize: function expandByteSize(offset, size) {
+		return this.value.expandByteSize(offset, size);
 	}
 };
 
