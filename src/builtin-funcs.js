@@ -306,7 +306,10 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 			}
 			result += String.fromCharCode(c);
 			if((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC)) {
-				result += String.fromCharCode(src.getbyte(index + i));
+				if(i >= length) break;
+				var c2 = src.getbyte(index + i);
+				if(c2 == 0) break;
+				result += String.fromCharCode(c2);
 				i ++;
 			}
 		}

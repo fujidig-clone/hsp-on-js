@@ -1,5 +1,28 @@
-a = "ABC"
-getstr b, a, 0, '@', 1
+a = ""
+poke a, 0, 0x82
+poke a, 1, 0xA0
+getstr b, a, 0, 0, 1
+mes strsize
+mes b
+mes stat
+
+mes
+
+a = "__abc"
+poke a, 0, 0x82
+poke a, 1, 0x00
+
+getstr b, a
+mes strsize
+mes b
+mes stat
+
+mes
+
+a = "_aa"
+poke a, 0, 0x82
+
+getstr b, a, 0, 'a'
 mes strsize
 mes b
 mes stat
