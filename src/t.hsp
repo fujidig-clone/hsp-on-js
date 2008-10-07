@@ -1,11 +1,5 @@
-buf = "ABC,DEF,EFG"
-i = 0
-
-repeat 4
-	getstr ln, buf, i, ','
-	i += strsize
-	mes "ln = " + ln
-	mes "strsize = " + strsize
-	mes "stat = " + stat
-	mes
-loop
+a = "ABC"
+getstr b, a, 0, '@', 1
+mes strsize
+mes b
+mes stat
