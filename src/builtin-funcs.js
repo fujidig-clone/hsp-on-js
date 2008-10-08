@@ -468,7 +468,7 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		n = n ? n.toIntValue()._value : 0;
 		switch(n) {
 		case 0: // notemax
-			var lines = this.getNote().getValue()._value.split(/\r\n|\n|\r/);
+			var lines = this.getNote().getValue()._value.split(/\r?\n|\r/);
 			var len = lines.length;
 			if(!lines[len-1]) len --;
 			return new IntValue(len);

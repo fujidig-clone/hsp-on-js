@@ -172,31 +172,40 @@ textarea { width: 100%; }
 <p>対応している機能は少ないですが、これから実装していく予定です。 HTML5 Canvas を使って GUI 命令にも対応できたらいいなあと思っています。</p>
 <p>HSP on JS は <a href="http://coderepos.org/share/browser/lang/javascript/hsp-on-js">CodeRepos</a> にリポジトリを置いています。</p>
 <h2>Hello, world!</h2>
+<div>
 <textarea cols="100" rows="10">
 mes "Hello, world!"
 mes "こんにちは！"</textarea>
+</div>
 <h2>カウンタ</h2>
+<div>
 <textarea cols="100" rows="10">
 repeat
 	cls
 	mes cnt
 	wait 10
 loop</textarea>
+</div>
 <h2>カウンタ2</h2>
 <p>上のカウンタと同時に動かすことができます</p>
+<div>
 <textarea cols="100" rows="10">
 repeat
 	cls
 	mes cnt
 	wait 10
 loop</textarea>
+</div>
 <h2>乱数</h2>
 <p>HSP と同じ結果の乱数を取得することができます</p>
+<div>
 <textarea cols="100" rows="10">
 repeat 20
 	mes rnd(32768)
 loop</textarea>
+</div>
 <h2>フィボナッチ数の列挙</h2>
+<div>
 <textarea cols="100" rows="10">
 a = 1
 b = 1
@@ -206,7 +215,9 @@ repeat 20
 	a = b
 	b = c
 loop</textarea>
+</div>
 <h2>エラトステネスのふるい</h2>
+<div>
 <textarea cols="100" rows="10">
 ; http://sprocket.babyblue.jp/html/hsplet3/eratosthenes.htm より
 MAXS = 100 ; Length
@@ -231,7 +242,9 @@ repeat MAXS, 2
 		mes cnt
 	}
 loop</textarea>
+</div>
 <h2>多次元配列</h2>
+<div>
 <textarea cols="100" rows="10">
 sdim a,, 3, 3
 a.0.0 = "あ", "い", "う"
@@ -242,8 +255,10 @@ repeat 3 : y = cnt
 		mes "a."+x+"."+y+" = "+a.x.y
 	loop
 loop</textarea>
+</div>
 <h2>ラベル型変数</h2>
 <p>HSP のサンプル new\label_type.hsp より</p>
+<div>
 <textarea cols="100" rows="10">
 	;	ラベル型変数のテスト
 	;
@@ -261,8 +276,10 @@ loop</textarea>
 *test2
 	mes "JUMP OK2"
 	return</textarea>
+</div>
 <h2>バイナリデータの検索</h2>
 <p><a href="http://rpen.blogspot.com/2007/08/blog-post.html">HSP3のスクリプトを垂れ流すブログ: バイナリデータの検索</a>より</p>
+<div>
 <textarea cols="100" rows="10">
 // 文字列でやっているが、文字列以外のバイナリデータでも原理は同じ。
     sTarget = "Hot Soup Processor"  // 検索されるバイナリデータ（この中から検索するバイナリデータを探す）
@@ -297,13 +314,16 @@ loop</textarea>
         mes "見つかりませんでした。"
     }
     stop</textarea>
+</div>
 <h2>ファイル読み込み</h2>
+<div>
 <textarea cols="100" rows="10">
 sdim buf, 10000
 bload "samples.html", buf // この HTML ファイル自身の内容を取得
 ins = instr(buf, 0, "&lt;body")
 ins2 = instr(buf, ins, "&lt;h2")
 mes strmid(buf, ins, ins2)</textarea>
+</div>
 <h2>使用ライブラリ</h2>
 <ul>
 <li><a href="http://jquery.com/">jQuery</a> (このサンプル集で使用。HSP on JS コアでは使用していません。）
