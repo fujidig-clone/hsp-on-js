@@ -1,29 +1,3 @@
-#runtime "hsplet3"
-a = "*"
-notesel a
-mes noteinfo(1) ; >> 1
-	b = "**"
-	notesel b
-	mes noteinfo(1) ; >> 2
-		c = "***"
-		notesel c
-		mes noteinfo(1) ; >> 3
-			d = "****"
-			notesel d
-			mes noteinfo(1) ; >> 4
-			mes noteinfo(1) ; >> 4
-			noteunsel
-		mes noteinfo(1) ; >> 3
-		noteunsel
-	mes noteinfo(1) ; >> 2
-	noteunsel
-mes noteinfo(1) ; >> 1
-noteunsel
-
-mes
-a = "", " ", "\n", "\n ", "\n\n", "a\n\nb", "a\n\nb\n"
-foreach a
-	notesel a.cnt
-	mes noteinfo()
-loop
-
+a = "x a"
+poke a, 1, 0x81
+mes instr(a, 0, "a")

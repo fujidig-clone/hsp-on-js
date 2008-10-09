@@ -57,22 +57,39 @@ Utils.objectExtend(StrValue.prototype, {
 		return '<StrValue:'+this._value+'>';
 	},
 	indexOf: function indexOf(pattern, fromIndex) {
+		// ネイティブの String#indexOf でマッチする部分を探し、
+		// マッチした部分が二バイト文字の途中からでないか 1 バイトずつ戻っていきながらチェックする
+		
+		function isSJISSecondByte(str, index, begin) {
+			var result = false;
+			while(true) {
+				if(index == begin) return result;
+				var c = str.charCodeAt(index - 1);
+				if(!((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC))) {
+					return result;
+				}
+				index --;
+				result = ! result;
+			}
+		}
 		var str = this._value;
 		var length = str.length;
 		var pos = fromIndex;
 		var patternLength = pattern.length;
 		if(patternLength == 0) return -1;
-		while(pos + patternLength <= length) {
-			if(str.substr(pos, patternLength) == pattern) {
-				return pos;
-			}
-			var c = str.charCodeAt(pos);
-			pos ++;
-			if((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC)) {
-				pos ++;
-			}
+		var c = pattern.charCodeAt(0);
+		if(!((0x40 <= c && c <= 0x7E) || (0x80 <= c <= 0xFC))) {
+			// pattern の一文字目が SJIS 第二バイトの範囲外なら String#indexOf の結果をそのまま返す
+			return str.indexOf(pattern, pos);
 		}
-		return -1;
+		while(true) {
+			var index = str.indexOf(pattern, pos);
+			if(index == -1) return -1;
+			if(!isSJISSecondByte(str, index, pos)) {
+				return index;
+			}
+			pos = index + 1;
+		} 
 	}
 });
 
