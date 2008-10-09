@@ -6,11 +6,9 @@ if $?.exitstatus != 0
 end
 
 dump = open('t.ax','rb'){|f|f.each_byte.each_slice(16).map{|i|"'%s'"%i.map{|j|'\x%02x'%j}.join}.join(",\n")}
-a = open('run-in-shell.js','rb'){|f|f.read}
-replaced = false
-a = a.gsub(/^([ \t]*var data = \[\n).*?^([ \t]*\])/m) {replaced = true;"#{$1}#{dump}\n#{$2}"}
-warn 'not replaced' unless replaced
-open('run-in-shell.js', 'wb'){|f| f.write a}
+open('t.ax.js', 'wb') do |f|
+  f.puts "var axbinary = [\n#{dump}\n].join('');"
+end
 
 filenames = %w[
 binary-parser.js
@@ -39,6 +37,7 @@ variable.js
 variable-agent.js
 compiler.js
 evaluator.js
+t.ax.js
 run-in-shell.js
 ]
 

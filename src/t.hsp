@@ -1,3 +1,6 @@
-a = "x a"
-poke a, 1, 0x81
-mes instr(a, 0, "a")
+a = "abc\ndefg\nhijk\n"
+notesel a
+repeat noteinfo(0)+2,-1
+	noteget ln, cnt
+	mes ""+cnt+": <"+ln+">"
+loop

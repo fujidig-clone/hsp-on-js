@@ -353,6 +353,22 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 	0x28: function noteunsel() {
 		this.scanArgs(arguments, '');
 		this.noteStack.pop();
+	},
+	0x29: function noteget(dest, lineNumber) {
+		this.scanArgs(arguments, 'vN');
+		lineNumber = lineNumber ? lineNumber.toIntValue()._value : 0;
+		var val = this.getNote().getValue();
+		var str = val._value;
+		var index = val.lineIndex(lineNumber);
+		if(index == null) index = str.length;
+		var length = val.lineLength(index);
+		if(length >= 1 && str.charCodeAt(index + length - 1) == 0x0a) {
+			length --;
+		}
+		if(length >= 1 && str.charCodeAt(index + length - 1) == 0x0d) {
+			length --;
+		}
+		dest.assign(new StrValue(str.substr(index, length)));
 	}
 };
 

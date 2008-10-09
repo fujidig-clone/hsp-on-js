@@ -90,6 +90,29 @@ Utils.objectExtend(StrValue.prototype, {
 			}
 			pos = index + 1;
 		} 
+	},
+	lineIndex: function lineIndex(lineNumber) {
+		var str = this._value;
+		var i = 0;
+		var result;
+		var tag = new Object;
+		try {
+			str.replace(/.*(?:\r\n|\n|\r|.$)/g, function(s, l) {
+				if(i++ == lineNumber) {
+					result = l;
+					throw tag;
+				}
+			});
+			return null;
+		} catch(e) {
+			if(e !== tag) throw e;
+			return result;
+		}
+	},
+	lineLength: function lineLength(index) {
+		var str = this._value;
+		var matched = /\r?\n|\r|$/.exec(str.slice(index));
+		return matched.index + matched[0].length;
 	}
 });
 
