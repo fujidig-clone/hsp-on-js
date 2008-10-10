@@ -264,10 +264,20 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 			});
 	},
 	0x1a: function poke(v, offset, val) {
-		this.scanArgs(arguments, 'vNN');
+		this.scanArgs(arguments, 'vN.?');
 		offset = offset ? offset.toIntValue()._value : 0;
-		val = val ? val.toIntValue()._value : 0;
-		v.setbyte(offset, val);
+		val = val ? val.toValue() : new IntValue(0);
+		switch(val.getType()) {
+		case VarType.INT:
+			v.setbyte(offset, val._value);
+			break;
+		case VarType.STR:
+			v.setbytes(offset, val._value + "\0");
+			this.strsize = new IntValue(val._value.length);
+			break;
+		default:
+			throw new HSPError(ErrorCode.TYPE_MISMATCH);
+		}
 	},
 	0x1b: function wpoke(v, offset, val) {
 		this.scanArgs(arguments, 'vNN');

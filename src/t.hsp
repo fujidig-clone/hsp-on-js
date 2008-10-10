@@ -1,6 +1,5 @@
-a = "abc\ndefg\nhijk\n"
-notesel a
-repeat noteinfo(0)+2,-1
-	noteget ln, cnt
-	mes ""+cnt+": <"+ln+">"
-loop
+a = "abcdefg"
+poke a, 2, "XXX"
+mes a
+mes strsize
+
