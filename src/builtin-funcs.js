@@ -245,15 +245,15 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 	0x11: function exist(path) {
 		this.scanArgs(arguments, 's');
 		path = path.toStrValue()._value;
-		throw new FileReadException(
-			path,
-			function(data) { this.strsize = new IntValue(data.length); },
-			function() { this.strsize = new IntValue(-1); });
+		this.fileRead(path,
+		              function(data) { this.strsize = new IntValue(data.length); },
+		              function() { this.strsize = new IntValue(-1); });
 	},
 	0x16: function bload(path, v) {
+		// FIXME 第三引数のサイズ、第四引数のオフセットに対応
 		this.scanArgs(arguments, 'sv');
 		path = path.toStrValue()._value;
-		throw new FileReadException(
+		this.fileRead(
 			path,
 			function(data) {
 				var size = v.getByteSize();
@@ -391,6 +391,22 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		if(index == null) return;
 		var length = val.lineLengthIncludeCR(index);
 		note.splice(index, length, '');
+	},
+	0x25: function noteload(path) {
+		// FIXME 第二引数のサイズ上限に対応
+		this.scanArgs(arguments, 's');
+		path = path.toStrValue()._value;
+		var note = this.getNote();
+		this.fileRead(
+			path,
+			function(data) {
+				data = CP932.encode(data) + "\0";
+				note.expandByteSize(data.length);
+				note.setbytes(0, data);
+			},
+			function() {
+				throw new HSPError(ErrorCode.FILE_IO);
+			});
 	},
 	0x27: function randomize(seed) {
 		this.scanArgs(arguments, 'N');

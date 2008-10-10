@@ -209,6 +209,9 @@ Evaluator.prototype = {
 		}
 		return this.noteStack[this.noteStack.length - 1];
 	},
+	fileRead: function fileRead(path, success, error) {
+		throw new FileReadException(path, success, error);
+	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
 		   insn.code != Instruction.Code.CALL_BUILTIN_FUNC) {

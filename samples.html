@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.4.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.5.js" charset="utf-8"></script>
 <script type="text/javascript">
 HSPonJS.emptyFunction = function(){};
 
@@ -318,8 +318,8 @@ loop</textarea>
 <h2>ファイル読み込み</h2>
 <div>
 <textarea cols="100" rows="10">
-sdim buf, 10000
-bload "samples.html", buf // この HTML ファイル自身の内容を取得
+notesel buf
+noteload "samples.html" // この HTML ファイル自身の内容を取得
 ins = instr(buf, 0, "&lt;body")
 ins2 = instr(buf, ins, "&lt;h2")
 mes strmid(buf, ins, ins2)</textarea>
