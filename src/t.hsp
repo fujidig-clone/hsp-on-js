@@ -1,5 +1,11 @@
-a = "abcdefg"
-poke a, 2, "XXX"
-mes a
-mes strsize
+a = "abc\ndefg\nhijkl"
+notesel a
+noteadd "123"
+noteadd "456"
+noteadd "DEFG", 1, 1
+notedel 0
+repeat notemax + 2, -1
+	noteget ln, cnt
+	mes ""+cnt+": <"+ln+">"
+loop
 

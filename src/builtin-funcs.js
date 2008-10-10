@@ -356,6 +356,42 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		var buf = v.variable.value.values[offset];
 		this.noteStack.push(buf);
 	},
+	0x23: function noteadd(line, lineNumber, overwrite) {
+		this.scanArgs(arguments, 'sNN');
+		line = line.toStrValue();
+		lineNumber = lineNumber ? lineNumber.toIntValue()._value : -1;
+		overwrite = (overwrite ? overwrite.toIntValue()._value : 0) != 0;
+		var note = this.getNote();
+		var index = note.getValue().lineIndex(lineNumber);
+		if(index == null) {
+			if(lineNumber >= 0) return;
+			var str = note.getValue()._value;
+			index = str.length;
+			if(index != 0) {
+				var c = str.charCodeAt(index - 1);
+				if(c != 0x0d && c != 0x0a) {
+					note.assign(new StrValue(str + "\r\n"));
+					index += 2;
+				}
+			}
+		}
+		if(!overwrite) {
+			note.splice(index, 0, line._value + "\r\n");
+			return;
+		}
+		var length = note.getValue().lineLength(index);
+		note.splice(index, length, line._value);
+	},
+	0x24: function notedel(lineNumber) {
+		this.scanArgs(arguments, 'N');
+		lineNumber = lineNumber ? lineNumber.toIntValue()._value : 0;
+		var note = this.getNote();
+		var val = note.getValue();
+		var index = val.lineIndex(lineNumber);
+		if(index == null) return;
+		var length = val.lineLengthIncludeCR(index);
+		note.splice(index, length, '');
+	},
 	0x27: function randomize(seed) {
 		this.scanArgs(arguments, 'N');
 		this.random.srand(seed ? seed.toIntValue()._value : +new Date);
@@ -370,14 +406,11 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		var val = this.getNote().getValue();
 		var str = val._value;
 		var index = val.lineIndex(lineNumber);
-		if(index == null) index = str.length;
+		if(index == null) {
+			dest.assign(StrValue.EMPTY_STR);
+			return;
+		}
 		var length = val.lineLength(index);
-		if(length >= 1 && str.charCodeAt(index + length - 1) == 0x0a) {
-			length --;
-		}
-		if(length >= 1 && str.charCodeAt(index + length - 1) == 0x0d) {
-			length --;
-		}
 		dest.assign(new StrValue(str.substr(index, length)));
 	}
 };

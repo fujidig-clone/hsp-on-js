@@ -205,7 +205,7 @@ Evaluator.prototype = {
 	},
 	getNote: function getNote() {
 		if(this.noteStack.length == 0) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ノートパッドが選択されていません');
 		}
 		return this.noteStack[this.noteStack.length - 1];
 	},

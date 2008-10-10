@@ -55,6 +55,11 @@ StrBuffer.prototype = {
 	expandByteSize: function expandByteSize(size) {
 		if(this._str.length >= size) return;
 		this._str += Utils.strTimes("\0", size - this._str.length);
+	},
+	splice: function splice(index, length, sub) {
+		var str = this._str;
+		this._str = str.slice(0, index) + sub + str.slice(index + length);
+		this._valCache = null;
 	}
 };
 

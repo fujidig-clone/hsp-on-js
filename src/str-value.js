@@ -92,6 +92,7 @@ Utils.objectExtend(StrValue.prototype, {
 		} 
 	},
 	lineIndex: function lineIndex(lineNumber) {
+		if(lineNumber < 0) return null;
 		var str = this._value;
 		var i = 0;
 		var result;
@@ -110,6 +111,10 @@ Utils.objectExtend(StrValue.prototype, {
 		}
 	},
 	lineLength: function lineLength(index) {
+		var str = this._value;
+		return /[\r\n]|$/.exec(str.slice(index)).index;
+	},
+	lineLengthIncludeCR: function lineLengthIncludeCR(index) {
 		var str = this._value;
 		var matched = /\r?\n|\r|$/.exec(str.slice(index));
 		return matched.index + matched[0].length;
