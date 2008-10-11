@@ -161,6 +161,10 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		l3 = l3 ? l3.toIntValue()._value : 0;
 		v.variable.dim(type, l0, l1, l2, l3);
 	},
+	0x0e: function dup(dest, src) {
+		this.scanArgs(arguments, 'av');
+		dest.variable.value = src.ref();
+	},
 	0x11: function stop() {
 		this.scanArgs(arguments, '');
 		throw new StopException;

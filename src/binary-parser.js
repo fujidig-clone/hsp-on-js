@@ -41,7 +41,7 @@ with({p: BinaryParser}) {
 			var bias = Math.pow(2, exponentBits - 1) - 1, signal = this.readBits(this.offset + precisionBits + exponentBits, 1),
 				exponent = this.readBits(this.offset + precisionBits, exponentBits), significand = 0,
 				divisor = 2, curByte = this.buffer.length + (-precisionBits-this.offset >> 3) - 1,
-				byteValue, startBit, i;
+				byteValue, startBit, mask;
 			this.offset += precisionBits + exponentBits + 1;
 			do
 				for(byteValue = this.buffer[ ++curByte ], startBit = precisionBits % 8 || 8, mask = 1 << startBit;

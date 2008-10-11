@@ -104,6 +104,11 @@ VariableAgent.prototype = {
 		var offset = this.variable.value.getOffset(this.indices);
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		return this.variable.expandByteSize(offset, size);
+	},
+	ref: function ref() {
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return this.variable.ref(offset);
 	}
 };
 

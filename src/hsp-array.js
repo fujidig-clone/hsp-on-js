@@ -35,6 +35,16 @@ HSPArray.prototype = {
 			if(lastDimension > 3) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 			l3 = indices[3] + 1;
 		}
+		switch(indices.length) {
+		case 4:
+			if(indices[3] < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		case 3:
+			if(indices[2] < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		case 2:
+			if(indices[1] < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		case 1:
+			if(indices[0] < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		}
 		this.l0 = l0;
 		this.l1 = l1;
 		this.l2 = l2;
@@ -109,6 +119,9 @@ HSPArray.prototype = {
 	expandByteSize: function expandByteSize(offset, size) {
 		throw new HSPError(ErrorCode.TYPE_MISMATCH,
 		                   VarTypeNames[this.getType()]+" 型はメモリ領域の拡張に対応していません"); 
+	},
+	ref: function ref(offset) {
+		return new Reference(this, offset);
 	}
 };
 

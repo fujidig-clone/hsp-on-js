@@ -1,11 +1,20 @@
-a = "abc\ndefg\nhijkl"
-notesel a
-noteadd "123"
-noteadd "456"
-noteadd "DEFG", 1, 1
-notedel 0
-repeat notemax + 2, -1
-	noteget ln, cnt
-	mes ""+cnt+": <"+ln+">"
-loop
+a = 3
+dup b, a
+mes "b = "+b
+b = 5
+mes "a = "+a
 
+mes
+
+dup c, b
+c = 7
+mes "a = "+a
+mes "b = "+b
+mes "c = "+c
+
+mes
+
+a = 9.0 : b = 10
+mes "a = "+a
+mes "b = "+b
+mes "c = "+c

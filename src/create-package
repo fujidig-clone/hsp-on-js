@@ -32,6 +32,7 @@ int-value.js
 jump-type.js
 str-buffer.js
 hsp-array.js
+reference.js
 label-array.js
 str-array.js
 double-array.js
