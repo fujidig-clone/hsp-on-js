@@ -10,14 +10,14 @@ Reference.prototype = {
 	},
 	expand: function expand(indices) {
 		var offset = indices.length > 0 ? indices[0] : 0;
-		if(indices.length > 1 || offset < 0 || offset > this.l0) {
+		if(indices.length > 1 || offset < 0 || offset >= this.l0) {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
 		return false;
 	},
 	getOffset: function getOffset(indices) {
 		var offset = indices.length > 0 ? indices[0] : 0;
-		if(indices.length > 1 || offset < 0 || offset > this.l0) {
+		if(indices.length > 1 || offset < 0 || offset >= this.l0) {
 			return null;
 		}
 		return offset;
