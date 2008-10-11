@@ -14,7 +14,7 @@ StrValue.of = function of(str) {
 		return StrValue.EMPTY_STR;
 	}
 	return new StrValue(str);
-}
+};
 
 Utils.objectExtend(StrValue.prototype, {
 	add: function add(rhs) {
@@ -89,7 +89,7 @@ Utils.objectExtend(StrValue.prototype, {
 				return index;
 			}
 			pos = index + 1;
-		} 
+		}
 	},
 	lineIndex: function lineIndex(lineNumber) {
 		if(lineNumber < 0) return null;
@@ -98,7 +98,7 @@ Utils.objectExtend(StrValue.prototype, {
 		var result;
 		var tag = new Object;
 		try {
-			str.replace(/.*(?:\r\n|\n|\r|.$)/g, function(s, l) {
+			str.replace(/.*(?:\r\n|[\r\n]|.$)/g, function(s, l) {
 				if(i++ == lineNumber) {
 					result = l;
 					throw tag;
@@ -116,7 +116,7 @@ Utils.objectExtend(StrValue.prototype, {
 	},
 	lineLengthIncludeCR: function lineLengthIncludeCR(index) {
 		var str = this._value;
-		var matched = /\r?\n|\r|$/.exec(str.slice(index));
+		var matched = /\r\n|[\r\n]|$/.exec(str.slice(index));
 		return matched.index + matched[0].length;
 	}
 });

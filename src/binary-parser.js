@@ -15,7 +15,7 @@ function BinaryParser(data, index, length) {
 }
 
 with({p: BinaryParser}) {
-	p.CheckBufferError = function CheckBufferError(message) { this.message = message; }
+	p.CheckBufferError = function CheckBufferError(message) { this.message = message; };
 	p.CheckBufferError.prototype = new Error;
 	p.CheckBufferError.prototype.name = 'BinaryParser.CheckBufferError';
 	

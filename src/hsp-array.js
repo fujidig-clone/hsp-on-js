@@ -10,7 +10,7 @@ HSPArray.prototype = {
 		this.values[offset] = rhs.toValue();
 	},
 	expand: function expand(indices) {
-		if(indices.length > 4) { 
+		if(indices.length > 4) {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
 		if(this.getOffset(indices) != null) return false;
@@ -94,11 +94,11 @@ HSPArray.prototype = {
 	getL3: function getL3() { return this.l3; },
 	getbyte: function getbyte(offset, bytesOffset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
-		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません"); 
+		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません");
 	},
 	setbyte: function setbyte(offset, bytesOffset, val) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
-		                   VarTypeNames[this.getType()]+" 型はメモリ書き込みに対応していません"); 
+		                   VarTypeNames[this.getType()]+" 型はメモリ書き込みに対応していません");
 	},
 	getbytes: function getbytes(offset, bytesOffset, length) {
 		var result = "";
@@ -114,11 +114,11 @@ HSPArray.prototype = {
 	},
 	getByteSize: function getByteSize(offset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
-		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません"); 
+		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません");
 	},
 	expandByteSize: function expandByteSize(offset, size) {
 		throw new HSPError(ErrorCode.TYPE_MISMATCH,
-		                   VarTypeNames[this.getType()]+" 型はメモリ領域の拡張に対応していません"); 
+		                   VarTypeNames[this.getType()]+" 型はメモリ領域の拡張に対応していません");
 	},
 	ref: function ref(offset) {
 		return new Reference(this, offset);
@@ -143,7 +143,7 @@ HSPArray.lengthToIndices = function lengthToIndices(l0, l1, l2, l3) {
 		}
 	}
 	return indices;
-}
+};
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.HSPArray = HSPArray;

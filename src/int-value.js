@@ -16,7 +16,7 @@ IntValue.prototype = new Value;
 			return cache[value+128];
 		}
 		return new IntValue(value);
-	}
+	};
 })();
 
 Utils.objectExtend(IntValue.prototype, {

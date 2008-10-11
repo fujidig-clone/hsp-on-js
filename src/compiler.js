@@ -240,7 +240,7 @@ Compiler.prototype = {
 				token = this.ax.tokens[this.tokensPos];
 				if(token && token.ex2) break;
 			}
-		}	
+		}
 	},
 	compileOperator: function compileOperator(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
