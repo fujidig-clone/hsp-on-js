@@ -58,6 +58,9 @@ Reference.prototype = {
 	expandByteSize: function expandByteSize(offset, size) {
 		return this.value.expandByteSize(this.base + offset, size);
 	},
+	bufferAt: function bufferAt(offset) {
+		return this.value.bufferAt(offset);
+	},
 	ref: function ref(offset) {
 		if(offset == 0) {
 			return this;

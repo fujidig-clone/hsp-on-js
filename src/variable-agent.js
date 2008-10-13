@@ -68,47 +68,39 @@ VariableAgent.prototype = {
 		return this.variable.assign(this.indices, rhs);
 	},
 	toValue: function toValue() {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.at(offset);
+		return this.variable.at(this.getOffset());
 	},
 	isUsing: function isUsing() {
 		return this.toValue().isUsing();
 	},
 	getbyte: function getbyte(bytesOffset) {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.getbyte(offset, bytesOffset);
+		return this.variable.getbyte(this.getOffset(), bytesOffset);
 	},
 	setbyte: function setbyte(bytesOffset, val) {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.setbyte(offset, bytesOffset, val);
+		return this.variable.setbyte(this.getOffset(), bytesOffset, val);
 	},
 	getbytes: function getbytes(bytesOffset, length) {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.getbytes(offset, bytesOffset, length);
+		return this.variable.getbytes(this.getOffset(), bytesOffset, length);
 	},
 	setbytes: function setbytes(bytesOffset, buf) {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.setbytes(offset, bytesOffset, buf);
+		return this.variable.setbytes(this.getOffset(), bytesOffset, buf);
 	},
 	getByteSize: function getByteSize() {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.getByteSize(offset);
+		return this.variable.getByteSize(this.getOffset());
 	},
 	expandByteSize: function expandByteSize(size) {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.expandByteSize(offset, size);
+		return this.variable.expandByteSize(this.getOffset(), size);
 	},
 	ref: function ref() {
+		return this.variable.ref(this.getOffset());
+	},
+	getBuffer: function getBuffer() {
+		return this.variable.bufferAt(this.getOffset());
+	},
+	getOffset: function getOffset() {
 		var offset = this.variable.value.getOffset(this.indices);
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return this.variable.ref(offset);
+		return offset;
 	}
 };
 

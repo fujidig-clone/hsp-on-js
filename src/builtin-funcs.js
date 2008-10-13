@@ -355,9 +355,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		if(v.getType() != VarType.STR) {
 			v.assign(StrValue.EMPTY_STR);
 		}
-		var offset = v.variable.value.getOffset(v.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		var buf = v.variable.value.values[offset];
+		var buf = v.getBuffer();
 		this.noteStack.push(buf);
 	},
 	0x23: function noteadd(line, lineNumber, overwrite) {

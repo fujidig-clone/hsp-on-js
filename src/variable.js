@@ -92,6 +92,9 @@ Variable.prototype = {
 	expandByteSize: function expandByteSize(offset, size) {
 		return this.value.expandByteSize(offset, size);
 	},
+	bufferAt: function bufferAt(offset) {
+		return this.value.bufferAt(offset);
+	},
 	ref: function ref(offset) {
 		return this.value.ref(offset);
 	}
