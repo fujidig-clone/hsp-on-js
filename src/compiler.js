@@ -6,6 +6,7 @@ function Compiler(ax) {
 		this.labels[i] = new Label;
 	}
 	this.ifLabels = {};
+	this.userDefFuncs = [];
 }
 
 function CompileError(message) {
@@ -37,7 +38,7 @@ Compiler.prototype = {
 			}
 			switch(token.type) {
 			case Token.Type.VAR:
-			//case Token.Type.STRUCT:
+			case Token.Type.STRUCT:
 				this.compileAssignment(sequence);
 				break;
 			case Token.Type.CMPCMD:
@@ -46,9 +47,11 @@ Compiler.prototype = {
 			case Token.Type.PROGCMD:
 				this.compileProgramCommand(sequence);
 				break;
+			case Token.Type.MODCMD:
+				this.compileUserDefCommand(sequence);
+				break;
 			case Token.Type.INTCMD:
 			case Token.Type.EXTCMD:
-			case Token.Type.MODCMD:
 			case Token.Type.DLLFUNC:
 			case Token.Type.DLLCTRL:
 				this.compileCommand(sequence);
@@ -63,8 +66,22 @@ Compiler.prototype = {
 		token || (token = this.ax.tokens[this.tokensPos]);
 		sequence.push(new Instruction(code, opts, token.fileName, token.lineNo));
 	},
+	getFinfoIdByMinfoId: function getFinfoIdByMinfoId(minfoId) {
+		var funcsInfo = this.ax.funcsInfo;
+		for(var i = 0; i < funcsInfo.length; i ++) {
+			var funcInfo = funcsInfo[i];
+			if(funcInfo.prmindex <= minfoId && minfoId < funcInfo.prmindex + funcInfo.prmmax) {
+				return i;
+			}
+		}
+		return null;
+	},
 	compileAssignment: function compileAssignment(sequence) {
-		this.compileVariable(sequence);
+		if(this.ax.tokens[this.tokensPos].type == Token.Type.STRUCT) {		
+			this.compileProxyVariable(sequence);
+		} else {
+			this.compileVariable(sequence);
+		}
 		var token = this.ax.tokens[this.tokensPos++];
 		if(!(token && token.type == Token.Type.MARK)) {
 			throw new CompileError();
@@ -217,6 +234,9 @@ Compiler.prototype = {
 					                 [new IntValue(token.val)]);
 					this.tokensPos ++;
 					break;
+				case Token.Type.STRUCT:
+					this.compileStruct(sequence);
+					break;
 				case Token.Type.LABEL:
 					this.pushNewInsn(sequence, Instruction.Code.PUSH,
 					                 [this.labels[token.code]]);
@@ -229,6 +249,8 @@ Compiler.prototype = {
 					this.compileSysvar(sequence);
 					break;
 				case Token.Type.MODCMD:
+					this.compileUserdefFuncall(sequence);
+					break;
 				case Token.Type.INTFUNC:
 				case Token.Type.DLLFUNC:
 				case Token.Type.DLLCTRL:
@@ -258,6 +280,13 @@ Compiler.prototype = {
 			this.compileSysvar(sequence);
 		}
 	},
+	compileStruct: function compileStruct(sequence) {
+		var token = this.ax.tokens[this.tokensPos];
+		var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+		this.pushNewInsn(sequence, Instruction.Code.GETARG,
+		                 [token.code - funcInfo.prmindex]);
+		this.tokensPos ++;
+	},
 	compileSysvar: function compileSysvar(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_FUNC,
@@ -276,8 +305,36 @@ Compiler.prototype = {
 			throw new CompileError();
 		}
 	},
+	compileUserdefFuncall: function compileUserdefFuncall(sequence) {
+		var token = this.ax.tokens[this.tokensPos++];
+		var argc = this.compileParenAndParameters(sequence);
+		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_FUNC,
+		                 [this.getUserDefFunc(token.code), argc], token);
+	},
+	compileUserDefCommand: function compileUserDefCommand(sequence) {
+		var token = this.ax.tokens[this.tokensPos++];
+		var argc = this.compileParameters(sequence);
+		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_CMD,
+		                 [this.getUserDefFunc(token.code), argc], token);
+	},
+	getUserDefFunc: function getUserDefFunc(finfoId) {
+		var func = this.userDefFuncs[finfoId];
+		if(func) return func;
+		var funcInfo = this.ax.funcsInfo[finfoId];
+		var isCType = funcInfo.index == -2; // STRUCTDAT_INDEX_CFUNC
+		var paramTypes = [];
+		for(var i = 0; i < funcInfo.prmmax; i ++) {
+			paramTypes[i] = this.ax.prmsInfo[funcInfo.prmindex + i].mptype;
+		}
+		return this.userDefFuncs[finfoId] = new UserDefFunc(isCType, funcInfo.name, this.labels[funcInfo.otindex], paramTypes);
+	},
 	compileFuncall: function compileFuncall(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
+		var argc = this.compileParenAndParameters(sequence);
+		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_FUNC,
+		                 [token.type, token.code, argc], token);
+	},
+	compileParenAndParameters: function compileParenAndParameters(sequence) {
 		var paren_token = this.ax.tokens[this.tokensPos++];
 		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40)) {
 			throw new CompileError('関数名の後ろに開き括弧がありません。');
@@ -287,13 +344,39 @@ Compiler.prototype = {
 		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
 			throw new CompileError('関数パラメータの後ろに閉じ括弧がありません。');
 		}
-		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_FUNC,
-		                 [token.type, token.code, argc], token);
+		return argc;
 	},
 	compileVariable: function compileVariable(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
-		var paren_token = this.ax.tokens[this.tokensPos];
+		var argc = this.compileVariableSubscript(sequence);
+		this.pushNewInsn(sequence, Instruction.Code.PUSH_VAR,
+		                 [token.code, argc], token);
+	},
+	compileProxyVariable: function compileProxyVariable(sequence) {
+		var token = this.ax.tokens[this.tokensPos++];
+		var prmInfo = this.ax.prmsInfo[token.code];
+		var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+		switch(prmInfo.mptype) {
+		case MPType.LOCALVAR:
+		case MPType.ARRAYVAR:
+			var argc = this.compileVariableSubscript(sequence);
+			this.pushNewInsn(sequence, Instruction.Code.PUSH_ARG_VAR,
+				             [token.code - funcInfo.prmindex, argc], token);
+			break;
+		case MPType.SINGLEVAR:
+			this.pushNewInsn(sequence, Instruction.Code.GETARG,
+				             [token.code - funcInfo.prmindex], token);
+			if(this.ax.tokens[this.tokensPos].type == Token.Type.MARK && this.ax.tokens[this.tokensPos].code == 40) {
+				throw new CompileError('パラメータタイプ var の変数に添字を指定して代入しています');
+			}
+			break;
+		default:
+			throw new CompileError('変数でないパラメータに代入しています');
+		}
+	},
+	compileVariableSubscript: function compileVariableSubscript(sequence) {
 		var argc = 0;
+		var paren_token = this.ax.tokens[this.tokensPos];
 		if(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40) {
 			this.tokensPos ++;
 			argc = this.compileParameters(sequence);
@@ -305,8 +388,7 @@ Compiler.prototype = {
 				throw new CompileError('配列変数の添字の後ろに閉じ括弧がありません。');
 			}
 		}
-		this.pushNewInsn(sequence, Instruction.Code.PUSH_VAR,
-		                 [token.code, argc], token);
+		return argc;
 	}
 };
 

@@ -43,6 +43,8 @@ function AXData(data) {
 	this.hpidat = data.substr(this.pt_hpidat, this.max_hpi);
 	this.tokens = this.createTokens();
 	this.variableNames = this.createVariableNames();
+	this.funcsInfo = this.createFuncsInfo();
+	this.prmsInfo = this.createPrmsInfo();
 	
 	p = new BinaryParser(this.ot);
 	this.labels = [];
@@ -144,6 +146,44 @@ AXData.prototype = {
 		}
 		return variableNames;
 	},
+	createFuncsInfo: function createFuncsInfo() {
+		var funcsInfo = [];
+		var finfo = new BinaryParser(this.finfo);
+		while(!finfo.isEOS()) {
+			var index = finfo.readShort();
+			var subid = finfo.readShort();
+			var prmindex = finfo.readInt();
+			var prmmax = finfo.readInt();
+			var nameidx = finfo.readInt();
+			var size = finfo.readInt();
+			var otindex = finfo.readInt();
+			var funcflag = finfo.readInt();
+			var name = this.getDSStr(nameidx);
+			funcsInfo.push({index: index,
+			                subid: subid,
+			                prmindex: prmindex,
+			                prmmax: prmmax,
+			                nameidx: nameidx,
+			                size: size,
+			                otindex: otindex,
+			                funcflag: funcflag,
+			                name: name});
+		}
+		return funcsInfo;
+	},
+	createPrmsInfo: function createPrmsInfo() {
+		var prmsInfo = [];
+		var minfo = new BinaryParser(this.minfo);
+		while(!minfo.isEOS()) {
+			var mptype = minfo.readShort();
+			var subid = minfo.readShort();
+			var offset = minfo.readInt();
+			prmsInfo.push({mptype: mptype,
+			               subid: subid,
+			               offset: offset});
+		}
+		return prmsInfo;
+	},
 	getDSStr: function getDSStr(index) {
 		return Utils.getCStr(this.ds, index);
 	},
@@ -192,8 +232,39 @@ Token.Type = {
 	USERDEF:   18
 };
 
+var MPType = {
+	NONE:          0,
+	VAR:           1,
+	STRING:        2,
+	DNUM:          3,
+	INUM:          4,
+	STRUCT:        5,
+	LABEL:         7,
+	LOCALVAR:     -1,
+	ARRAYVAR:     -2,
+	SINGLEVAR:    -3,
+	FLOAT:        -4,
+	STRUCTTAG:    -5,
+	LOCALSTRING:  -6,
+	MODULEVAR:    -7,
+	PPVAL:        -8,
+	PBMSCR:       -9,
+	PVARPTR:     -10,
+	IMODULEVAR:  -11,
+	IOBJECTVAR:  -12,
+	LOCALWSTR:   -13,
+	FLEXSPTR:    -14,
+	FLEXWPTR:    -15,
+	PTR_REFSTR:  -16,
+	PTR_EXINFO:  -17,
+	PTR_DPMINFO: -18,
+	NULLPTR:     -19,
+	TMODULEVAR:  -20
+};
+
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.AXData = AXData;
 	HSPonJS.Token = Token;
+	HSPonJS.MPType = MPType;
 }
 

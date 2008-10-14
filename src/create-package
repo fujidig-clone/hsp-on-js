@@ -21,6 +21,7 @@ vcrandom.js
 exception.js
 axdata.js
 instruction.js
+user-def-func.js
 builtin-func-names.js
 builtin-funcs.js
 vartype.js

@@ -37,7 +37,11 @@ Instruction.CodeNames = [
 	'SETVAR',
 	'EXPANDARRAY',
 	'CALL_BUILTIN_CMD',
-	'CALL_BUILTIN_FUNC'
+	'CALL_BUILTIN_FUNC',
+	'CALL_USERDEF_CMD',
+	'CALL_USERDEF_FUNC',
+	'GETARG',
+	'PUSH_ARG_VAR'
 ];
 
 Instruction.Code = {};
