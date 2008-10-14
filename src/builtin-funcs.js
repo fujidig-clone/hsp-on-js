@@ -12,8 +12,10 @@ function LoopData(cnt, end, pc) {
 	this.pc = pc;
 }
 
-function Frame(pc) {
+function Frame(pc, userDefFunc, args) {
 	this.pc = pc;
+	this.userDefFunc = userDefFunc;
+	this.args = args;
 }
 
 BuiltinFuncs[Token.Type.PROGCMD] = {

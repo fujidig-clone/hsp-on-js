@@ -78,7 +78,9 @@ Compiler.prototype = {
 	},
 	compileAssignment: function compileAssignment(sequence) {
 		if(this.ax.tokens[this.tokensPos].type == Token.Type.STRUCT) {		
-			this.compileProxyVariable(sequence);
+			if(this.compileProxyVariable(sequence)) {
+				throw new CompileError('変数でないパラメータに代入しています');
+			}
 		} else {
 			this.compileVariable(sequence);
 		}
@@ -249,7 +251,7 @@ Compiler.prototype = {
 					this.compileSysvar(sequence);
 					break;
 				case Token.Type.MODCMD:
-					this.compileUserdefFuncall(sequence);
+					this.compileUserDefFuncall(sequence);
 					break;
 				case Token.Type.INTFUNC:
 				case Token.Type.DLLFUNC:
@@ -282,10 +284,12 @@ Compiler.prototype = {
 	},
 	compileStruct: function compileStruct(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
-		var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
-		this.pushNewInsn(sequence, Instruction.Code.GETARG,
-		                 [token.code - funcInfo.prmindex]);
-		this.tokensPos ++;
+		var prmInfo = this.ax.prmsInfo[token.code];
+		if(this.compileProxyVariable(sequence)) {
+			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+			this.pushNewInsn(sequence, Instruction.Code.GETARG,
+				             [token.code - funcInfo.prmindex], token);
+		}
 	},
 	compileSysvar: function compileSysvar(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
@@ -305,7 +309,7 @@ Compiler.prototype = {
 			throw new CompileError();
 		}
 	},
-	compileUserdefFuncall: function compileUserdefFuncall(sequence) {
+	compileUserDefFuncall: function compileUserDefFuncall(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var argc = this.compileParenAndParameters(sequence);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_FUNC,
@@ -362,16 +366,16 @@ Compiler.prototype = {
 			var argc = this.compileVariableSubscript(sequence);
 			this.pushNewInsn(sequence, Instruction.Code.PUSH_ARG_VAR,
 				             [token.code - funcInfo.prmindex, argc], token);
-			break;
+			return false;
 		case MPType.SINGLEVAR:
 			this.pushNewInsn(sequence, Instruction.Code.GETARG,
 				             [token.code - funcInfo.prmindex], token);
 			if(this.ax.tokens[this.tokensPos].type == Token.Type.MARK && this.ax.tokens[this.tokensPos].code == 40) {
 				throw new CompileError('パラメータタイプ var の変数に添字を指定して代入しています');
 			}
-			break;
+			return false;
 		default:
-			throw new CompileError('変数でないパラメータに代入しています');
+			return true;
 		}
 	},
 	compileVariableSubscript: function compileVariableSubscript(sequence) {

@@ -57,13 +57,7 @@ Evaluator.prototype = {
 		case Instruction.Code.PUSH_VAR:
 			var varId = insn.opts[0];
 			var argc = insn.opts[1];
-			var indices = Utils.aryPopN(this.stack, argc);
-			for(var i = 0; i < argc; i ++) {
-				if(indices[i].getType() != VarType.INT) {
-					throw new HSPError(ErrorCode.TYPE_MISMATCH);
-				}
-				indices[i] = indices[i].toValue()._value;
-			}
+			var indices = this.popIndices(argc);
 			this.stack.push(new VariableAgent(this.variables[varId], indices));
 			break;
 		case Instruction.Code.POP:
@@ -175,6 +169,23 @@ Evaluator.prototype = {
 		case Instruction.Code.CALL_BUILTIN_FUNC:
 			this.stack.push(this.callBuiltinFunc(insn));
 			break;
+		case Instruction.Code.CALL_USERDEF_CMD:
+			var userDefFunc = insn.opts[0];
+			var argc = insn.opts[1];
+			var args = Utils.aryPopN(this.stack, argc);
+			this.callUserDefFunc(userDefFunc, args);
+			break;
+		case Instruction.Code.GETARG:
+			var argNum = insn.opts[0];
+			this.stack.push(this.frameStack[this.frameStack.length - 1].args[argNum]);
+			break;
+		case Instruction.Code.PUSH_ARG_VAR:
+			var argNum = insn.opts[0];
+			var argc = insn.opts[1];
+			var variable = this.frameStack[this.frameStack.length - 1].args[argNum];
+			var indices = this.popIndices(argc);
+			this.stack.push(new VariableAgent(variable, indices));
+			break;
 		default:
 			throw new Error("未対応の命令コード: "+insn.code);
 		}
@@ -196,12 +207,67 @@ Evaluator.prototype = {
 		var args = Utils.aryPopN(this.stack, argc);
 		return func.apply(this, args);
 	},
+	callUserDefFunc: function callUserDefFunc(userDefFunc, origArgs) {
+		var args = [];
+		var origArgsCount = 0;
+		for(var i = 0; i < userDefFunc.paramTypes.length; i ++) {
+			var mptype = userDefFunc.paramTypes[i];
+			var arg = origArgs[origArgsCount];
+			switch(mptype) {
+			case MPType.DNUM:
+				this.scanArg(arg, 'n', false);
+				args.push(arg.toDoubleValue());
+				origArgsCount ++;
+				break;
+			case MPType.INUM:
+				this.scanArg(arg, 'n', true);
+				args.push(arg ? arg.toIntValue() : new IntValue(0));
+				origArgsCount ++;
+				break;
+			case MPType.LOCALVAR:
+				args.push(new Variable);
+				break;
+			case MPType.ARRAYVAR:
+				this.scanArg(arg, 'v', false);
+				args.push(arg.variable);
+				origArgsCount ++;
+				break;
+			case MPType.SINGLEVAR:
+				this.scanArg(arg, 'v', false);
+				args.push(arg);
+				origArgsCount ++;
+				break;
+			case MPType.LOCALSTRING:
+				this.scanArg(arg, 's', false);
+				args.push(arg.toStrValue());
+				origArgsCount ++;
+				break;
+			default:
+				throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
+			}
+		}
+		if(this.frameStack.length >= 256) {
+			throw new HSPError(ErrorCode.STACK_OVERFLOW);
+		}
+		this.frameStack.push(new Frame(this.pc + 1, userDefFunc, args));
+		this.pc = userDefFunc.label.pos - 1;
+	},
 	subroutineJump: function subroutineJump(label) {
 		if(this.frameStack.length >= 256) {
 			throw new HSPError(ErrorCode.STACK_OVERFLOW);
 		}
-		this.frameStack.push(new Frame(this.pc + 1));
+		this.frameStack.push(new Frame(this.pc + 1, null, null));
 		this.pc = label.pos - 1;
+	},
+	popIndices: function popIndices(argc) {
+		var indices = Utils.aryPopN(this.stack, argc);
+		for(var i = 0; i < argc; i ++) {
+			if(indices[i].getType() != VarType.INT) {
+				throw new HSPError(ErrorCode.TYPE_MISMATCH);
+			}
+			indices[i] = indices[i].toValue()._value;
+		}
+		return indices;
 	},
 	getNote: function getNote() {
 		if(this.noteStack.length == 0) {

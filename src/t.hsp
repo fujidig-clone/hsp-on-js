@@ -1,5 +1,11 @@
-a = "abc"
-dup b, a
-notesel b
-noteadd "foo"
-mes "<"+a+">"
+#module
+#deffunc foo array a
+	a.0 = a.1
+	return
+#global
+
+a = 111, 222
+foo a
+foreach a
+	mes "a."+cnt+" = "+a.cnt
+loop
