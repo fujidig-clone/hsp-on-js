@@ -33,7 +33,9 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 			throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);
 		}
 		var frame = this.frameStack.pop();
-		if(val) {
+		if(frame.userDefFunc && frame.userDefFunc.isCType) {
+			this.stack.push(val);
+		} else if(val) {
 			switch(val.getType()) {
 			case VarType.STR:
 				this.refstr.assign(0, val.toStrValue());

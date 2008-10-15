@@ -170,6 +170,7 @@ Evaluator.prototype = {
 			this.stack.push(this.callBuiltinFunc(insn));
 			break;
 		case Instruction.Code.CALL_USERDEF_CMD:
+		case Instruction.Code.CALL_USERDEF_FUNC:
 			var userDefFunc = insn.opts[0];
 			var argc = insn.opts[1];
 			var args = Utils.aryPopN(this.stack, argc);

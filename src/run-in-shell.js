@@ -23,10 +23,11 @@ function main(){
 	var compiler = new Compiler(axdata);
 	var sequence = compiler.compile();
 
-/*	sequence.forEach(function(insn){
+//*
+sequence.forEach(function(insn){
 		print(insn);
 	});
-*/
+//*/
 
 	var evaluator = new Evaluator(axdata, sequence);
 	evaluator.evaluate();
