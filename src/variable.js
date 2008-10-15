@@ -4,9 +4,9 @@ function Variable() {
 
 Variable.prototype = {
 	assign: function assign(indices, rhs) {
+		this.value.expand(indices);
 		if(this.getType() != rhs.getType()) {
-			// オフィシャル HSP だと添字が 0 のときも許容している
-			if(indices.length != 0) {
+			if(this.value.getOffset(indices) != 0) {
 				throw new HSPError(ErrorCode.INVALID_ARRAYSTORE,
 				VarTypeNames[this.getType()]+' 型の配列変数に '+VarTypeNames[rhs.getType()]+' 型の値を代入しました');
 			}
@@ -26,8 +26,8 @@ Variable.prototype = {
 			default:
 				throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[rhs.getType()]+' 型の値は変数に代入できません');
 			}
+			this.value.expand(indices);
 		}
-		this.value.expand(indices);
 		var offset = this.value.getOffset(indices);
 		return this.value.assign(offset, rhs);
 	},
