@@ -122,9 +122,17 @@ var Formatter = {
 				str = '0.' + Utils.strTimes('0', prec - 1) + (up ? '1' : '0');
 			}
 		} else {
-			str = val.toExponential(Math.min(exponent + prec, 16));
+			while(true) {
+				str = val.toExponential(Math.min(exponent + prec, 16));
+				var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
+				var mantissa = matched[1], newExponent = parseInt(matched[2]);
+				if(exponent != newExponent) {
+					exponent = newExponent;
+					continue;
+				}
+				break;
+			}
 			print(uneval(str));
-			var mantissa = /^(\d(?:\.\d+)?)e[+-]\d+$/.exec(str)[1];
 			var matched = /\.(\d+)e/.exec(str);
 			if(matched && matched[1].length < exponent + prec) {
 				mantissa += Utils.strTimes("0", exponent + prec - matched[1].length);
