@@ -89,6 +89,9 @@ var Formatter = {
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
 	},
+	convertMemoryAddress: function convertMemoryAddress(val, flags, width, prec) {
+		return Formatter.convertInt(val, {'-': flags['-']}, width, null, false, 16, '');
+	},
 	convertExp: function convertExp(val, flags, width, prec) {
 		if(prec == null) prec = 6;
 		var isNegative = val < 0;
@@ -244,6 +247,10 @@ Formatter.ConvertTable = {
 	'o': function(val, flags, width, prec) {
 		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, false, 8, '0');
+	},
+	'p': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
+		return Formatter.convertMemoryAddress(val, flags, width, prec);
 	},
 	's': function(val, flags, width, prec) {
 		var str = val.toStrValue()._value;
