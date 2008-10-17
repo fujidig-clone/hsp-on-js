@@ -93,12 +93,21 @@ var Formatter = {
 		if(prec == null) prec = 6;
 		var isNegative = val < 0;
 		val = Math.abs(val);
-		var str = val.toExponential(Math.min(prec, 16));
-		var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
-		var mantissa = matched[1], exponent = matched[2];
-		matched = /\.(\d+)e/.exec(str);
-		if(matched && matched[1].length < prec) {
-			mantissa += Utils.strTimes("0", prec - matched[1].length);
+		var mantissa, exponent;
+		if(isNaN(val)) {
+			mantissa = Formatter.convertNaN(prec);
+			exponent = 0;
+		} else if(val == Infinity) {
+			mantissa = Formatter.convertInf(prec);
+			exponent = 0;
+		} else {
+			var str = val.toExponential(Math.min(prec, 16));
+			var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
+			mantissa = matched[1], exponent = parseInt(matched[2]);
+			matched = /\.(\d+)e/.exec(str);
+			if(matched && matched[1].length < prec) {
+				mantissa += Utils.strTimes("0", prec - matched[1].length);
+			}
 		}
 		str = mantissa + "e" + Formatter.convertInt(exponent, {'+': true}, 0, 3, true, 10, '');
 		var prefix = Formatter.signPrefix(isNegative, flags);
@@ -112,8 +121,19 @@ var Formatter = {
 		if(prec == null) prec = 6;
 		var isNegative = val < 0;
 		val = Math.abs(val);
+		var str = Formatter.convertFloatSub(val, prec);
+		var prefix = Formatter.signPrefix(isNegative, flags);
+		if(flags['0'] && !flags['-']) {
+			str = Formatter.addZeros(str, width - prefix.length);
+		}
+		str = prefix + str;
+		return Formatter.addSpaces(str, flags, width);
+	},
+	convertFloatSub: function convertFloatSub(val, prec) {
+		if(isNaN(val)) return Formatter.convertNaN(prec);
+		if(val == Infinity) return Formatter.convertInf(prec);
 		var exponent = val != 0 ? Math.floor(Math.log(val) / Math.LN10) : 0;
-		var str = '';
+		var str;
 		if(exponent < 0 && -exponent > prec) {
 			var up = -exponent-1 == prec && val * Math.pow(10, prec) >= 0.5;
 			if(prec == 0) {
@@ -121,34 +141,45 @@ var Formatter = {
 			} else {
 				str = '0.' + Utils.strTimes('0', prec - 1) + (up ? '1' : '0');
 			}
-		} else {
-			while(true) {
-				str = val.toExponential(Math.min(exponent + prec, 16));
-				var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
-				var mantissa = matched[1], newExponent = parseInt(matched[2]);
-				if(exponent != newExponent) {
-					exponent = newExponent;
-					continue;
-				}
-				break;
-			}
-			var matched = /\.(\d+)e/.exec(str);
-			if(matched && matched[1].length < exponent + prec) {
-				mantissa += Utils.strTimes("0", exponent + prec - matched[1].length);
-			}
-			str = mantissa;
-			if(exponent > 0) {
-				str = str.charAt(0) + str.substr(2, exponent) + (prec != 0 ? '.' + str.slice(2 + exponent) : '');
-			} else if(exponent < 0) {
-				str = '0.' + Utils.strTimes('0', -exponent-1) + str.charAt(0) + str.slice(2);
-			}
+			return str;
 		}
-		var prefix = Formatter.signPrefix(isNegative, flags);
-		if(flags['0'] && !flags['-']) {
-			str = Formatter.addZeros(str, width - prefix.length);
+		while(true) {
+			str = val.toExponential(Math.min(exponent + prec, 16));
+			var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
+			var mantissa = matched[1], newExponent = parseInt(matched[2]);
+			if(exponent == newExponent) break;
+			exponent = newExponent;
 		}
-		str = prefix + str;
-		return Formatter.addSpaces(str, flags, width);
+		var matched = /\.(\d+)e/.exec(str);
+		if(matched && matched[1].length < exponent + prec) {
+			mantissa += Utils.strTimes("0", exponent + prec - matched[1].length);
+		}
+		str = mantissa;
+		if(exponent > 0) {
+			str = str.charAt(0) + str.substr(2, exponent) + (prec != 0 ? '.' + str.slice(2 + exponent) : '');
+		} else if(exponent < 0) {
+			str = '0.' + Utils.strTimes('0', -exponent-1) + str.charAt(0) + str.slice(2);
+		}
+		return str;
+	},
+	convertNaN: function convertNaN(prec) {
+		switch(prec) {
+		case 0: return '1';
+		case 1: return '1.$';
+		case 2: return '1.#R';
+		case 3: return '1.#QO';
+		case 4: return '1.#QNB';
+		default:return '1.#QNAN' + Utils.strTimes('0', prec - 5);
+		}
+	},
+	convertInf: function convertInf(prec) {
+		switch(prec) {
+		case 0: return '1';
+		case 1: return '1.$';
+		case 2: return '1.#J';
+		case 3: return '1.#IO';
+		default:return '1.#INF' + Utils.strTimes('0', prec - 4);
+		}
 	}
 };
 
