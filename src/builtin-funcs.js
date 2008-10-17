@@ -600,6 +600,11 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		}
 		return new StrValue(str.substr(index, length));
 	},
+	0x103: function strf(format) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		this.scanArgs(arguments, 's.*');
+		return Formatter.sprintf(this, format, args);
+	},
 	0x180: function sin(val) {
 		this.scanArgs(arguments, 'n');
 		return new DoubleValue(Math.sin(val.toDoubleValue()._value));
