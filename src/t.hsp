@@ -13,3 +13,7 @@ mes strf("<%20.3E>\n<%020.3E>\n<%+020.3E>\n<%-+020.3E>", 0, 0, 0, 0)
 #include "hspmath.as"
 mes strf("<%.50e>", DBL_MAX)
 mes strf("<%.50e>", DBL_MIN)
+mes strf("<%f>", 0)
+mes strf("<%f>", DBL_MAX)
+mes strf("<%20.3f>\n<%020.3f>\n<%+020.3f>\n<%-+020.3f>", 0, 0, 0, 0)
+

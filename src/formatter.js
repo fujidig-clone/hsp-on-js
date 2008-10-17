@@ -132,7 +132,6 @@ var Formatter = {
 				}
 				break;
 			}
-			print(uneval(str));
 			var matched = /\.(\d+)e/.exec(str);
 			if(matched && matched[1].length < exponent + prec) {
 				mantissa += Utils.strTimes("0", exponent + prec - matched[1].length);
@@ -144,7 +143,12 @@ var Formatter = {
 				str = '0.' + Utils.strTimes('0', -exponent-1) + str.charAt(0) + str.slice(2);
 			}
 		}
-		print(uneval({val: val, exponent: exponent, prec: prec, str: str}));
+		var prefix = Formatter.signPrefix(isNegative, flags);
+		if(flags['0'] && !flags['-']) {
+			str = Formatter.addZeros(str, width - prefix.length);
+		}
+		str = prefix + str;
+		return Formatter.addSpaces(str, flags, width);
 	}
 };
 
@@ -171,6 +175,10 @@ Formatter.ConvertTable = {
 	'e': function(val, flags, width, prec) {
 		val = val.toDoubleValue()._value;
 		return Formatter.convertExp(val, flags, width, prec);
+	},
+	'f': function(val, flags, width, prec) {
+		val = val.toDoubleValue()._value;
+		return Formatter.convertFloat(val, flags, width, prec);
 	},
 	'i': function(val, flags, width, prec) {
 		val = val.toIntValue()._value;
