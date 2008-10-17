@@ -43,7 +43,7 @@ var Formatter = {
 		if(argsIndex < args.length) {
 			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
 		}
-		return new StrValue(result);
+		return new StrValue(Utils.getCStr(result));
 	},
 	addSpaces: function addSpaces(str, flags, width) {
 		var spaces = Utils.strTimes(' ', Math.max(width - str.length, 0));
@@ -58,8 +58,18 @@ var Formatter = {
 		var zeros = Utils.strTimes('0', Math.max(length, 0));
 		return zeros + str;
 	},
+	signPrefix: function signPrefix(isNegative, flags) {
+		if(isNegative) {
+			return '-';
+		} else if(flags['+']) {
+			return '+';
+		} else if(flags[' ']) {
+			return ' ';
+		} else {
+			return '';
+		}
+	},
 	convertInt: function convertInt(val, flags, width, prec, signed, radix, pre) {
-		val = val.toIntValue()._value;
 		if(!signed) {
 			if(val & 0x80000000) val += 0x100000000;
 		}
@@ -69,13 +79,7 @@ var Formatter = {
 		var prefix = '';
 		if(flags['#'] && val != 0) prefix = pre;
 		if(signed) {
-			if(isNegative) {
-				prefix = '-';
-			} else if(flags['+']) {
-				prefix = '+';
-			} else if(flags[' ']) {
-				prefix = ' ';
-			}
+			prefix = Formatter.signPrefix(isNegative, flags);
 		}
 		if(prec != null) {
 			str = Formatter.addZeros(str, prec);
@@ -84,11 +88,33 @@ var Formatter = {
 		}
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
+	},
+	convertExp: function convertExp(val, flags, width, prec) {
+		if(prec == null) prec = 6;
+		var str = val.toExponential(Math.min(prec, 16));
+		var matched = /^(-?)(\d(?:.\d+)?)e([+-]\d+)$/.exec(str);
+		var isNegative = matched[1].length != 0, mantissa = matched[2], exponent = matched[3];
+		matched = /\.(\d+)e/.exec(str);
+		if(matched && matched[1].length < prec) {
+			mantissa += Utils.strTimes("0", prec - matched[1].length);
+		}
+		str = mantissa + "e" + Formatter.convertInt(exponent, {'+': true}, 0, 3, true, 10, '');
+		var prefix = Formatter.signPrefix(isNegative, flags);
+		if(flags['0'] && !flags['-']) {
+			str = Formatter.addZeros(str, width - prefix.length);
+		}
+		str = prefix + str;
+		return Formatter.addSpaces(str, flags, width);
 	}
 };
 
 Formatter.ConvertTable = {
+	'E': function(val, flags, width, prec) {
+		val = val.toDoubleValue()._value;
+		return Formatter.convertExp(val, flags, width, prec).toUpperCase();
+	},
 	'X': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, false, 16, '0X').toUpperCase();
 	},
 	'c': function(val, flags, width, prec) {
@@ -99,12 +125,19 @@ Formatter.ConvertTable = {
 		return Formatter.addSpaces(str, flags, width);
 	},
 	'd': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, true, 10, '');
 	},
+	'e': function(val, flags, width, prec) {
+		val = val.toDoubleValue()._value;
+		return Formatter.convertExp(val, flags, width, prec);
+	},
 	'i': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, true, 10, '');
 	},
 	'o': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, false, 8, '0');
 	},
 	's': function(val, flags, width, prec) {
@@ -118,9 +151,11 @@ Formatter.ConvertTable = {
 		return Formatter.addSpaces(str, flags, width);
 	},
 	'u': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, false, 10, '');
 	},
 	'x': function(val, flags, width, prec) {
+		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, false, 16, '0x');
 	}
 };
