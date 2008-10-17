@@ -124,8 +124,7 @@ var Formatter = {
 		// 文字列上で小数点を動かして、 mantissa を 10^exponent 倍にする
 		str = mantissa;
 		if(exponent > 0) {
-			str = str.charAt(0) + str.substr(2, exponent);
-			if(prec != 0) str += '.' + str.slice(2 + exponent);
+			str = str.charAt(0) + str.substr(2, exponent) + (prec != 0 ? '.' + str.slice(2 + exponent) : '');
 		} else if(exponent < 0) {
 			str = '0.' + Utils.strTimes('0', -exponent-1) + str.charAt(0) + str.slice(2);
 		}
