@@ -91,9 +91,11 @@ var Formatter = {
 	},
 	convertExp: function convertExp(val, flags, width, prec) {
 		if(prec == null) prec = 6;
+		var isNegative = val < 0;
+		val = Math.abs(val);
 		var str = val.toExponential(Math.min(prec, 16));
-		var matched = /^(-?)(\d(?:.\d+)?)e([+-]\d+)$/.exec(str);
-		var isNegative = matched[1].length != 0, mantissa = matched[2], exponent = matched[3];
+		var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
+		var mantissa = matched[1], exponent = matched[2];
 		matched = /\.(\d+)e/.exec(str);
 		if(matched && matched[1].length < prec) {
 			mantissa += Utils.strTimes("0", prec - matched[1].length);
@@ -105,6 +107,29 @@ var Formatter = {
 		}
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
+	},
+	convertFloat: function convertFloat(val, flags, width, prec) {
+		if(prec == null) prec = 6;
+		var isNegative = val < 0;
+		val = Math.abs(val);
+		var exponent = val != 0 ? Math.floor(Math.log(val) / Math.LN10) : 0;
+		print(uneval({exponent: exponent, prec: prec}));
+		var str = val.toExponential(Math.max(Math.min(exponent + prec, 16), 0));
+		print(uneval(str));
+		var mantissa = /^(\d(?:\.\d+)?)e[+-]\d+$/.exec(str)[1];
+		var matched = /\.(\d+)e/.exec(str);
+		if(matched && matched[1].length < exponent + prec) {
+			mantissa += Utils.strTimes("0", exponent + prec - matched[1].length);
+		}
+		// 文字列上で小数点を動かして、 mantissa を 10^exponent 倍にする
+		str = mantissa;
+		if(exponent > 0) {
+			str = str.charAt(0) + str.substr(2, exponent);
+			if(prec != 0) str += '.' + str.slice(2 + exponent);
+		} else if(exponent < 0) {
+			str = '0.' + Utils.strTimes('0', -exponent-1) + str.charAt(0) + str.slice(2);
+		}
+		print(uneval([exponent, mantissa, str]));
 	}
 };
 
