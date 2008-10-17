@@ -117,6 +117,24 @@ var Formatter = {
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
 	},
+	convertFloatG: function convertFloatG(val, flags, width, prec) {
+		if(prec == null) prec = 6;
+		var str;
+		var isNegative = val < 0;
+		val = Math.abs(val);
+		if(isNaN(val) || val == Infinity || (1e-4 <= val && val < Math.pow(10, prec))) {
+			str = Formatter.convertFloat(val, {}, 0, Math.max(prec - 1, 0));
+		} else {
+			str = Formatter.convertExp(val, {}, 0, Math.max(prec - 1, 0));
+		}
+		str = str.replace(/\.(\d*?)0+(?!\d)/, function(s, d) { return d.length > 0 ? '.' + d : ''; });
+		var prefix = Formatter.signPrefix(isNegative, flags);
+		if(flags['0'] && !flags['-']) {
+			str = Formatter.addZeros(str, width - prefix.length);
+		}
+		str = prefix + str;
+		return Formatter.addSpaces(str, flags, width);
+	},
 	convertFloat: function convertFloat(val, flags, width, prec) {
 		if(prec == null) prec = 6;
 		var isNegative = val < 0;
@@ -188,6 +206,10 @@ Formatter.ConvertTable = {
 		val = val.toDoubleValue()._value;
 		return Formatter.convertExp(val, flags, width, prec).toUpperCase();
 	},
+	'G': function(val, flags, width, prec) {
+		val = val.toDoubleValue()._value;
+		return Formatter.convertFloatG(val, flags, width, prec).toUpperCase();
+	},
 	'X': function(val, flags, width, prec) {
 		val = val.toIntValue()._value;
 		return Formatter.convertInt(val, flags, width, prec, false, 16, '0X').toUpperCase();
@@ -210,6 +232,10 @@ Formatter.ConvertTable = {
 	'f': function(val, flags, width, prec) {
 		val = val.toDoubleValue()._value;
 		return Formatter.convertFloat(val, flags, width, prec);
+	},
+	'g': function(val, flags, width, prec) {
+		val = val.toDoubleValue()._value;
+		return Formatter.convertFloatG(val, flags, width, prec);
 	},
 	'i': function(val, flags, width, prec) {
 		val = val.toIntValue()._value;

@@ -16,13 +16,19 @@ mes strf("<%.50e>", DBL_MIN)
 mes strf("<%f>", 0)
 mes strf("<%f>", DBL_MAX)
 mes strf("<%20.3f>\n<%020.3f>\n<%+020.3f>\n<%-+020.3f>", 0, 0, 0, 0)
+mes "== NaN =="
 val = sqrt(-1)
 mes strf("<%.0f><%.1f><%.2f><%.3f>%.4f><%.5f>", val, val, val, val, val, val)
 mes strf("<%.0e><%.1e><%.2e><%.3e>%.4e><%.5e>", val, val, val, val, val, val)
+mes strf("<%.1g><%.2g><%.3g><%.4g>%.5g><%.6g>", val, val, val, val, val, val)
+mes "== Inf =="
 val = expf(999)
 mes strf("<%.0f><%.1f><%.2f><%.3f>%.4f><%.5f>", val, val, val, val, val, val)
 mes strf("<%.0e><%.1e><%.2e><%.3e>%.4e><%.5e>", val, val, val, val, val, val)
+mes strf("<%.1g><%.2g><%.3g><%.4g>%.5g><%.6g>", val, val, val, val, val, val)
+mes "== -Inf =="
 val = -expf(999)
 mes strf("<%.0f><%.1f><%.2f><%.3f>%.4f><%.5f>", val, val, val, val, val, val)
 mes strf("<%.0e><%.1e><%.2e><%.3e>%.4e><%.5e>", val, val, val, val, val, val)
-
+mes strf("<%.1g><%.2g><%.3g><%.4g>%.5g><%.6g>", val, val, val, val, val, val)
+mes strf("<%g><%g><%g><%g><%g><%g><%g><%g><%g><%g><%g><%g><%g>", 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e+0, 1e+1, 1e+2, 1e+3, 1e+4, 1e+5, 1e+6, 1e+7)
