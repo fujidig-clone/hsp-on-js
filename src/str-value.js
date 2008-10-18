@@ -42,11 +42,29 @@ Utils.objectExtend(StrValue.prototype, {
 		return VarType.STR;
 	},
 	toIntValue: function toIntValue() {
-		// FIXME $ で始まると 16 進数として解釈するように
-		return new IntValue(this._value);
+		if(this._value.charAt(0) == '$') {
+			var n = 0;
+			for(var i = 1; i < this._value.length; i ++) {
+				n *= 16;
+				var c = this._value.charCodeAt(i);
+				if(0x30 <= c && c <= 0x39) { // '0' .. '9'
+					n += c - 0x30;
+				} else if(0x41 <= c && c <= 0x5a) { // 'A' .. 'Z'
+					n += c - 0x41;
+				} else if(0x61 <= c && c <= 0x7a) { // 'a' .. 'z'
+					n += c - 0x61;
+				} else {
+					// オフィシャル HSP で '0'..'9', 'A'..'Z', 'a'..'z' 以外の文字は
+					//  '0' と同じと認識するという謎の動作を行うのでひとまずそれと同じ動作をする
+					// break;
+				}
+			}
+			return new IntValue(n);
+		}
+		return new IntValue(parseInt(this._value, 10));
 	},
 	toDoubleValue: function toDoubleValue() {
-		var n = +this._value;
+		var n = parseFloat(this._value);
 		if(isNaN(n)) n = 0;
 		return new DoubleValue(n);
 	},
