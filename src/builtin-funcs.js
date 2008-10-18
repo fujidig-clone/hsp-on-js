@@ -579,14 +579,7 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		return new IntValue(Math.min(Math.max(min, val), max));
 	},
 	0x100: function str(val, base) {
-		this.scanArgs(arguments, '.N');
-		if(base) {
-			// 16 進数の変換用。strf を実装するまでのつなぎ
-			val = val.toIntValue()._value;
-			base = base.toIntValue()._value;
-			if(val < 0) val += 0x100000000;
-			return new StrValue(val.toString(base));
-		}
+		this.scanArgs(arguments, '.');
 		return val.toStrValue();
 	},
 	0x101: function strmid(str, index, length) {
