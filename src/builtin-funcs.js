@@ -598,6 +598,35 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		this.scanArgs(arguments, 's.*');
 		return Formatter.sprintf(this, format, args);
 	},
+	0x104: function getpath(path, flags) {
+		this.scanArgs(arguments, 'sn');
+		path = path.toStrValue()._value;
+		flags = flags.toIntValue()._value;
+		if(flags & 16) {
+			var re = /((?:[\x81-\x9f\xe0-\xfc][\s\S]|[^A-Z])*)([A-Z]*)/g;
+			path = path.replace(re, function(s,a,b) {
+				return a + b.toLowerCase();
+			});
+		}
+		var dir = /^(?:\w:)?(?:(?:[^\x81-\x9f\xe0-\xfc]|[\x81-\x9f\xe0-\xfc]{2})*[\/\\])?/.exec(path)[0];
+		var ext = /(?:\.[^.\/\\]*)?$/.exec(path)[0];
+		var basename = path.slice(dir.length, path.length - ext.length);
+		if(flags & 8) {
+			path = basename + ext;
+		} else if(flags & 32) {
+			path = dir;
+		}
+		var result = path;
+		switch(flags & 7) {
+		case 1:
+			result = path.slice(0, path.length - ext.length);
+			break;
+		case 2:
+			result = ext;
+			break;
+		}
+		return new StrValue(result);
+	},
 	0x180: function sin(val) {
 		this.scanArgs(arguments, 'n');
 		return new DoubleValue(Math.sin(val.toDoubleValue()._value));

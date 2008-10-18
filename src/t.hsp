@@ -1,7 +1,8 @@
-mes double("0x100")
-mes double("abc")
-mes double(" \n\t1E5")
-mes int(" \n\t++123")
-mes strf("%#x", int("$100"))
-mes strf("%#x", int("$123$456"))
+path = "C:\\Program Files\\hsp31\\readme.txt"
+mes "all:" + getpath(path, 0)
+mes "remove ext: " + getpath(path, 1)
+mes "ext only: " + getpath(path, 2)
+mes "filename only: " + getpath(path, 8)
+mes "lower case: " + getpath(path, 16)
+mes "only dir: " + getpath(path, 32)
 
