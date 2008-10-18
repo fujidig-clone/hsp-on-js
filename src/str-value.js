@@ -49,12 +49,12 @@ Utils.objectExtend(StrValue.prototype, {
 				var c = this._value.charCodeAt(i);
 				if(0x30 <= c && c <= 0x39) { // '0' .. '9'
 					n += c - 0x30;
-				} else if(0x41 <= c && c <= 0x5a) { // 'A' .. 'Z'
+				} else if(0x41 <= c && c <= 0x46) { // 'A' .. 'F'
 					n += c - 0x41 + 10;
-				} else if(0x61 <= c && c <= 0x7a) { // 'a' .. 'z'
+				} else if(0x61 <= c && c <= 0x66) { // 'a' .. 'f'
 					n += c - 0x61 + 10;
 				} else {
-					// オフィシャル HSP で '0'..'9', 'A'..'Z', 'a'..'z' 以外の文字は
+					// オフィシャル HSP で '0'..'9', 'A'..'F', 'a'..'f' 以外の文字は
 					//  '0' と同じと認識するという謎の動作を行うのでひとまずそれと同じ動作をする
 					// break;
 				}
