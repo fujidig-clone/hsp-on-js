@@ -50,9 +50,9 @@ Utils.objectExtend(StrValue.prototype, {
 				if(0x30 <= c && c <= 0x39) { // '0' .. '9'
 					n += c - 0x30;
 				} else if(0x41 <= c && c <= 0x5a) { // 'A' .. 'Z'
-					n += c - 0x41;
+					n += c - 0x41 + 10;
 				} else if(0x61 <= c && c <= 0x7a) { // 'a' .. 'z'
-					n += c - 0x61;
+					n += c - 0x61 + 10;
 				} else {
 					// オフィシャル HSP で '0'..'9', 'A'..'Z', 'a'..'z' 以外の文字は
 					//  '0' と同じと認識するという謎の動作を行うのでひとまずそれと同じ動作をする
