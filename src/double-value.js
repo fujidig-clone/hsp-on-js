@@ -56,12 +56,7 @@ Utils.objectExtend(DoubleValue.prototype, {
 		return this;
 	},
 	toStrValue: function toStrValue() {
-		// FIXME オフィシャル HSP と同じ 0.000000 のようなフォーマットに
-		var s = '' + this._value;
-		if(/^-?\d+$/.test(s)) {
-			s += '.0';
-		}
-		return new StrValue(s);
+		return new StrValue(Formatter.convertFloat(this._value, {}, 0, null));
 	},
 	toString: function toString() {
 		return '<DoubleValue:'+this._value+'>';
