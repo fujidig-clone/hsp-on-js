@@ -578,7 +578,7 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 		max = max.toIntValue()._value;
 		return new IntValue(Math.min(Math.max(min, val), max));
 	},
-	0x100: function str(val, base) {
+	0x100: function str(val) {
 		this.scanArgs(arguments, '.');
 		return val.toStrValue();
 	},
