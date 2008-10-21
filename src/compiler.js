@@ -77,13 +77,7 @@ Compiler.prototype = {
 		return null;
 	},
 	compileAssignment: function compileAssignment(sequence) {
-		if(this.ax.tokens[this.tokensPos].type == Token.Type.STRUCT) {		
-			if(this.compileProxyVariable(sequence)) {
-				throw new CompileError('変数でないパラメータに代入しています');
-			}
-		} else {
-			this.compileVariable(sequence);
-		}
+		this.compileVariable(sequence);
 		var token = this.ax.tokens[this.tokensPos++];
 		if(!(token && token.type == Token.Type.MARK)) {
 			throw new CompileError();
@@ -144,6 +138,19 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
 				             [token.type, token.code, argc], token);
 			break;
+		case 0x12: // newmod
+			this.tokensPos ++;
+			this.compileVariable(sequence);
+			var structToken = this.ax.tokens[this.tokensPos++];
+			var prmInfo = this.ax.prmsInfo[structToken.code];
+			if(structToken.type != Token.Type.STRUCT || prmInfo.mptype != MPType.STRUCTTAG) {
+				throw new CompileError('モジュールが指定されていません');
+			}
+			var module = this.getUserDefFunc(prmInfo.subid);
+			var argc = 1 + this.compileParametersSub(sequence);
+			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
+				             [module, argc], token);
+			break;
 		default:
 			this.compileCommand(sequence);
 		}
@@ -183,6 +190,11 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.PUSH, [undefined]);
 			argc ++;
 		}
+		argc += this.compileParametersSub(sequence, cannotBeOmitted);
+		return argc;
+	},
+	compileParametersSub: function compileParametersSub(sequence, cannotBeOmitted) {
+		var argc = 0;
 		while(true) {
 			var token = this.ax.tokens[this.tokensPos];
 			if(!token || token.ex1) return argc;
@@ -219,7 +231,7 @@ Compiler.prototype = {
 					this.compileOperator(sequence);
 					break;
 				case Token.Type.VAR:
-					this.compileVariable(sequence);
+					this.compileStaticVariable(sequence);
 					break;
 				case Token.Type.STRING:
 					this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -285,7 +297,7 @@ Compiler.prototype = {
 	compileStruct: function compileStruct(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
 		var prmInfo = this.ax.prmsInfo[token.code];
-		if(this.compileProxyVariable(sequence)) {
+		if(!this.compileProxyVariable(sequence)) {
 			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
 			this.pushNewInsn(sequence, Instruction.Code.GETARG,
 				             [token.code - funcInfo.prmindex], token);
@@ -325,6 +337,12 @@ Compiler.prototype = {
 		var func = this.userDefFuncs[finfoId];
 		if(func) return func;
 		var funcInfo = this.ax.funcsInfo[finfoId];
+		if(funcInfo.index == -3) { // STRUCTDAT_INDEX_STRUCT
+			var destructor = funcInfo.otindex != 0 ? this.getUserDefFunc(funcInfo.otindex) : null;
+			var constructorFinfoId = this.ax.prmsInfo[funcInfo.prmindex].offset;
+			var constructor = constructorFinfoId != -1 ? this.getUserDefFunc(constructorFinfoId) : null;
+			return this.userDefFuncs[finfoId] = new Module(funcInfo.name, constructor, destructor, funcInfo.prmmax - 1);
+		}
 		var isCType = funcInfo.index == -2; // STRUCTDAT_INDEX_CFUNC
 		var paramTypes = [];
 		for(var i = 0; i < funcInfo.prmmax; i ++) {
@@ -351,6 +369,16 @@ Compiler.prototype = {
 		return argc;
 	},
 	compileVariable: function compileVariable(sequence) {
+		switch(this.ax.tokens[this.tokensPos].type) {
+		case Token.Type.VAR:
+			this.compileStaticVariable(sequence);
+			return;
+		case Token.Type.STRUCT:
+			if(this.compileProxyVariable(sequence)) return;
+		}
+		throw new CompileError('変数が指定されていません');
+	},
+	compileStaticVariable: function compileStaticVariable(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var argc = this.compileVariableSubscript(sequence);
 		this.pushNewInsn(sequence, Instruction.Code.PUSH_VAR,
@@ -358,24 +386,37 @@ Compiler.prototype = {
 	},
 	compileProxyVariable: function compileProxyVariable(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
+		if(token.code == -1) {
+			this.pushNewInsn(sequence, Instruction.Code.THISMOD, [], token);
+			if(this.ax.tokens[this.tokensPos].type == Token.Type.MARK && this.ax.tokens[this.tokensPos].code == 40) {
+				throw new CompileError('thismod に添字を指定しています');
+			}
+			return true;
+		}
 		var prmInfo = this.ax.prmsInfo[token.code];
 		var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+		if(prmInfo.subid >= 0) {
+			var argc = this.compileVariableSubscript(sequence);
+			this.pushNewInsn(sequence, Instruction.Code.PUSH_MEMBER,
+				             [token.code - funcInfo.prmindex - 1, argc], token);
+			return true;
+		}
 		switch(prmInfo.mptype) {
 		case MPType.LOCALVAR:
 		case MPType.ARRAYVAR:
 			var argc = this.compileVariableSubscript(sequence);
 			this.pushNewInsn(sequence, Instruction.Code.PUSH_ARG_VAR,
 				             [token.code - funcInfo.prmindex, argc], token);
-			return false;
+			return true;
 		case MPType.SINGLEVAR:
 			this.pushNewInsn(sequence, Instruction.Code.GETARG,
 				             [token.code - funcInfo.prmindex], token);
 			if(this.ax.tokens[this.tokensPos].type == Token.Type.MARK && this.ax.tokens[this.tokensPos].code == 40) {
-				throw new CompileError('パラメータタイプ var の変数に添字を指定して代入しています');
+				throw new CompileError('パラメータタイプ var の変数に添字を指定しています');
 			}
-			return false;
-		default:
 			return true;
+		default:
+			return false;
 		}
 	},
 	compileVariableSubscript: function compileVariableSubscript(sequence) {

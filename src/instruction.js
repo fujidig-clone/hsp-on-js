@@ -41,7 +41,10 @@ Instruction.CodeNames = [
 	'CALL_USERDEF_CMD',
 	'CALL_USERDEF_FUNC',
 	'GETARG',
-	'PUSH_ARG_VAR'
+	'PUSH_ARG_VAR',
+	'PUSH_MEMBER',
+	'THISMOD',
+	'NEWMOD'
 ];
 
 Instruction.Code = {};
