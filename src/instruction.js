@@ -36,6 +36,8 @@ Instruction.CodeNames = [
 	'IFEQ',
 	'SETVAR',
 	'EXPANDARRAY',
+	'INC',
+	'DEC',
 	'CALL_BUILTIN_CMD',
 	'CALL_BUILTIN_FUNC',
 	'CALL_USERDEF_CMD',

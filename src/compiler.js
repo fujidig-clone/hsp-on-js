@@ -83,21 +83,12 @@ Compiler.prototype = {
 			throw new CompileError();
 		}
 		if(this.ax.tokens[this.tokensPos].ex1) {
-			// TODO インクリメント デクリメントの命令 inc dec を作る
 			if(token.val == 0) { // インクリメント
-				this.pushNewInsn(sequence, Instruction.Code.DUP, [], token);
-				this.pushNewInsn(sequence, Instruction.Code.EXPANDARRAY, [], token);
-				this.pushNewInsn(sequence, Instruction.Code.PUSH, [new IntValue(1)], token);
-				this.pushNewInsn(sequence, Instruction.Code.ADD, [], token);
-				this.pushNewInsn(sequence, Instruction.Code.SETVAR, [1], token);
+				this.pushNewInsn(sequence, Instruction.Code.INC, [], token);
 				return;
 			}
 			if(token.val == 1) { // デクリメント
-				this.pushNewInsn(sequence, Instruction.Code.DUP, [], token);
-				this.pushNewInsn(sequence, Instruction.Code.EXPANDARRAY, [], token);
-				this.pushNewInsn(sequence, Instruction.Code.PUSH, [new IntValue(1)], token);
-				this.pushNewInsn(sequence, Instruction.Code.SUB, [], token);
-				this.pushNewInsn(sequence, Instruction.Code.SETVAR, [1], token);
+				this.pushNewInsn(sequence, Instruction.Code.DEC, [], token);
 				return;
 			}
 		}

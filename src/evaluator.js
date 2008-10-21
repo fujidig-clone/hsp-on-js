@@ -163,6 +163,16 @@ Evaluator.prototype = {
 			var agent = this.stack[this.stack.length - 1];
 			agent.variable.expand(agent.indices);
 			break;
+		case Instruction.Code.INC:
+			var agent = this.stack.pop();
+			agent.variable.expand(agent.indices);
+			agent.assign(agent.add(new IntValue(1)));
+			break;
+		case Instruction.Code.DEC:
+			var agent = this.stack.pop();
+			agent.variable.expand(agent.indices);
+			agent.assign(agent.sub(new IntValue(1)));
+			break;
 		case Instruction.Code.CALL_BUILTIN_CMD:
 			this.callBuiltinFunc(insn);
 			break;
