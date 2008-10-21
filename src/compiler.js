@@ -122,6 +122,16 @@ Compiler.prototype = {
 	compileProgramCommand: function compileProgramCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
 		switch(token.code) {
+		case 0x00: // goto
+			var labelToken = this.ax.tokens[this.tokensPos + 1];
+			if(labelToken && labelToken.type == Token.Type.LABEL && !labelToken.ex2 && (!this.ax.tokens[this.tokensPos + 2] || this.ax.tokens[this.tokensPos + 2].ex1)) {
+				this.pushNewInsn(sequence, Instruction.Code.GOTO,
+				                 [this.labels[labelToken.code]]);
+				this.tokensPos += 2;
+			} else {
+				this.compileCommand(sequence);
+			}
+			break;
 		case 0x03: // break
 		case 0x04: // repeat
 		case 0x06: // continue
