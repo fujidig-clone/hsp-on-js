@@ -24,7 +24,14 @@ Utils.objectExtend(StrValue.prototype, {
 		return new IntValue(this._value == rhs.toStrValue()._value);
 	},
 	ne: function ne(rhs) {
-		return new IntValue(this._value != rhs.toStrValue()._value);
+		var l = this._value, r = rhs.toStrValue()._value;
+		if(l == r) {
+			return new IntValue(0);
+		} else if(l > r) {
+			return new IntValue(1);
+		} else {
+			return new IntValue(-1);
+		}
 	},
 	gt: function gt(rhs) {
 		return new IntValue(this._value > rhs.toStrValue()._value);
