@@ -23,6 +23,9 @@ Variable.prototype = {
 			case VarType.INT:
 				this.value = new IntArray();
 				break;
+			case VarType.STRUCT:
+				this.value = new StructArray();
+				break;
 			default:
 				throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[rhs.getType()]+' 型の値は変数に代入できません');
 			}
@@ -66,6 +69,9 @@ Variable.prototype = {
 			break;
 		case VarType.INT:
 			ary = new IntArray();
+			break;
+		case VarType.STRUCT:
+			ary = new StructArray();
 			break;
 		default:
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '異常な変数型の値です');

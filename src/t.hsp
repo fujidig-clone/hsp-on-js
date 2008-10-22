@@ -1,3 +1,9 @@
-mes "abc" != "abc"
-mes "xyz" != "abc"
-mes "abc" != "xyz"
+#module mod x
+#modinit int a, str b
+	mes "foo "+a+", "+b
+	return
+#global
+
+newmod a, mod, 111, "bar"
+mes vartype(a)
+

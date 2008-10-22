@@ -197,6 +197,31 @@ Evaluator.prototype = {
 			var indices = this.popIndices(argc);
 			this.stack.push(new VariableAgent(variable, indices));
 			break;
+		//case Instruction.Code.PUSH_MEMBER:
+			break;
+		//case Instruction.Code.THISMOD:
+			break;
+		case Instruction.Code.NEWMOD:
+			var module = insn.opts[0];
+			var argc = insn.opts[1];
+			var args = Utils.aryPopN(this.stack, argc);
+			var agent = args[0];
+			this.scanArg(agent, 'a', false);
+			if(agent.getType() != VarType.STRUCT) {
+				agent.variable.dim(VarType.STRUCT, 1, 0, 0, 0);
+			}
+			var array = agent.variable.value;
+			var offset = array.findIndex();
+			var members = [];
+			for(var i = 0; i < module.membersCount; i ++) {
+				members[i] = new Variable;
+			}
+			array.assign(offset, new StructValue(module, members));
+			if(module.constructor) {
+				args[0] = new VariableAgent(agent.variable, [offset]);
+				this.callUserDefFunc(module.constructor, args);
+			}
+			break;
 		default:
 			throw new Error("未対応の命令コード: "+insn.code);
 		}
@@ -253,9 +278,19 @@ Evaluator.prototype = {
 				args.push(arg.toStrValue());
 				origArgsCount ++;
 				break;
+			case MPType.MODULEVAR:
+			case MPType.IMODULEVAR:
+			case MPType.TMODULEVAR:
+				this.scanArg(arg, 'v', false);
+				args.push(arg);
+				origArgsCount ++;
+				break;
 			default:
 				throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
 			}
+		}
+		if(origArgsCount < origArgs.length) {
+			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
 		}
 		if(this.frameStack.length >= 256) {
 			throw new HSPError(ErrorCode.STACK_OVERFLOW);

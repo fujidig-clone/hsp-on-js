@@ -28,6 +28,7 @@ label.js
 str-value.js
 double-value.js
 int-value.js
+struct-value.js
 jump-type.js
 str-buffer.js
 hsp-array.js
@@ -36,6 +37,7 @@ label-array.js
 str-array.js
 double-array.js
 int-array.js
+struct-array.js
 variable.js
 variable-agent.js
 compiler.js
