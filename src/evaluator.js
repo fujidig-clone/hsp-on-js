@@ -197,9 +197,15 @@ Evaluator.prototype = {
 			var indices = this.popIndices(argc);
 			this.stack.push(new VariableAgent(variable, indices));
 			break;
-		//case Instruction.Code.PUSH_MEMBER:
+		case Instruction.Code.PUSH_MEMBER:
+			var memberNum = insn.opts[0];
+			var argc = insn.opts[1];
+			var struct = this.frameStack[this.frameStack.length - 1].args[0].toValue();
+			var indices = this.popIndices(argc);
+			this.stack.push(new VariableAgent(struct.members[memberNum], indices));
 			break;
-		//case Instruction.Code.THISMOD:
+		case Instruction.Code.THISMOD:
+			this.stack.push(this.frameStack[this.frameStack.length - 1].args[0]);
 			break;
 		case Instruction.Code.NEWMOD:
 			var module = insn.opts[0];

@@ -1,9 +1,17 @@
-#module mod x
-#modinit int a, str b
-	mes "foo "+a+", "+b
+#module mod x, y, z
+#modinit int _x, int _y, int _z
+	x = _x
+	y = _y
+	z = _z
+	return
+#modfunc f
+	mes strf("x = %d, y = %d, z = %d", x, y, z)
+	return
+#modfunc f2
+	f thismod
 	return
 #global
 
-newmod a, mod, 111, "bar"
-mes vartype(a)
+newmod a, mod, 111, 222, 333
+f2 a
 
