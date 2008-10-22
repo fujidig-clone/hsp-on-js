@@ -104,7 +104,14 @@ VariableAgent.prototype = {
 	}
 };
 
+function ModVarData() {
+	 VariableAgent.apply(this, arguments);
+}
+
+ModVarData.prototype = new VariableAgent;
+
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.VariableAgent = VariableAgent;
+	HSPonJS.ModVarData = ModVarData;
 }
 

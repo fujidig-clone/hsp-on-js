@@ -188,24 +188,24 @@ Evaluator.prototype = {
 			break;
 		case Instruction.Code.GETARG:
 			var argNum = insn.opts[0];
-			this.stack.push(this.frameStack[this.frameStack.length - 1].args[argNum]);
+			this.stack.push(this.getArg(argNum));
 			break;
 		case Instruction.Code.PUSH_ARG_VAR:
 			var argNum = insn.opts[0];
 			var argc = insn.opts[1];
-			var variable = this.frameStack[this.frameStack.length - 1].args[argNum];
+			var variable = this.getArg(argNum);
 			var indices = this.popIndices(argc);
 			this.stack.push(new VariableAgent(variable, indices));
 			break;
 		case Instruction.Code.PUSH_MEMBER:
 			var memberNum = insn.opts[0];
 			var argc = insn.opts[1];
-			var struct = this.frameStack[this.frameStack.length - 1].args[0].toValue();
+			var struct = this.getThismod().toValue();
 			var indices = this.popIndices(argc);
 			this.stack.push(new VariableAgent(struct.members[memberNum], indices));
 			break;
 		case Instruction.Code.THISMOD:
-			this.stack.push(this.frameStack[this.frameStack.length - 1].args[0]);
+			this.stack.push(this.getThismod());
 			break;
 		case Instruction.Code.NEWMOD:
 			var module = insn.opts[0];
@@ -288,7 +288,7 @@ Evaluator.prototype = {
 			case MPType.IMODULEVAR:
 			case MPType.TMODULEVAR:
 				this.scanArg(arg, 'v', false);
-				args.push(arg);
+				args.push(new ModVarData(arg.variable, arg.indices));
 				origArgsCount ++;
 				break;
 			default:
@@ -329,6 +329,20 @@ Evaluator.prototype = {
 	},
 	fileRead: function fileRead(path, success, error) {
 		throw new FileReadException(path, success, error);
+	},
+	getArg: function getArg(argNum) {
+		var frame = this.frameStack[this.frameStack.length - 1];
+		if(this.frameStack.length == 0 || !frame.args) {
+			throw new HSPError(ErrorCode.INVALID_PARAMETER);
+		}
+		return frame.args[argNum];
+	},
+	getThismod: function getThismod() {
+		var thismod = this.getArg(0);
+		if(!(thismod instanceof ModVarData && thismod.getType() == VarType.STRUCT && thismod.isUsing())) {
+			throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
+		}
+		return thismod;
 	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
