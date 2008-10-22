@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.6.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.7.js" charset="utf-8"></script>
 <script type="text/javascript">
 HSPonJS.emptyFunction = function(){};
 
@@ -131,7 +131,10 @@ $(function(){
 			var script = textarea.value;
 			resultTextarea.value = '';
 			quitEvaluator(i);
+			var messageNode = document.createTextNode('コンパイル中...');
+			$(this).after(messageNode);
 			$.post('compile.cgi', {script: script}, function(jsonData){
+				messageNode.parentNode.removeChild(messageNode);
 				var data = eval('('+jsonData+')');
 				if (!data.success) {
 					alert(data.message);
@@ -169,7 +172,7 @@ textarea { width: 100%; }
 <body>
 <h1>HSP on JS</h1>
 <p>HSP on JS は JavaScript による HSP インタプリタの実装です。以下のサンプルを実際に実行してみてください。</p>
-<p>対応している機能は少ないですが、これから実装していく予定です。 HTML5 Canvas を使って GUI 命令にも対応できたらいいなあと思っています。</p>
+<p>テキストベースで GUI のスクリプトなどは動かすことができません。今後 HTML5 Canvas を使って GUI 命令にも対応できたらいいなあと思っています。</p>
 <p>HSP on JS は <a href="http://coderepos.org/share/browser/lang/javascript/hsp-on-js">CodeRepos</a> にリポジトリを置いています。</p>
 <h2>Hello, world!</h2>
 <div>
@@ -316,7 +319,36 @@ mes strmid(buf, ins, ins2)</textarea>
 repeat 10
 	mes fib(cnt)
 loop</textarea>
-</div> 
+</div>
+<h2>モジュール変数</h2>
+<p>HSP のサンプル new\modvar.hsp より</p>
+<div>
+<textarea cols="100" rows="10">
+	;
+	;	モジュール変数のテスト
+	;
+#module ball x,y
+
+#modinit int a
+	x=rnd(a):y=rnd(a)
+	return
+
+#modfunc putprm
+	mes "X="+x+"/Y="+y
+	return
+
+#global
+	repeat 12
+	newmod a,ball,10
+	loop
+
+	foreach a:mes "#"+cnt
+	putprm a.cnt
+	loop
+
+	mes "OK"
+	stop</textarea>
+</div>
 <h2>使用ライブラリ</h2>
 <ul>
 <li><a href="http://jquery.com/">jQuery</a> (このサンプル集で使用。HSP on JS コアでは使用していません。）
