@@ -348,7 +348,7 @@ Evaluator.prototype = {
 		var struct = agent.toValue();
 		var self = this;
 		if(struct.isUsing() != 1) {
-			callback();
+			if(callback) callback();
 			return;
 		}
 		var myCallback = function() {
