@@ -379,13 +379,18 @@ Evaluator.prototype = {
 		var i = 0;
 		var self = this;
 		(function() {
-			if(i >= variable.getL0()) {
-				callback();
-				return;
+			while(true) {
+				if(i >= variable.getL0()) {
+					callback();
+					return;
+				}
+				var agent = new VariableAgent(variable, [i]);
+				i ++;
+				if(agent.isUsing() == 1) {
+					self.deleteStruct(agent, arguments.callee);
+					return;
+				}
 			}
-			var indices = [i];
-			i ++;
-			self.deleteStruct(new VariableAgent(variable, indices), arguments.callee);
 		})();
 	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
