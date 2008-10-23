@@ -12,10 +12,11 @@ function LoopData(cnt, end, pc) {
 	this.pc = pc;
 }
 
-function Frame(pc, userDefFunc, args) {
+function Frame(pc, userDefFunc, args, callback) {
 	this.pc = pc;
 	this.userDefFunc = userDefFunc;
 	this.args = args;
+	this.callback = callback;
 }
 
 BuiltinFuncs[Token.Type.PROGCMD] = {
@@ -51,6 +52,7 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 			}
 		}
 		this.pc = frame.pc - 1;
+		if(frame.callback) frame.callback();
 	},
 	0x03: function break_(label) {
 		this.scanArgs(arguments, 'l');
@@ -172,6 +174,13 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 	0x11: function stop() {
 		this.scanArgs(arguments, '');
 		throw new StopException;
+	},
+	0x14: function delmod(v) {
+		this.scanArgs(arguments, 'v');
+		if(v.getType() != VarType.STRUCT) {
+			throw new HSPError(ErrorCode.TYPE_MISMATCH);
+		}
+		this.deleteStruct(v);
 	},
 	0x16: function mref(v, id) {
 		this.scanArgs(arguments, 'aN');

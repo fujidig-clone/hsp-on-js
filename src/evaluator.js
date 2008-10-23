@@ -222,7 +222,7 @@ Evaluator.prototype = {
 			for(var i = 0; i < module.membersCount; i ++) {
 				members[i] = new Variable;
 			}
-			array.assign(offset, new StructValue(module, members));
+			array.values[offset] = new StructValue(module, members, false);
 			if(module.constructor) {
 				args[0] = new VariableAgent(agent.variable, [offset]);
 				this.callUserDefFunc(module.constructor, args);
@@ -249,7 +249,7 @@ Evaluator.prototype = {
 		var args = Utils.aryPopN(this.stack, argc);
 		return func.apply(this, args);
 	},
-	callUserDefFunc: function callUserDefFunc(userDefFunc, origArgs) {
+	callUserDefFunc: function callUserDefFunc(userDefFunc, origArgs, callback) {
 		var args = [];
 		var origArgsCount = 0;
 		for(var i = 0; i < userDefFunc.paramTypes.length; i ++) {
@@ -301,7 +301,7 @@ Evaluator.prototype = {
 		if(this.frameStack.length >= 256) {
 			throw new HSPError(ErrorCode.STACK_OVERFLOW);
 		}
-		this.frameStack.push(new Frame(this.pc + 1, userDefFunc, args));
+		this.frameStack.push(new Frame(this.pc + 1, userDefFunc, args, callback));
 		this.pc = userDefFunc.label.pos - 1;
 	},
 	subroutineJump: function subroutineJump(label) {
@@ -343,6 +343,50 @@ Evaluator.prototype = {
 			throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
 		}
 		return thismod;
+	},
+	deleteStruct: function deleteStruct(agent, callback) {
+		var struct = agent.toValue();
+		var self = this;
+		if(struct.isUsing() != 1) {
+			callback();
+			return;
+		}
+		var myCallback = function() {
+			var i = 0;
+			(function() {
+				while(true) {
+					if(i >= struct.members.length) {
+						agent.assign(StructValue.EMPTY);
+						if(callback) callback();
+						return;
+					}
+					var member = struct.members[i];
+					i ++;
+					if(member.getType() == VarType.STRUCT) {
+						self.deleteAllStruct(member, arguments.callee);
+						return;
+					}
+				}
+			})();
+		}
+		if(struct.module.destructor) {
+			this.callUserDefFunc(struct.module.destructor, [agent], myCallback);
+		} else {
+			myCallback();
+		}
+	},
+	deleteAllStruct: function deleteAllStruct(variable, callback) {
+		var i = 0;
+		var self = this;
+		(function() {
+			if(i >= variable.getL0()) {
+				callback();
+				return;
+			}
+			var indices = [i];
+			i ++;
+			self.deleteStruct(new VariableAgent(variable, indices), arguments.callee);
+		})();
 	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&

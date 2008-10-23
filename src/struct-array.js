@@ -6,6 +6,9 @@ function StructArray() {
 StructArray.prototype = new HSPArray();
 
 Utils.objectExtend(StructArray.prototype, {
+	assign: function assign(offset, rhs) {
+		this.values[offset] = rhs.toValue().clone();
+	},
 	expand: function expand(indices) {
 		var isExpanded = HSPArray.prototype.expand.call(this, indices);
 		if(isExpanded) {
