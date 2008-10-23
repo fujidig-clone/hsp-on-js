@@ -393,6 +393,25 @@ Evaluator.prototype = {
 			}
 		})();
 	},
+	deleteLocalVars: function deleteLocalVars(paramTypes, args, callback) {
+		var i = 0;
+		var self = this;
+		(function() {
+			while(true) {
+				if(i >= args.length) {
+					callback();
+					return;
+				}
+				var paramType = paramTypes[i];
+				var arg = args[i];
+				i ++;
+				if(paramType == MPType.LOCALVAR && arg.getType() == VarType.STRUCT) {
+					self.deleteAllStruct(arg, arguments.callee);
+					return;
+				}
+			}
+		})();
+	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
 		   insn.code != Instruction.Code.CALL_BUILTIN_FUNC) {

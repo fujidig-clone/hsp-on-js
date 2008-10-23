@@ -1,34 +1,17 @@
-#module mod_node name, children, count
+#module mod name
 #modinit str _name
 	name = _name
-	dimtype children, 5
-	count = 0
-	return
-#modfunc append_child str child_name, var result
-	newmod children, mod_node, child_name
-	result = children.count
-	count ++
-	return
-#modfunc dump str indent
-	mes indent + name
-	foreach children
-		dump children.cnt, indent + "  "
-	loop
 	return
 #modterm
 	mes "term: "+name
 	return
 #global
 
-newmod root, mod_node, "ROOT"
-append_child root, "1", node_1
-append_child node_1, "1-1", node_1_1
-append_child root, "2", node_2
-append_child node_2, "2-1", node_2_1
-append_child node_2_1, "2-1-1", node_2_1_1
-append_child node_2, "2-2", node_2_2
+#module
+#deffunc main local a, local b
+	newmod a, mod, "A"
+	newmod b, mod, "B"
+	return
+#global
 
-dump root, ""
-
-delmod root
-mes "FINISH"
+main
