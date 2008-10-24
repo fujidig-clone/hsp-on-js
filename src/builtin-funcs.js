@@ -52,9 +52,13 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 			}
 		}
 		this.pc = frame.pc - 1;
-		this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, function() {
-			if(frame.callback) frame.callback();
-		});
+		if(frame.userDefFunc) {
+			this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, function() {
+				if(frame.callback) frame.callback();
+			});
+		} else if(frame.callback) {
+			frame.callback();
+		}
 	},
 	0x03: function break_(label) {
 		this.scanArgs(arguments, 'l');

@@ -1,68 +1,88 @@
 #!/usr/bin/env ruby1.9
+require 'optparse'
+
+use_repl = false
+package_path = nil
+show_sequence = false
+js = 'js'
+
+opt = OptionParser.new
+opt.on('--repl') {|v| use_repl = v}
+opt.on('--package=PATH') {|v| package_path = v }
+opt.on('--[no-]show-sequence') {|v| show_sequence = v }
+opt.on('--js=COMMAND') {|v| js = v }
+opt.on('--v8') {|v| js = 'v8' }
+opt.on('--rhino') {|v| js = 'rhino' }
+
+opt.parse!(ARGV)
+
 message = IO.popen('hspcmp -d t.hsp'){|io|io.read}
 if $?.exitstatus != 0
   puts message.encode(Encoding.default_external, 'cp932')
   exit 1
 end
 
-dump = open('t.ax','rb'){|f|f.each_byte.each_slice(16).map{|i|"'%s'"%i.map{|j|'\x%02x'%j}.join}.join(",\n")}
+dump = open('t.ax','rb') do |f|
+  f.each_byte.each_slice(16).map do |i|
+    "'%s'" % i.map{|j| '\x%02x'%j }.join
+  end.join(",\n")
+end
+
 open('t.ax.js', 'wb') do |f|
   f.puts "var axbinary = [\n#{dump}\n].join('');"
+  f.puts "var showSequence = #{show_sequence};"
 end
 
-filenames = %w[
-binary-parser.js
-cp932.js
-utils.js
-vcrandom.js
-formatter.js
-exception.js
-axdata.js
-instruction.js
-user-def-func.js
-builtin-func-names.js
-builtin-funcs.js
-vartype.js
-value.js
-label.js
-str-value.js
-double-value.js
-int-value.js
-struct-value.js
-jump-type.js
-str-buffer.js
-hsp-array.js
-reference.js
-label-array.js
-str-array.js
-double-array.js
-int-array.js
-struct-array.js
-variable.js
-variable-agent.js
-compiler.js
-evaluator.js
-t.ax.js
-run-in-shell.js
-]
-
-if ARGV.delete('--for-win32-rhino')
-  open('for-win32-rhino.js','wb:cp932') do |out|
-    filenames.each do |filename|
-      open(filename, 'rb:utf-8') {|f| out.puts f.read }
-    end
-  end
-  system('rhino -w -f for-win32-rhino.js')
-  exit
+if package_path
+  filenames = [package_path]
+else
+  filenames = %w[
+    binary-parser.js
+    cp932.js
+    utils.js
+    vcrandom.js
+    formatter.js
+    exception.js
+    axdata.js
+    instruction.js
+    user-def-func.js
+    builtin-func-names.js
+    builtin-funcs.js
+    vartype.js
+    value.js
+    label.js
+    str-value.js
+    double-value.js
+    int-value.js
+    struct-value.js
+    jump-type.js
+    str-buffer.js
+    hsp-array.js
+    reference.js
+    label-array.js
+    str-array.js
+    double-array.js
+    int-array.js
+    struct-array.js
+    variable.js
+    variable-agent.js
+    compiler.js
+    evaluator.js
+  ]
 end
 
-if ARGV.delete('--shell')
+filenames << 't.ax.js' << 'run-in-shell.js'
+
+if use_repl
   filenames << '-'
 end
 
-if ARGV.delete('--rhino')
-  system(*%w[rhino -w]+filenames.map{|i|["-f", i]}.flatten)
-else 
-  system(*%w[js -s -w]+filenames.map{|i|["-f", i]}.flatten)
+case js
+when 'rhino'
+  system('rhino', *filenames.map{|i|["-f", i]}.flatten)
+when 'v8'
+  system('v8', *filenames)
+else
+  system('js', '-s', '-w', *filenames.map{|i|["-f", i]}.flatten)
 end
 

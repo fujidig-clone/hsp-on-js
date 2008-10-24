@@ -107,7 +107,7 @@ Variable.prototype = {
 };
 
 if(typeof HSPonJS != 'undefined') {
-	HSPonJS.Variable = HSPonJS.Variable;
+	HSPonJS.Variable = Variable;
 }
 
 
