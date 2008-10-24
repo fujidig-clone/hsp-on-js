@@ -15,6 +15,7 @@ function Evaluator(axdata, sequence) {
 	this.refstr = new StrArray();
 	this.strsize = new IntValue(0);
 	this.random = new VCRandom();
+	this.atExitOfDispatchCallbacks = [];
 }
 
 Evaluator.prototype = {
@@ -226,10 +227,16 @@ Evaluator.prototype = {
 			if(module.constructor) {
 				args[0] = new VariableAgent(agent.variable, [offset]);
 				this.callUserDefFunc(module.constructor, args);
+			} else if(args.length > 1) {
+				throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
 			}
 			break;
 		default:
 			throw new Error("未対応の命令コード: "+insn.code);
+		}
+		var callbacks = this.atExitOfDispatchCallbacks;
+		while(callbacks.length) {
+			callbacks.pop()();
 		}
 		this.pc ++;
 	},
@@ -345,6 +352,7 @@ Evaluator.prototype = {
 		return thismod;
 	},
 	deleteStruct: function deleteStruct(agent, callback) {
+		this.deleteStructRecursionLevel = 0;
 		var struct = agent.toValue();
 		var self = this;
 		if(struct.isUsing() != 1) {
@@ -354,6 +362,11 @@ Evaluator.prototype = {
 		var myCallback = function() {
 			var i = 0;
 			(function() {
+				if(++self.deleteStructRecursionLevel >= 128) {
+					self.deleteStructRecursionLevel = 0;
+					self.atExitOfDispatchCallbacks.push(arguments.callee);
+					return;
+				} 
 				while(true) {
 					if(i >= struct.members.length) {
 						agent.assign(StructValue.EMPTY);
@@ -372,7 +385,7 @@ Evaluator.prototype = {
 		if(struct.module.destructor) {
 			this.callUserDefFunc(struct.module.destructor, [agent], myCallback);
 		} else {
-			throw new CallbackException(myCallback);
+			this.atExitOfDispatchCallbacks.push(myCallback);
 		}
 	},
 	deleteAllStruct: function deleteAllStruct(variable, callback) {
