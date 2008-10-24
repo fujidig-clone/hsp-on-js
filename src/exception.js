@@ -109,6 +109,10 @@ function FileReadException(path, success, error) {
 }
 FileReadException.prototype = new HSPException;
 
+function CallbackException(callback) {
+	this.callback = callback;
+}
+CallbackException.prototype = new HSPException;
 
 function HSPError(errcode, message) {
 	this.errcode = errcode;
@@ -124,6 +128,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.WaitException = WaitException;
 	HSPonJS.StopException = StopException;
 	HSPonJS.FileReadException = FileReadException;
+	HSPonJS.CallbackException = CallbackException;
 	HSPonJS.HSPError = HSPError;
 }
 

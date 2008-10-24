@@ -1,17 +1,15 @@
-#module mod name
-#modinit str _name
-	name = _name
-	return
-#modterm
-	mes "term: "+name
-	return
+#module mod x
 #global
 
 #module
-#deffunc main local a, local b
-	newmod a, mod, "A"
-	newmod b, mod, "B"
+#deffunc main local a
+	mes "newmod ..."
+	repeat 1000
+		newmod a, mod, cnt
+	loop
+	mes "delete ..."
 	return
 #global
 
 main
+

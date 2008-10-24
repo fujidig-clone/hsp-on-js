@@ -16,6 +16,10 @@ Evaluator.prototype.disposeException = function disposeException(e) {
 		print('#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ' + (this.getBuiltinFuncName(insn)||''));
 		print('--> '+(e.message||ErrorMessages[e.errcode]));
 	}
+	if(e instanceof CallbackException) {
+		this.resume(e.callback);
+		return;
+	}
 };
 
 function main(){

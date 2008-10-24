@@ -372,7 +372,7 @@ Evaluator.prototype = {
 		if(struct.module.destructor) {
 			this.callUserDefFunc(struct.module.destructor, [agent], myCallback);
 		} else {
-			myCallback();
+			throw new CallbackException(myCallback);
 		}
 	},
 	deleteAllStruct: function deleteAllStruct(variable, callback) {
