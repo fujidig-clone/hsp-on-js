@@ -433,18 +433,16 @@ Evaluator.prototype = {
 					self.deleteStructRecursionLevel = 0;
 					return arguments.callee;
 				}
-				while(true) {
-					if(i >= struct.members.length) {
-						agent.assign(StructValue.EMPTY);
-						if(callback) return callback();
-						return null;
-					}
+				while(i < struct.members.length) {
 					var member = struct.members[i];
 					i ++;
 					if(member.getType() == VarType.STRUCT) {
 						return self.deleteAllStruct0(member, arguments.callee);
 					}
 				}
+				agent.assign(StructValue.EMPTY);
+				if(callback) return callback();
+				return null;
 			})();
 		}
 		if(struct.module.destructor) {
@@ -458,27 +456,21 @@ Evaluator.prototype = {
 		var i = 0;
 		var self = this;
 		return (function() {
-			while(true) {
-				if(i >= variable.getL0()) {
-					return callback();
-				}
+			while(i < variable.getL0()) {
 				var agent = new VariableAgent(variable, [i]);
 				i ++;
 				if(agent.isUsing() == 1) {
 					return self.deleteStruct0(agent, arguments.callee);
 				}
 			}
+			return callback();
 		})();
 	},
 	deleteLocalVars: function deleteLocalVars(paramTypes, args, callback) {
 		var i = 0;
 		var self = this;
 		(function() {
-			while(true) {
-				if(i >= args.length) {
-					callback();
-					return;
-				}
+			while(i < args.length) {
 				var paramType = paramTypes[i];
 				var arg = args[i];
 				i ++;
@@ -487,6 +479,8 @@ Evaluator.prototype = {
 					return;
 				}
 			}
+			callback();
+			return;
 		})();
 	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {

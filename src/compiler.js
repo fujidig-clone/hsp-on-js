@@ -104,7 +104,7 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.EXPANDARRAY, [], token);
 			var argc = this.compileParameters(sequence, true);
 			if(argc != 1) {
-				throw this.error("複合代入のパラメータの数が間違っています。");
+				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
 			this.pushNewInsn(sequence, Instruction.Code.ADD + token.val, [], token);
 			this.pushNewInsn(sequence, Instruction.Code.SETVAR, [argc], token);
@@ -112,7 +112,7 @@ Compiler.prototype = {
 		}
 		var argc = this.compileParameters(sequence, true);
 		if(argc == 0) {
-			throw this.error("代入のパラメータの数が間違っています。");
+			throw this.error("代入のパラメータの数が間違っています。", token);
 		}
 		this.pushNewInsn(sequence, Instruction.Code.SETVAR, [argc], token);
 	},
@@ -132,7 +132,7 @@ Compiler.prototype = {
 		case 0x02: // return
 			this.tokensPos ++;
 			var argc = this.compileParameters(sequence);
-			if(argc > 1) throw this.error('return の引数が多すぎます');
+			if(argc > 1) throw this.error('return の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.RETURN,
 			                 [argc == 1], token);
 			break;
@@ -161,7 +161,7 @@ Compiler.prototype = {
 			var structToken = this.ax.tokens[this.tokensPos++];
 			var prmInfo = this.ax.prmsInfo[structToken.code];
 			if(structToken.type != Token.Type.STRUCT || prmInfo.mptype != MPType.STRUCTTAG) {
-				throw this.error('モジュールが指定されていません');
+				throw this.error('モジュールが指定されていません', structToken);
 			}
 			var module = this.getUserDefFunc(prmInfo.subid);
 			var argc = 1 + this.compileParametersSub(sequence);
@@ -171,7 +171,7 @@ Compiler.prototype = {
 		case 0x14: // delmod
 			this.tokensPos ++;
 			var argc = this.compileParameters(sequence);
-			if(argc != 1) throw this.error('delmod の引数の数が違います');
+			if(argc != 1) throw this.error('delmod の引数の数が違います', token);
 			this.pushNewInsn(sequence, Instruction.Code.DELMOD, [], token);
 			break;
 		default:
@@ -195,11 +195,11 @@ Compiler.prototype = {
 		}
 		var argc = this.compileParameters(sequence);
 		if(token.code == 0) { // 'if'
-			if(argc != 1) throw this.error("if の引数の数が間違っています。");
+			if(argc != 1) throw this.error("if の引数の数が間違っています。", token);
 			this.pushNewInsn(sequence, Instruction.Code.IFEQ,
 			                 [label], token);
 		} else {
-			if(argc != 0) throw this.error("else の引数の数が間違っています。");
+			if(argc != 0) throw this.error("else の引数の数が間違っています。", token);
 			this.pushNewInsn(sequence, Instruction.Code.GOTO,
 			                 [label], token);
 		}
@@ -382,12 +382,12 @@ Compiler.prototype = {
 	compileParenAndParameters: function compileParenAndParameters(sequence) {
 		var paren_token = this.ax.tokens[this.tokensPos++];
 		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40)) {
-			throw this.error('関数名の後ろに開き括弧がありません。');
+			throw this.error('関数名の後ろに開き括弧がありません。', paren_token);
 		}
 		var argc = this.compileParameters(sequence);
 		paren_token = this.ax.tokens[this.tokensPos++];
 		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
-			throw this.error('関数パラメータの後ろに閉じ括弧がありません。');
+			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', paren_token);
 		}
 		return argc;
 	},
@@ -449,11 +449,11 @@ Compiler.prototype = {
 			this.tokensPos ++;
 			argc = this.compileParameters(sequence);
 			if(argc == 0) {
-				throw this.error('配列変数の添字が空です');
+				throw this.error('配列変数の添字が空です', paren_token);
 			}
 			paren_token = this.ax.tokens[this.tokensPos++];
 			if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
-				throw this.error('配列変数の添字の後ろに閉じ括弧がありません。');
+				throw this.error('配列変数の添字の後ろに閉じ括弧がありません。', paren_token);
 			}
 		}
 		return argc;

@@ -109,7 +109,7 @@ function resizeTextarea(textarea) {
 	textarea.setAttribute('rows', textarea.value.split("\n").length);
 }
 
-$(function(){
+$(function() {
 	var evaluators = [];
 	function quitEvaluator(i) {
 		if(evaluators[i]) {
@@ -122,30 +122,42 @@ $(function(){
 		resizeTextarea(textarea);
 		var runButton = document.createElement('button');
 		runButton.setAttribute('type', 'button');
-		runButton.appendChild(document.createTextNode('Run!'));
+		runButton.appendChild(document.createTextNode('実行'));
+		var messageSpan = document.createElement('span');
+		messageSpan.appendChild(document.createTextNode('コンパイル中...'));
+		messageSpan.style.display = 'none';
 		var resetButton = document.createElement('button');
 		resetButton.setAttribute('type', 'button');
 		resetButton.style.display = 'none';
-		resetButton.appendChild(document.createTextNode('reset'));
+		resetButton.appendChild(document.createTextNode('リセット'));
 		var resultTextarea = document.createElement('textarea');
 		resultTextarea.setAttribute('cols', 100);
 		resultTextarea.setAttribute('rows', 2);
 		resultTextarea.style.display = 'none';
-		$(runButton).click(function(){
+		var compileCount = 0;
+		var evaluating = false;
+		$(runButton).click(function() {
 			var script = textarea.value;
 			resultTextarea.value = '';
 			quitEvaluator(i);
-			var messageNode = document.createTextNode('コンパイル中...');
-			$(this).after(messageNode);
-			$.post('compile.cgi', {script: script}, function(jsonData){
-				messageNode.parentNode.removeChild(messageNode);
+			messageSpan.style.display = '';
+			var curCount = ++ compileCount;
+			$.post('compile.cgi', {script: script}, function(jsonData) {
+				if(curCount != compileCount) return;
+				messageSpan.style.display = 'none';
 				var data = eval('('+jsonData+')');
 				if (!data.success) {
 					alert(data.message);
 					return;
 				}
 				var axdata = new HSPonJS.AXData(data.ax);
-				var sequence = new HSPonJS.Compiler(axdata).compile();
+				try {
+					var sequence = new HSPonJS.Compiler(axdata).compile();
+				} catch(e) {
+					if(!(e instanceof HSPonJS.CompileError)) throw e;
+					alert('コンパイルエラー:\n'+e.message+'\nat '+e.hspFileName+':'+e.hspLineNumber);
+					return;
+				}
 				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
 				evaluator.resultTextarea = resultTextarea;
 				quitEvaluator(i);
@@ -155,7 +167,7 @@ $(function(){
 				evaluator.evaluate();
 			});
 		});
-		$(resetButton).click(function(){
+		$(resetButton).click(function() {
 			quitEvaluator(i);
 			resultTextarea.style.display = 'none';
 			resetButton.style.display = 'none';
@@ -164,6 +176,7 @@ $(function(){
 		$(textarea)
 			.after(resultTextarea)
 			.after(resetButton)
+			.after(messageSpan)
 			.after(runButton)
 			.keyup(function(){resizeTextarea(this);});
 	});
