@@ -9,7 +9,9 @@ function Evaluator(axdata, sequence) {
 	}
 	this.loopStack = [];
 	this.frameStack = [];
-	this.noteStack = [];
+	this.oldNotes = [];
+	this.oldNotesPos = 0;
+	this.note = null;
 	this.stat = new IntArray();
 	this.refdval = new DoubleArray();
 	this.refstr = new StrArray();
@@ -383,11 +385,23 @@ Evaluator.prototype = {
 		}
 		return indices;
 	},
+	selectNote: function selectNote(v) {
+		if(this.note) {
+			this.oldNotes[this.oldNotesPos] = this.note;
+			this.oldNotesPos = (this.oldNotesPos + 1) % 256;
+		}
+		this.note = v;
+	},
+	undoNote: function undoNote() {
+		this.oldNotesPos = (this.oldNotesPos - 1 + 256) % 256;
+		this.note = this.oldNotes[this.oldNotesPos];
+		this.oldNotes[this.oldNotesPos] = null;
+	},
 	getNote: function getNote() {
-		if(this.noteStack.length == 0) {
+		if(!this.note) {
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ノートパッドが選択されていません');
 		}
-		return this.noteStack[this.noteStack.length - 1];
+		return this.note;
 	},
 	fileRead: function fileRead(path, success, error) {
 		throw new FileReadException(path, success, error);

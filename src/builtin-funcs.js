@@ -322,7 +322,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 			v.assign(StrValue.EMPTY_STR);
 		}
 		var buf = v.getBuffer();
-		this.noteStack.push(buf);
+		this.selectNote(buf);
 	},
 	0x23: function noteadd(line, lineNumber, overwrite) {
 		this.scanArgs(arguments, 'sNN');
@@ -382,7 +382,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 	},
 	0x28: function noteunsel() {
 		this.scanArgs(arguments, '');
-		this.noteStack.pop();
+		this.undoNote();
 	},
 	0x29: function noteget(dest, lineNumber) {
 		this.scanArgs(arguments, 'vN');

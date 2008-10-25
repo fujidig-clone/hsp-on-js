@@ -1,22 +1,4 @@
-#module mod tag, child
-#modinit int _tag
-	tag = _tag
-	return
-#modfunc append_child int _tag, var result
-	newmod child, mod, _tag
-	result = child
-	return
-;#modterm
-	return
-#global
-
-	mes "newmod ..."
-	newmod a, mod, 0
-	b = a
-	repeat 3000, 1
-		append_child b, cnt, b
-	loop
-	mes "delete ..."
-	delmod a
-	mes "finish"
+repeat 1000
+	notesel a
+loop
 
