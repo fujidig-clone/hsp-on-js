@@ -5,20 +5,6 @@ var BuiltinFuncs = [];
 	}
 })();
 
-
-function LoopData(cnt, end, pc) {
-	this.cnt = cnt;
-	this.end = end;
-	this.pc = pc;
-}
-
-function Frame(pc, userDefFunc, args, callback) {
-	this.pc = pc;
-	this.userDefFunc = userDefFunc;
-	this.args = args;
-	this.callback = callback;
-}
-
 BuiltinFuncs[Token.Type.PROGCMD] = {
 	0x00: function goto_(label) {
 		this.scanArgs(arguments, 'l');
@@ -27,38 +13,6 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 	0x01: function gosub(label) {
 		this.scanArgs(arguments, 'l');
 		this.subroutineJump(label.toValue());
-	},
-	0x02: function return_(val) {
-		this.scanArgs(arguments, '.?');
-		if(this.frameStack.length == 0) {
-			throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);
-		}
-		var frame = this.frameStack.pop();
-		if(frame.userDefFunc && frame.userDefFunc.isCType) {
-			this.stack.push(val);
-		} else if(val) {
-			switch(val.getType()) {
-			case VarType.STR:
-				this.refstr.assign(0, val.toStrValue());
-				break;
-			case VarType.DOUBLE:
-				this.refdval.assign(0, val.toDoubleValue());
-				break;
-			case VarType.INT:
-				this.stat.assign(0, val.toIntValue());
-				break;
-			default:
-				throw new HSPError(ErrorCode.TYPE_MISMATCH);
-			}
-		}
-		this.pc = frame.pc - 1;
-		if(frame.userDefFunc) {
-			this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, function() {
-				if(frame.callback) frame.callback();
-			});
-		} else if(frame.callback) {
-			frame.callback();
-		}
 	},
 	0x03: function break_(label) {
 		this.scanArgs(arguments, 'l');
@@ -180,13 +134,6 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 	0x11: function stop() {
 		this.scanArgs(arguments, '');
 		throw new StopException;
-	},
-	0x14: function delmod(v) {
-		this.scanArgs(arguments, 'v');
-		if(v.getType() != VarType.STRUCT) {
-			throw new HSPError(ErrorCode.TYPE_MISMATCH);
-		}
-		this.deleteStruct(v);
 	},
 	0x16: function mref(v, id) {
 		this.scanArgs(arguments, 'aN');

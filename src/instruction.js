@@ -46,7 +46,9 @@ Instruction.CodeNames = [
 	'PUSH_ARG_VAR',
 	'PUSH_MEMBER',
 	'THISMOD',
-	'NEWMOD'
+	'NEWMOD',
+	'RETURN',
+	'DELMOD'
 ];
 
 Instruction.Code = {};

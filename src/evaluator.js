@@ -15,7 +15,19 @@ function Evaluator(axdata, sequence) {
 	this.refstr = new StrArray();
 	this.strsize = new IntValue(0);
 	this.random = new VCRandom();
-	this.atExitOfDispatchCallbacks = [];
+}
+
+function LoopData(cnt, end, pc) {
+	this.cnt = cnt;
+	this.end = end;
+	this.pc = pc;
+}
+
+function Frame(pc, userDefFunc, args, callback) {
+	this.pc = pc;
+	this.userDefFunc = userDefFunc;
+	this.args = args;
+	this.callback = callback;
 }
 
 Evaluator.prototype = {
@@ -231,12 +243,55 @@ Evaluator.prototype = {
 				throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
 			}
 			break;
+		case Instruction.Code.RETURN:
+			var val = insn.opts[0] ? this.stack.pop() : undefined;
+			if(this.frameStack.length == 0) {
+				throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);
+			}
+			var frame = this.frameStack.pop();
+			if(frame.userDefFunc && frame.userDefFunc.isCType) {
+				if(!val) throw new HSPError(ErrorCode.NORETVAL);
+				this.stack.push(val.toValue());
+			} else if(val) {
+				switch(val.getType()) {
+				case VarType.STR:
+					this.refstr.assign(0, val.toStrValue());
+					break;
+				case VarType.DOUBLE:
+					this.refdval.assign(0, val.toDoubleValue());
+					break;
+				case VarType.INT:
+					this.stat.assign(0, val.toIntValue());
+					break;
+				default:
+					throw new HSPError(ErrorCode.TYPE_MISMATCH);
+				}
+			}
+			this.pc = frame.pc - 1;
+			var runCallback = function() {
+				if(frame.callback) {
+					var fn = frame.callback();
+					while(fn) {
+						fn = fn();
+					}
+				}
+			};
+			if(frame.userDefFunc) {
+				this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, runCallback);
+			} else {
+				runCallback();
+			}
+			break;
+		case Instruction.Code.DELMOD:
+			var v = this.stack.pop();
+			this.scanArg(v, 'v', false);
+			if(v.getType() != VarType.STRUCT) {
+				throw new HSPError(ErrorCode.TYPE_MISMATCH);
+			}
+			this.deleteStruct(v);
+			break;
 		default:
 			throw new Error("未対応の命令コード: "+insn.code);
-		}
-		var callbacks = this.atExitOfDispatchCallbacks;
-		while(callbacks.length) {
-			callbacks.pop()();
 		}
 		this.pc ++;
 	},
@@ -352,56 +407,65 @@ Evaluator.prototype = {
 		return thismod;
 	},
 	deleteStruct: function deleteStruct(agent, callback) {
+		var fn = this.deleteStruct0(agent, callback);
+		while(fn) {
+			fn = fn();
+		}
+	},
+	deleteAllStruct: function deleteAllStruct(variable, callback) {
+		var fn = this.deleteAllStruct0(variable, callback);
+		while(fn) {
+			fn = fn();
+		}
+	},
+	deleteStruct0: function deleteStruct0(agent, callback) {
 		this.deleteStructRecursionLevel = 0;
 		var struct = agent.toValue();
 		var self = this;
 		if(struct.isUsing() != 1) {
-			if(callback) callback();
-			return;
+			if(callback) return callback();
+			return null;
 		}
 		var myCallback = function() {
 			var i = 0;
-			(function() {
+			return (function() {
 				if(++self.deleteStructRecursionLevel >= 128) {
 					self.deleteStructRecursionLevel = 0;
-					self.atExitOfDispatchCallbacks.push(arguments.callee);
-					return;
-				} 
+					return arguments.callee;
+				}
 				while(true) {
 					if(i >= struct.members.length) {
 						agent.assign(StructValue.EMPTY);
-						if(callback) callback();
-						return;
+						if(callback) return callback();
+						return null;
 					}
 					var member = struct.members[i];
 					i ++;
 					if(member.getType() == VarType.STRUCT) {
-						self.deleteAllStruct(member, arguments.callee);
-						return;
+						return self.deleteAllStruct0(member, arguments.callee);
 					}
 				}
 			})();
 		}
 		if(struct.module.destructor) {
 			this.callUserDefFunc(struct.module.destructor, [agent], myCallback);
+			return null;
 		} else {
-			this.atExitOfDispatchCallbacks.push(myCallback);
+			return myCallback;
 		}
 	},
-	deleteAllStruct: function deleteAllStruct(variable, callback) {
+	deleteAllStruct0: function deleteAllStruct0(variable, callback) {
 		var i = 0;
 		var self = this;
-		(function() {
+		return (function() {
 			while(true) {
 				if(i >= variable.getL0()) {
-					callback();
-					return;
+					return callback();
 				}
 				var agent = new VariableAgent(variable, [i]);
 				i ++;
 				if(agent.isUsing() == 1) {
-					self.deleteStruct(agent, arguments.callee);
-					return;
+					return self.deleteStruct0(agent, arguments.callee);
 				}
 			}
 		})();
@@ -544,7 +608,8 @@ Evaluator.prototype = {
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Evaluator = Evaluator;
-	HSPonJS.StopException = StopException;
+	HSPonJS.LoopData = LoopData;
+	HSPonJS.Frame = Frame;
 }
 
 
