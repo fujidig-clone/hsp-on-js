@@ -232,12 +232,7 @@ Evaluator.prototype = {
 				agent.variable.dim(VarType.STRUCT, 1, 0, 0, 0);
 			}
 			var array = agent.variable.value;
-			var offset = array.findIndex();
-			var members = [];
-			for(var i = 0; i < module.membersCount; i ++) {
-				members[i] = new Variable;
-			}
-			array.values[offset] = new StructValue(module, members, false);
+			var offset = array.newmod(module);
 			if(module.constructor) {
 				args[0] = new VariableAgent(agent.variable, [offset]);
 				this.callUserDefFunc(module.constructor, args);

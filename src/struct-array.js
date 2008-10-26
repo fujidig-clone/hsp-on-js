@@ -1,6 +1,7 @@
 function StructArray() {
 	HSPArray.call(this);
 	this.values = [StructValue.EMPTY];
+	this.searchFrom = 0;
 }
 
 StructArray.prototype = new HSPArray();
@@ -8,6 +9,9 @@ StructArray.prototype = new HSPArray();
 Utils.objectExtend(StructArray.prototype, {
 	assign: function assign(offset, rhs) {
 		this.values[offset] = rhs.toValue().clone();
+		if(rhs == StructValue.EMPTY && offset < this.searchFrom) {
+			this.searchFrom = offset;
+		}
 	},
 	expand: function expand(indices) {
 		var isExpanded = HSPArray.prototype.expand.call(this, indices);
@@ -23,16 +27,23 @@ Utils.objectExtend(StructArray.prototype, {
 	getType: function getType() {
 		return VarType.STRUCT;
 	},
-	// newmod で格納するべきインデックスを返す（空きがなければ拡張する）
-	findIndex: function findIndex() {
+	// 配列インデックスを返す
+	newmod: function newmod(module) {
 		var len = this.l0;
-		for(var i = 0; i < len; i ++) {
-			if(this.values[i] == StructValue.EMPTY) {
-				return i;
+		var index;
+		for(index = this.searchFrom; index < len; index ++) {
+			if(this.values[index] == StructValue.EMPTY) {
+				break;
 			}
 		}
-		this.expand([len]);
-		return len;
+		if(index == len) this.expand([len]);
+		this.searchFrom = index + 1;
+		var members = [];
+		for(var i = 0; i < module.membersCount; i ++) {
+			members[i] = new Variable;
+		}
+		this.values[index] = new StructValue(module, members, false);
+		return index;
 	}
 });
 

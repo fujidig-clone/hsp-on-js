@@ -1,76 +1,10 @@
-; original: http://rpen.blogspot.com/2007/12/blog-post_16.html
-#module
-#const EXPAND_SIZE 1024
-#deffunc set_string str str_to_set
-    string_length = strlen(str_to_set)
-    string_size = 64
-    sdim string, string_size
-    poke string, 0, str_to_set
-    return
-
-#deffunc get_string var target
-    target = string
-    return
-
-#defcfunc get_string_length
-    return string_length
-
-#deffunc add_string str str_to_add
-    len = strlen(str_to_add)
-    if string_size <= string_length + len {
-        string_size += EXPAND_SIZE
-        memexpand string, string_size
-    }
-    poke string, string_length, str_to_add
-    string_length += len
-    return
+#module mod x
 #global
 
-#const TRIAL_TIME 1000
-#define ctype timeGetTime gettime(-1)
-	sdim result
-
-    set_string ""
-    time_start = timeGetTime()
-    repeat TRIAL_TIME
-        add_string "sample string\n"
-    loop
-    get_string result(0)
-    time(0) = timeGetTime() - time_start
-    mes strf("poke: %d[ms]", time(0))
-
-    string = ""
-    time_start = timeGetTime()
-    repeat TRIAL_TIME
-        string += "sample string\n"
-    loop
-    result(1) = string
-    time(1) = timeGetTime() - time_start
-    mes strf("+=: %d[ms]", time(1))
-
-    sdim string
-    sdim tmp
-    time_start = timeGetTime()
-    repeat TRIAL_TIME
-        tmp += "sample string\n"
-        if 1000000\(cnt+1)=0 : string += tmp:tmp=""
-    loop
-    string += tmp
-    result(2) = string
-    time(2) = timeGetTime() - time_start
-    mes strf("tmp: %d[ms]", time(2))
-
-    sdim string
-    notesel string
-    time_start = timeGetTime()
-    repeat TRIAL_TIME
-        noteadd "sample string"
-    loop
-    result(3) = string
-    time(3) = timeGetTime() - time_start
-    mes strf("noteadd: %d[ms]", time(3))
-    
-    repeat 3
-    	if result(cnt) == result(cnt+1) : mes "ok" : else : mes "ng"
-    loop
+st = gettime(-1)
+repeat 3000
+	newmod a, mod
+loop
+ed = gettime(-1)
+mes strf("%d ms", ed - st)
 
