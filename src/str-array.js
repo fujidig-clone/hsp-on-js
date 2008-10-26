@@ -1,6 +1,6 @@
 function StrArray() {
 	HSPArray.call(this);
-	this.values = [new StrBuffer()];
+	this.values = [new StrBuffer(64)];
 }
 
 StrArray.prototype = new HSPArray();
@@ -14,7 +14,7 @@ Utils.objectExtend(StrArray.prototype, {
 		if(isExpanded) {
 			var newLen = this.allLength();
 			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = new StrBuffer();
+				this.values[i] = new StrBuffer(64);
 			}
 		}
 		return isExpanded;
@@ -26,18 +26,14 @@ Utils.objectExtend(StrArray.prototype, {
 		return VarType.STR;
 	},
 	strDim: function strDim(strLength, l0, l1, l2, l3) {
-		var str;
 		if(strLength == undefined || strLength <= 64) {
 			strLength = 64;
-			str = StrArray.DEFAULT;
-		} else {
-			str = Utils.strTimes("\0", strLength);
 		}
 		var indices = HSPArray.lengthToIndices(l0, l1, l2, l3);
 		HSPArray.prototype.expand.call(this, indices);
 		var len = this.allLength();
 		for(var i = 0; i < len; i ++) {
-			this.values[i] = new StrBuffer(str);
+			this.values[i] = new StrBuffer(strLength);
 		}
 	},
 	getbyte: function getbyte(offset, bytesOffset) {

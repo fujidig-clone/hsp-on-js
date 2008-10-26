@@ -1,8 +1,15 @@
 function main(){
 	var axdata = new AXData(axbinary);
 	var compiler = new Compiler(axdata);
-	var sequence = compiler.compile();
-
+	try {
+		var sequence = compiler.compile();
+	} catch(e) {
+		if(!(e instanceof CompileError)) throw e;
+		print(e);
+		print(e.hspFileName+':'+e.hspLineNumber);
+		return null;
+	}
+	
 	if(showSequence) {
 		sequence.forEach(function(insn){ print(insn);});
 	}
