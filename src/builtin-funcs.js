@@ -569,7 +569,7 @@ BuiltinFuncs[Token.Type.INTFUNC] = {
 				return a + b.toLowerCase();
 			});
 		}
-		var dir = /^(?:\w:)?(?:(?:[^\x81-\x9f\xe0-\xfc]|[\x81-\x9f\xe0-\xfc]{2})*[\/\\])?/.exec(path)[0];
+		var dir = /^(?:\w:)?(?:(?:[^\x81-\x9f\xe0-\xfc]|[\x81-\x9f\xe0-\xfc][\s\S])*[\/\\])?/.exec(path)[0];
 		var ext = /(?:\.[^.\/\\]*)?$/.exec(path)[0];
 		var basename = path.slice(dir.length, path.length - ext.length);
 		if(flags & 8) {
