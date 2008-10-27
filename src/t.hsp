@@ -1,6 +1,4 @@
-notesel a
-sdim a
-noteadd "foo"
-noteadd "bar"
-mes a
-
+mes strf("<%.2g>", 99.5)
+mes strf("<%.2g>", 99.4)
+mes strf("<%.1g>", 9.5)
+mes strf("<%.1g>", 9.4)

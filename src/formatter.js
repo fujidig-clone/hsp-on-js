@@ -90,7 +90,7 @@ var Formatter = {
 		return Formatter.addSpaces(str, flags, width);
 	},
 	convertMemoryAddress: function convertMemoryAddress(val, flags, width, prec) {
-		return Formatter.convertInt(val, {'-': flags['-']}, width, null, false, 16, '');
+		return Formatter.convertInt(val, {'-': flags['-']}, width, 8, false, 16, '').toUpperCase();
 	},
 	convertExp: function convertExp(val, flags, width, prec) {
 		if(prec == null) prec = 6;
@@ -122,13 +122,15 @@ var Formatter = {
 	},
 	convertFloatG: function convertFloatG(val, flags, width, prec) {
 		if(prec == null) prec = 6;
+		prec = Math.max(prec, 1);
 		var str;
 		var isNegative = val < 0;
 		val = Math.abs(val);
-		if(isNaN(val) || val == Infinity || (1e-4 <= val && val < Math.pow(10, prec))) {
-			str = Formatter.convertFloat(val, {}, 0, Math.max(prec - 1, 0));
+		if(isNaN(val) || val == Infinity || (1e-4 <= val && val < Math.pow(10, prec) - 0.5)) {
+			// FIXME convertFloat に渡す prec の値が正しくないようなので、後で直す
+			str = Formatter.convertFloat(val, {}, 0, prec - 1);
 		} else {
-			str = Formatter.convertExp(val, {}, 0, Math.max(prec - 1, 0));
+			str = Formatter.convertExp(val, {}, 0, prec - 1);
 		}
 		str = str.replace(/\.(\d*?)0+(?!\d)/, function(s, d) { return d.length > 0 ? '.' + d : ''; });
 		var prefix = Formatter.signPrefix(isNegative, flags);
