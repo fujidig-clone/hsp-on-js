@@ -164,16 +164,16 @@ var Formatter = {
 			}
 			return str;
 		}
-		while(true) {
-			str = val.toExponential(Math.min(exponent + prec, 16));
-			var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
-			var mantissa = matched[1], newExponent = parseInt(matched[2]);
-			if(exponent == newExponent) break;
-			exponent = newExponent;
-		}
+		var i = 0;
+		str = val.toExponential(Math.min(exponent + prec, 16));
+		var matched = /^(\d(?:\.\d+)?)e([+-]\d+)$/.exec(str);
+		var mantissa = matched[1], exponent = parseInt(matched[2]);
 		var matched = /\.(\d+)e/.exec(str);
 		if(matched && matched[1].length < exponent + prec) {
 			mantissa += Utils.strTimes("0", exponent + prec - matched[1].length);
+		}
+		if(!matched && exponent + prec > 0) {
+			mantissa += '.' + Utils.strTimes("0", exponent + prec);
 		}
 		str = mantissa;
 		if(exponent > 0) {
