@@ -122,6 +122,9 @@ HSPArray.prototype = {
 	},
 	ref: function ref(offset) {
 		return new Reference(this, offset);
+	},
+	bufferAt: function bufferAt(offset) {
+		throw new HSPError(ErrorCode.TYPE_MISMATCH);
 	}
 };
 

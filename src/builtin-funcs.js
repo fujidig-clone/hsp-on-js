@@ -321,8 +321,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 		if(v.getType() != VarType.STR) {
 			v.assign(StrValue.EMPTY_STR);
 		}
-		var buf = v.getBuffer();
-		this.selectNote(buf);
+		this.selectNote(v);
 	},
 	0x23: function noteadd(line, lineNumber, overwrite) {
 		this.scanArgs(arguments, 'sNN');

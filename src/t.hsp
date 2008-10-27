@@ -1,10 +1,6 @@
-mes strf("%.1f", 0.9999999999999999)
-mes strf("%.2f", 0.099)
-mes strf("%.1f", 0.99)
-mes strf("%.0f", 9.9)
-mes strf("%.0f", 999.99999)
-mes strf("%.1f", 999.99999)
-mes strf("%.2f", 999.99999)
-mes strf("%.3f", 999.99999)
-mes strf("%.4f", 999.99999)
-mes strf("%.5f", 999.99999)
+notesel a
+sdim a
+noteadd "foo"
+noteadd "bar"
+mes a
+

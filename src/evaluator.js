@@ -396,7 +396,7 @@ Evaluator.prototype = {
 		if(!this.note) {
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ノートパッドが選択されていません');
 		}
-		return this.note;
+		return this.note.getBuffer();
 	},
 	fileRead: function fileRead(path, success, error) {
 		throw new FileReadException(path, success, error);
