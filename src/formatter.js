@@ -112,6 +112,7 @@ var Formatter = {
 				mantissa += Utils.strTimes("0", prec - matched[1].length);
 			}
 		}
+		if(flags['#'] && str.indexOf('.') == -1) mantissa += '.';
 		str = mantissa + "e" + Formatter.convertInt(exponent, {'+': true}, 0, 3, true, 10, '');
 		var prefix = Formatter.signPrefix(isNegative, flags);
 		if(flags['0'] && !flags['-']) {
@@ -137,11 +138,13 @@ var Formatter = {
 				prec2 = prec - exponent - 1;
 				if(prec == 1 && val * Math.pow(10, -exponent) >= 9.5) prec2 --;
 			}
-			str = Formatter.convertFloat(val, {}, 0, prec2);
+			str = Formatter.convertFloat(val, {'#': flags['#']}, 0, prec2);
 		} else {
-			str = Formatter.convertExp(val, {}, 0, Math.min(prec - 1, 16));
+			str = Formatter.convertExp(val, {'#': flags['#']}, 0, Math.min(prec - 1, 16));
 		}
-		str = str.replace(/\.(\d*?)0+(?!\d)/, function(s, d) { return d.length > 0 ? '.' + d : ''; });
+		if(!flags['#']) {
+			str = str.replace(/\.(\d*?)0+(?!\d)/, function(s, d) { return d.length > 0 ? '.' + d : ''; });
+		}
 		var prefix = Formatter.signPrefix(isNegative, flags);
 		if(flags['0'] && !flags['-']) {
 			str = Formatter.addZeros(str, width - prefix.length);
@@ -154,6 +157,7 @@ var Formatter = {
 		var isNegative = val < 0;
 		val = Math.abs(val);
 		var str = Formatter.convertFloatSub(val, prec);
+		if(flags['#'] && str.indexOf('.') == -1) str += ".";
 		var prefix = Formatter.signPrefix(isNegative, flags);
 		if(flags['0'] && !flags['-']) {
 			str = Formatter.addZeros(str, width - prefix.length);
