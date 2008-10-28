@@ -1,4 +1,76 @@
-mes strf("<%.2g>", 99.5)
-mes strf("<%.2g>", 99.4)
-mes strf("<%.1g>", 9.5)
-mes strf("<%.1g>", 9.4)
+#include "hspmath.as"
+
+mes strf("<%.1g>", 0.001234)
+mes strf("<%.3f>", 0.001234)
+mes
+mes strf("<%.1g>", 0.012345)
+mes strf("<%.2f>", 0.012345)
+mes
+mes strf("<%.1g>", 0.123456)
+mes strf("<%.1f>", 0.123456)
+mes
+mes strf("<%.2g>", 1.234567)
+mes strf("<%.1f>", 1.234567)
+mes
+mes strf("<%.3g>", 12.34567)
+mes strf("<%.1f>", 12.34567)
+mes
+mes strf("<%.4g>", 123.4567)
+mes strf("<%.1f>", 123.4567)
+
+mes "--------------------"
+
+mes strf("<%.1g>", 0.944444)
+mes strf("<%.1f>", 0.944444)
+mes
+mes strf("<%.1g>", 0.955555)
+mes strf("<%.0f>", 0.955555)
+mes
+mes strf("<%.2g>", 0.955555)
+mes strf("<%.2f>", 0.955555)
+
+mes "--------------------"
+
+mes strf("<%.1g>", 0.094444)
+mes strf("<%.2f>", 0.094444)
+mes
+mes strf("<%.1g>", 0.095555)
+mes strf("<%.1f>", 0.095555)
+mes
+mes strf("<%.2g>", 0.095555)
+mes strf("<%.3f>", 0.095555)
+
+mes "--------------------"
+
+mes strf("<%.1g>", 9.444444)
+mes strf("<%.0f>", 9.444444)
+mes
+mes strf("<%.1g>", 9.555555)
+mes strf("<%.0e>", 9.555555)
+mes
+mes strf("<%.2g>", 9.555555)
+mes strf("<%.1f>", 9.555555)
+
+mes "--------------------"
+
+inf = 1e300 * 1e300
+mes strf("<%.3g>", inf)
+mes strf("<%.2f>", inf)
+mes
+mes strf("<%.1g>", inf)
+mes strf("<%.0f>", inf)
+
+mes "--------------------"
+
+mes strf("<%.2g>", 123.4)
+mes strf("<%.1e>", 123.4)
+mes
+mes strf("<%.300g>", DBL_MAX)
+mes strf("<%.16e>", DBL_MAX)
+mes
+mes strf("<%.10g>", DBL_MIN)
+mes strf("<%.9e>", DBL_MIN)
+mes
+mes strf("<%.1g>", 1.23e-5)
+mes strf("<%.0e>", 1.23e-5)
+

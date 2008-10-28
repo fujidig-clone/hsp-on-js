@@ -127,10 +127,19 @@ var Formatter = {
 		var isNegative = val < 0;
 		val = Math.abs(val);
 		if(isNaN(val) || val == Infinity || (1e-4 <= val && val < Math.pow(10, prec) - 0.5)) {
-			// FIXME convertFloat に渡す prec の値が正しくないようなので、後で直す
-			str = Formatter.convertFloat(val, {}, 0, prec - 1);
+			var prec2;
+			if(isNaN(val) || val == Infinity) {
+				prec2 = prec - 1;
+			} else if(val == 0.0) {
+				prec2 = prec;
+			} else {
+				var exponent = Math.floor(Math.log(val) / Math.LN10);
+				prec2 = prec - exponent - 1;
+				if(prec == 1 && val * Math.pow(10, -exponent) >= 9.5) prec2 --;
+			}
+			str = Formatter.convertFloat(val, {}, 0, prec2);
 		} else {
-			str = Formatter.convertExp(val, {}, 0, prec - 1);
+			str = Formatter.convertExp(val, {}, 0, Math.min(prec - 1, 16));
 		}
 		str = str.replace(/\.(\d*?)0+(?!\d)/, function(s, d) { return d.length > 0 ? '.' + d : ''; });
 		var prefix = Formatter.signPrefix(isNegative, flags);
