@@ -18,14 +18,14 @@ var Formatter = {
 				case '1': case '2': case '3': case '4': case '5':
 				case '6': case '7': case '8': case '9':
 					var matched = str.slice(pos).match(/^\d+/)[0];
-					width = parseInt(matched);
+					width = + matched;
 					pos += matched.length;
 					continue;
 				case '.':
 					pos ++;
 					var matched = str.slice(pos).match(/^\d*/)[0];
 					pos += matched.length;
-					prec = matched.length > 0 ? parseInt(matched) : 0;
+					prec = matched.length > 0 ? + matched : 0;
 					continue;
 				default:
 					break;
