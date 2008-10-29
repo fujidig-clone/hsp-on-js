@@ -1,4 +1,5 @@
-mes strf("%+-@ %d", 111, 222)
-mes strf("<%++", 111) + ">"
-mes strf("<%d %c %d", 111, 0, 222) + ">"
+st = gettime(-1)
+repeat 100000 : loop
+ed = gettime(-1)
+mes strf("%d ms", ed - st)
 

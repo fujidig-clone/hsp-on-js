@@ -48,7 +48,14 @@ Instruction.CodeNames = [
 	'THISMOD',
 	'NEWMOD',
 	'RETURN',
-	'DELMOD'
+	'DELMOD',
+	'REPEAT',
+	'LOOP',
+	'CNT',
+	'CONTINUE',
+	'BREAK',
+	'FOREACH',
+	'EACHCHK'
 ];
 
 Instruction.Code = {};

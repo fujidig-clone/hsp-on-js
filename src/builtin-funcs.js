@@ -14,57 +14,6 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		this.scanArgs(arguments, 'l');
 		this.subroutineJump(label.toValue());
 	},
-	0x03: function break_(label) {
-		this.scanArgs(arguments, 'l');
-		if(this.loopStack.length == 0) {
-			throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-		}
-		this.loopStack.pop();
-		this.pc = label.toValue().pos - 1;
-	},
-	0x04: function repeat(label, times, begin) {
-		this.scanArgs(arguments, 'lNN');
-		if(this.loopStack.length >= 31) {
-			throw new HSPError(ErrorCode.TOO_MANY_NEST);
-		}
-		var end = times ? times.toIntValue()._value : Infinity;
-		if(end == 0) {
-			this.pc = label.toValue().pos - 1;
-			return;
-		}
-		if(end < 0) end = Infinity;
-		begin = begin ? begin.toIntValue()._value : 0;
-		end += begin;
-		this.loopStack.push(new LoopData(begin, end, this.pc + 1));
-	},
-	0x05: function loop() {
-		this.scanArgs(arguments, '');
-		if(this.loopStack.length == 0) {
-			throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-		}
-		var data = this.loopStack[this.loopStack.length - 1];
-		data.cnt ++;
-		if(data.cnt >= data.end) {
-			this.loopStack.pop();
-			return;
-		}
-		this.pc = data.pc - 1;
-	},
-	0x06: function continue_(label, newCnt) {
-		this.scanArgs(arguments, 'lN');
-		if(this.loopStack.length == 0) {
-			throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-		}
-		var data = this.loopStack[this.loopStack.length - 1];
-		newCnt = newCnt ? newCnt.toIntValue()._value : data.cnt + 1;
-		data.cnt = newCnt;
-		if(data.cnt >= data.end) {
-			this.loopStack.pop();
-			this.pc = label.toValue().pos - 1;
-			return;
-		}
-		this.pc = data.pc - 1;
-	},
 	0x07: function wait(n) {
 		this.scanArgs(arguments, 'N');
 		var msec = (n ? n.toIntValue()._value : 100) * 10;
@@ -88,35 +37,6 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		var ary = new StrArray();
 		ary.strDim(strLength, l0, l1, l2, l3);
 		v.variable.value = ary;
-	},
-	0x0b: function foreach(label) {
-		this.scanArgs(arguments, 'l');
-		if(this.loopStack.length >= 31) {
-			throw new HSPError(ErrorCode.TOO_MANY_NEST);
-		}
-		this.loopStack.push(new LoopData(0, Infinity, this.pc + 1));
-	},
-	0x0c: function eachchk(label, v) {
-		this.scanArgs(arguments, 'la');
-		if(this.loopStack.length == 0) {
-			throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-		}
-		label = label.toValue();
-		var data = this.loopStack[this.loopStack.length - 1];
-		if(data.cnt >= v.variable.getL0()) {
-			this.loopStack.pop();
-			this.pc = label.pos - 1;
-			return;
-		}
-		if(v.variable.at([data.cnt]).isUsing() == false) { // label 型 や struct 型の empty を飛ばす
-			data.cnt ++;
-			if(data.cnt >= data.end) {
-				this.loopStack.pop();
-				this.pc = label.pos - 1;
-				return;
-			}
-			this.pc = data.pc - 1;
-		}
 	},
 	0x0d: function dimtype(v, type, l0, l1, l2, l3) {
 		this.scanArgs(arguments, 'anNNNN');
@@ -187,12 +107,6 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 	},
 	0x03: function stat() {
 		return this.stat.at(0);
-	},
-	0x04: function cnt() {
-		if(this.loopStack.length == 0) {
-			return new IntValue(0);
-		}
-		return new IntValue(this.loopStack[this.loopStack.length - 1].cnt);
 	},
 	0x06: function strsize() {
 		return this.strsize;

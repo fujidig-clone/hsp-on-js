@@ -137,20 +137,65 @@ Compiler.prototype = {
 			                 [argc == 1], token);
 			break;
 		case 0x03: // break
+			this.tokensPos ++;
+			var labelToken = this.ax.tokens[this.tokensPos++];
+			if(labelToken.type != Token.Type.LABEL) {
+				throw this.error();
+			}
+			var argc = this.compileParameters(sequence);
+			if(argc > 0) throw new this.error('break の引数が多すぎます', token);
+			this.pushNewInsn(sequence, Instruction.Code.BREAK,
+			                 [this.labels[labelToken.code]], token);
+			break;
 		case 0x04: // repeat
+			this.tokensPos ++;
+			var labelToken = this.ax.tokens[this.tokensPos++];
+			if(labelToken.type != Token.Type.LABEL) {
+				throw this.error();
+			}
+			var argc = this.compileParameters(sequence);
+			if(argc > 2) throw new this.error('repeat の引数が多すぎます', token);
+			this.pushNewInsn(sequence, Instruction.Code.REPEAT,
+			                 [this.labels[labelToken.code], argc], token);
+			break;
+		case 0x05: // loop
+			this.tokensPos ++;
+			var argc = this.compileParameters(sequence);
+			if(argc > 0) throw new this.error('loop の引数が多すぎます', token);
+			this.pushNewInsn(sequence, Instruction.Code.LOOP, [], token);
+			break;
 		case 0x06: // continue
+			this.tokensPos ++;
+			var labelToken = this.ax.tokens[this.tokensPos++];
+			if(labelToken.type != Token.Type.LABEL) {
+				throw this.error();
+			}
+			var argc = this.compileParameters(sequence);
+			if(argc > 1) throw new this.error('continue の引数が多すぎます', token);
+			this.pushNewInsn(sequence, Instruction.Code.CONTINUE,
+			                 [this.labels[labelToken.code], argc], token);
+			break;
 		case 0x0b: // foreach
+			this.tokensPos ++;
+			var labelToken = this.ax.tokens[this.tokensPos++];
+			if(labelToken.type != Token.Type.LABEL) {
+				throw this.error();
+			}
+			var argc = this.compileParameters(sequence);
+			if(argc > 0) throw new this.error();
+			this.pushNewInsn(sequence, Instruction.Code.FOREACH,
+			                 [this.labels[labelToken.code]], token);
+			break;
 		case 0x0c: // eachchk
 			this.tokensPos ++;
 			var labelToken = this.ax.tokens[this.tokensPos++];
 			if(labelToken.type != Token.Type.LABEL) {
 				throw this.error();
 			}
-			this.pushNewInsn(sequence, Instruction.Code.PUSH,
-			                 [this.labels[labelToken.code]], labelToken);
-			var argc = 1 + this.compileParameters(sequence);
-			this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
-				             [token.type, token.code, argc], token);
+			var argc = this.compileParameters(sequence);
+			if(argc != 1) throw new this.error('foreach の引数の数が違います', token);
+			this.pushNewInsn(sequence, Instruction.Code.EACHCHK,
+			                 [this.labels[labelToken.code]], token);
 			break;
 		case 0x12: // newmod
 			this.tokensPos ++;
@@ -366,6 +411,10 @@ Compiler.prototype = {
 	},
 	compileSysvar: function compileSysvar(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
+		if(token.type == Token.Type.SYSVAR && token.code == 0x04) {
+			this.pushNewInsn(sequence, Instruction.Code.CNT, [], token);
+			return;
+		}
 		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_FUNC,
 		                 [token.type, token.code, 0], token);
 	},

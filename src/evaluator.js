@@ -287,6 +287,107 @@ Evaluator.prototype = {
 			}
 			this.deleteStruct(v);
 			break;
+		case Instruction.Code.REPEAT:
+			if(this.loopStack.length >= 31) {
+				throw new HSPError(ErrorCode.TOO_MANY_NEST);
+			}
+			var label = insn.opts[0];
+			var argc = insn.opts[1];
+			var begin = 0, end = Infinity;
+			if(argc == 2) {
+				var begin = this.stack.pop();
+				this.scanArg(begin, 'n', false);
+				begin = begin.toIntValue()._value;
+			}
+			if(argc >= 1) {
+				var end = this.stack.pop();
+				this.scanArg(end, 'n', false);
+				end = end.toIntValue()._value;
+				if(end < 0) end = Infinity;
+			}
+			if(end == 0) {
+				this.pc = label.pos - 1;
+				break;
+			}
+			end += begin;
+			this.loopStack.push(new LoopData(begin, end, this.pc + 1));
+			break;
+		case Instruction.Code.LOOP:
+			if(this.loopStack.length == 0) {
+				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
+			}
+			var data = this.loopStack[this.loopStack.length - 1];
+			data.cnt ++;
+			if(data.cnt >= data.end) {
+				this.loopStack.pop();
+				break;
+			}
+			this.pc = data.pc - 1;
+			break;
+		case Instruction.Code.CNT:
+			if(this.loopStack.length == 0) {
+				this.stack.push(new IntValue(0));
+			}
+			this.stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));
+			break;
+		case Instruction.Code.CONTINUE:
+			if(this.loopStack.length == 0) {
+				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
+			}
+			var data = this.loopStack[this.loopStack.length - 1];
+			var label = insn.opts[0];
+			var argc = insn.opts[1];
+			var newCnt = data.cnt + 1;
+			if(argc) {
+				newCnt = this.stack.pop();
+				this.scanArg(newCnt, 'n', false);
+				newCnt = newCnt.toIntValue()._value;
+			}
+			data.cnt = newCnt;
+			if(data.cnt >= data.end) {
+				this.loopStack.pop();
+				this.pc = label.pos - 1;
+				break;
+			}
+			this.pc = data.pc - 1;
+			break;
+		case Instruction.Code.BREAK:
+			if(this.loopStack.length == 0) {
+				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
+			}
+			var label = insn.opts[0];
+			this.loopStack.pop();
+			this.pc = label.pos - 1;
+			break;
+		case Instruction.Code.FOREACH:
+			if(this.loopStack.length >= 31) {
+				throw new HSPError(ErrorCode.TOO_MANY_NEST);
+			}
+			this.loopStack.push(new LoopData(0, Infinity, this.pc + 1));
+			break;
+		case Instruction.Code.EACHCHK:
+			if(this.loopStack.length == 0) {
+				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
+			}
+			var label = insn.opts[0];
+			var v = this.stack.pop();
+			this.scanArg(v, 'v', false);
+			var data = this.loopStack[this.loopStack.length - 1];
+			if(data.cnt >= v.variable.getL0()) {
+				this.loopStack.pop();
+				this.pc = label.pos - 1;
+				break;
+			}
+			if(v.variable.at([data.cnt]).isUsing() == false) { // label 型 や struct 型の empty を飛ばす
+				data.cnt ++;
+				if(data.cnt >= data.end) {
+					this.loopStack.pop();
+					this.pc = label.pos - 1;
+					break;
+				}
+				this.pc = data.pc - 1;
+			}
+			break;
 		default:
 			throw new Error("未対応の命令コード: "+insn.code);
 		}
