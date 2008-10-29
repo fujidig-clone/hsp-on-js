@@ -20,52 +20,7 @@ function main(){
 }
 
 if(typeof HSPonJS != 'undefined') {
-	var AXData = HSPonJS.AXData;
-	var BinaryParser = HSPonJS.BinaryParser;
-	var BuiltinFuncNames = HSPonJS.BuiltinFuncNames;
-	var BuiltinFuncs = HSPonJS.BuiltinFuncs;
-	var CP932 = HSPonJS.CP932;
-	var CallbackException = HSPonJS.CallbackException;
-	var CompileError = HSPonJS.CompileError;
-	var Compiler = HSPonJS.Compiler;
-	var DoubleArray = HSPonJS.DoubleArray;
-	var DoubleValue = HSPonJS.DoubleValue;
-	var ErrorCode = HSPonJS.ErrorCode;
-	var ErrorMessages = HSPonJS.ErrorMessages;
-	var Evaluator = HSPonJS.Evaluator;
-	var FileReadException = HSPonJS.FileReadException;
-	var Formatter = HSPonJS.Formatter;
-	var Frame = HSPonJS.Frame;
-	var HSPArray = HSPonJS.HSPArray;
-	var HSPError = HSPonJS.HSPError;
-	var HSPException = HSPonJS.HSPException;
-	var Instruction = HSPonJS.Instruction;
-	var IntArray = HSPonJS.IntArray;
-	var IntValue = HSPonJS.IntValue;
-	var JumpType = HSPonJS.JumpType;
-	var Label = HSPonJS.Label;
-	var LabelArray = HSPonJS.LabelArray;
-	var LoopData = HSPonJS.LoopData;
-	var MPType = HSPonJS.MPType;
-	var ModVarData = HSPonJS.ModVarData;
-	var Module = HSPonJS.Module;
-	var Reference = HSPonJS.Reference;
-	var StopException = HSPonJS.StopException;
-	var StrArray = HSPonJS.StrArray;
-	var StrBuffer = HSPonJS.StrBuffer;
-	var StrValue = HSPonJS.StrValue;
-	var StructArray = HSPonJS.StructArray;
-	var StructValue = HSPonJS.StructValue;
-	var Token = HSPonJS.Token;
-	var UserDefFunc = HSPonJS.UserDefFunc;
-	var Utils = HSPonJS.Utils;
-	var VCRandom = HSPonJS.VCRandom;
-	var Value = HSPonJS.Value;
-	var VarType = HSPonJS.VarType;
-	var VarTypeNames = HSPonJS.VarTypeNames;
-	var Variable = HSPonJS.Variable;
-	var VariableAgent = HSPonJS.VariableAgent;
-	var WaitException = HSPonJS.WaitException;
+	HSPonJS.Utils.objectExtend(this, HSPonJS);
 }
 
 BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
