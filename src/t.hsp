@@ -1,11 +1,4 @@
-#include "hspmath.as"
-
-mes strf("%#.1g", 1)
-a = strf("%#.400g", DBL_MAX)
-prec = 400-log10(DBL_MAX)-1
-b = strf("%#."+prec+"f", DBL_MAX)
-if a == b : mes "OK" : else : mes "NG"
-
-mes strf("%.3g", 1.0)
-mes strf("%#.3g", 1.0)
+mes strf("%+-@ %d", 111, 222)
+mes strf("<%++", 111) + ">"
+mes strf("<%d %c %d", 111, 0, 222) + ">"
 

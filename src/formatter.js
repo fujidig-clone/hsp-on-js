@@ -2,7 +2,7 @@ var Formatter = {
 	sprintf: function sprintf(evaluator, format, args) {
 		var argsIndex = 0;
 		format = format.toStrValue()._value;
-		var re = /%[- #+0-9.]*[%EGXcdefgiopsux]/g;
+		var re = /%[- #+0-9.]*[\s\S]?/g;
 		var result = format.replace(re, function(str){
 			var pos = 1; // '%'.length
 			var flags = {};
@@ -38,7 +38,9 @@ var Formatter = {
 			}
 			var arg = args[argsIndex++];
 			evaluator.scanArg(arg, '.', false);
-			return Formatter.ConvertTable[specifier](arg, flags, width, prec);
+			var convert = Formatter.ConvertTable[specifier];
+			if(!convert) return specifier; 
+			return convert(arg, flags, width, prec);
 		});
 		if(argsIndex < args.length) {
 			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
