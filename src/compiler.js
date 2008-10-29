@@ -242,72 +242,110 @@ Compiler.prototype = {
 				}
 			}
 			argc ++;
-			
-			while(true) {
-				token = this.ax.tokens[this.tokensPos];
-				if(!token || token.ex1) return argc;
-				switch(token.type) {
-				case Token.Type.MARK:
-					if(token.code == 41) { // ')'
-						return argc;
-					}
-					this.compileOperator(sequence);
-					break;
-				case Token.Type.VAR:
-					this.compileStaticVariable(sequence);
-					break;
-				case Token.Type.STRING:
-					this.pushNewInsn(sequence, Instruction.Code.PUSH,
-					                 [new StrValue(token.val)]);
-					this.tokensPos ++;
-					break;
-				case Token.Type.DNUM:
-					this.pushNewInsn(sequence, Instruction.Code.PUSH,
-					                 [new DoubleValue(token.val)]);
-					this.tokensPos ++;
-					break;
-				case Token.Type.INUM:
-					this.pushNewInsn(sequence, Instruction.Code.PUSH,
-					                 [new IntValue(token.val)]);
-					this.tokensPos ++;
-					break;
-				case Token.Type.STRUCT:
-					this.compileStruct(sequence);
-					break;
-				case Token.Type.LABEL:
-					this.pushNewInsn(sequence, Instruction.Code.PUSH,
-					                 [this.labels[token.code]]);
-					this.tokensPos ++;
-					break;
-				case Token.Type.EXTSYSVAR:
-					this.compileExtSysvar(sequence);
-					break;
-				case Token.Type.SYSVAR:
-					this.compileSysvar(sequence);
-					break;
-				case Token.Type.MODCMD:
-					this.compileUserDefFuncall(sequence);
-					break;
-				case Token.Type.INTFUNC:
-				case Token.Type.DLLFUNC:
-				case Token.Type.DLLCTRL:
-					this.compileFuncall(sequence);
-					break;
-				default:
-					throw this.error("命令コード " + token.type + " は解釈できません。");
+			this.compileParameter(sequence);
+		}
+	},
+	compileParameter: function compileParameter(sequence) {
+		while(true) {
+			var token = this.ax.tokens[this.tokensPos];
+			if(!token || token.ex1) return;
+			switch(token.type) {
+			case Token.Type.MARK:
+				if(token.code == 41) { // ')'
+					return;
 				}
-				token = this.ax.tokens[this.tokensPos];
-				if(token && token.ex2) break;
+				this.compileOperator(sequence);
+				break;
+			case Token.Type.VAR:
+				this.compileStaticVariable(sequence);
+				break;
+			case Token.Type.STRING:
+				this.pushNewInsn(sequence, Instruction.Code.PUSH,
+				                 [new StrValue(token.val)]);
+				this.tokensPos ++;
+				break;
+			case Token.Type.DNUM:
+				this.pushNewInsn(sequence, Instruction.Code.PUSH,
+				                 [new DoubleValue(token.val)]);
+				this.tokensPos ++;
+				break;
+			case Token.Type.INUM:
+				this.pushNewInsn(sequence, Instruction.Code.PUSH,
+				                 [new IntValue(token.val)]);
+				this.tokensPos ++;
+				break;
+			case Token.Type.STRUCT:
+				this.compileStruct(sequence);
+				break;
+			case Token.Type.LABEL:
+				this.pushNewInsn(sequence, Instruction.Code.PUSH,
+				                 [this.labels[token.code]]);
+				this.tokensPos ++;
+				break;
+			case Token.Type.EXTSYSVAR:
+				this.compileExtSysvar(sequence);
+				break;
+			case Token.Type.SYSVAR:
+				this.compileSysvar(sequence);
+				break;
+			case Token.Type.MODCMD:
+				this.compileUserDefFuncall(sequence);
+				break;
+			case Token.Type.INTFUNC:
+			case Token.Type.DLLFUNC:
+			case Token.Type.DLLCTRL:
+				this.compileFuncall(sequence);
+				break;
+			default:
+				throw this.error("命令コード " + token.type + " は解釈できません。");
 			}
+			token = this.ax.tokens[this.tokensPos];
+			if(token && token.ex2) return;
 		}
 	},
 	compileOperator: function compileOperator(sequence) {
-		var token = this.ax.tokens[this.tokensPos];
+		var token = this.ax.tokens[this.tokensPos++];
 		if(!(0 <= token.code && token.code < 16)) {
-			throw this.error("演算子コード " + token.code + " は解釈できません。");
+			throw this.error("演算子コード " + token.code + " は解釈できません。", token);
 		}
-		this.pushNewInsn(sequence, Instruction.Code.ADD + token.code, []);
-		this.tokensPos ++;
+		var len = sequence.length;
+		// リテラル同士の演算の最適化 ex. 1 + 1 -> 2
+		if(len >= 2 &&
+		   sequence[len-2].code == Instruction.Code.PUSH &&
+		   sequence[len-1].code == Instruction.Code.PUSH &&
+		   sequence[len-2].opts[0] && sequence[len-1].opts[0]) {
+			var lhs = sequence[len-2].opts[0], rhs = sequence[len-1].opts[0];
+			try {
+				var result = this.operate(lhs, rhs, token.code);
+				sequence.length -= 2;
+				this.pushNewInsn(sequence, Instruction.Code.PUSH, [result], token);
+				return;
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		this.pushNewInsn(sequence, Instruction.Code.ADD + token.code, [], token);
+	},
+	operate: function operate(lhs, rhs, calcCode) {
+		switch(calcCode) {
+		case  0: return lhs.add(rhs);
+		case  1: return lhs.sub(rhs);
+		case  2: return lhs.mul(rhs);
+		case  3: return lhs.div(rhs);
+		case  4: return lhs.mod(rhs);
+		case  5: return lhs.and(rhs);
+		case  6: return lhs.or(rhs);
+		case  7: return lhs.xor(rhs);
+		case  8: return lhs.eq(rhs);
+		case  9: return lhs.ne(rhs);
+		case 10: return lhs.gt(rhs);
+		case 11: return lhs.lt(rhs);
+		case 12: return lhs.gteq(rhs);
+		case 13: return lhs.lteq(rhs);
+		case 14: return lhs.rsh(rhs);
+		case 15: return lhs.lsh(rhs);
+		default:  throw new Error('must not happen');
+		}
 	},
 	compileExtSysvar: function compileExtSysvar(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
