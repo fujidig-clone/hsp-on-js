@@ -47,6 +47,24 @@ var Formatter = {
 		}
 		return new StrValue(Utils.getCStr(result));
 	},
+	sprintfForJS: function sprintfForJS(format) {
+		var args = [];
+		for(var i = 1; i < arguments.length; i ++) {
+			var arg = arguments[i];
+			switch(typeof arg) {
+			case 'number':
+				args.push(new DoubleValue(arg));
+				break;
+			case 'string':
+				args.push(new StrValue(arg));
+				break;
+			default:
+				args.push(arg);
+			}
+		}
+		var dummyEvaluator = {scanArg: function(){}};
+		return Formatter.sprintf(dummyEvaluator, new StrValue(format), args)._value;
+	},
 	addSpaces: function addSpaces(str, flags, width) {
 		var spaces = Utils.strTimes(' ', Math.max(width - str.length, 0));
 		if(flags['-']) {

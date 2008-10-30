@@ -11,7 +11,20 @@ function main(){
 	}
 	
 	if(showSequence) {
-		sequence.forEach(function(insn){ print(insn);});
+		var fileName, lineNo;
+		sequence.forEach(function(insn, i) {
+			var out = Formatter.sprintfForJS('%5d %-20s %-30s ', i, Instruction.CodeNames[insn.code], insn.opts.map(String).join(', '));
+			if(fileName != insn.fileName) {
+				fileName = insn.fileName;
+				lineNo = insn.lineNo;
+				out += '('+fileName+':'+lineNo+') ';
+			} else if(lineNo != insn.lineNo) {
+				lineNo = insn.lineNo;
+				out += '('+lineNo+') ';
+			}
+			out = out.replace(/\s*$/, '');
+			print(out);
+		});
 	}
 
 	var evaluator = new Evaluator(axdata, sequence);
