@@ -6,14 +6,6 @@ var BuiltinFuncs = [];
 })();
 
 BuiltinFuncs[Token.Type.PROGCMD] = {
-	0x00: function goto_(label) {
-		this.scanArgs(arguments, 'l');
-		this.pc = label.toValue().pos - 1;
-	},
-	0x01: function gosub(label) {
-		this.scanArgs(arguments, 'l');
-		this.subroutineJump(label.toValue());
-	},
 	0x07: function wait(n) {
 		this.scanArgs(arguments, 'N');
 		var msec = (n ? n.toIntValue()._value : 100) * 10;
@@ -67,36 +59,6 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 			break;
 		default:
 			throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);
-		}
-	},
-	0x18: function exgoto(v, mode, b, label) {
-		this.scanArgs(arguments, 'vnnl');
-		this.scanArg(v, 'i');
-		var a = v.toIntValue()._value;
-		mode = mode.toIntValue()._value;
-		b = b.toIntValue()._value;
-		label = label.toValue();
-		if(mode >= 0) {
-			if(a >= b) {
-				this.pc = label.pos - 1;
-			}
-		} else {
-			if(a <= b) {
-				this.pc = label.pos - 1;
-			}
-		}
-	},
-	0x19: function on(n, jumpType) {
-		this.scanArgs(arguments, 'Njl*');
-		n = n ? n.toIntValue()._value : 0;
-		if(!(0 <= n && n < arguments.length - 2)) {
-			return;
-		}
-		var label = arguments[n + 2].toValue();
-		if(jumpType == JumpType.GOTO) {
-			this.pc = label.pos - 1;
-		} else {
-			this.subroutineJump(label);
 		}
 	}
 };

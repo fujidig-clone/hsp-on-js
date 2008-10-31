@@ -55,7 +55,15 @@ Instruction.CodeNames = [
 	'CONTINUE',
 	'BREAK',
 	'FOREACH',
-	'EACHCHK'
+	'EACHCHK',
+	'GOSUB',
+	'GOTO_EXPR',
+	'GOSUB_EXPR',
+	'EXGOTO',
+	'EXGOTO_OPT1',
+	'EXGOTO_OPT2',
+	'EXGOTO_OPT3',
+	'ON'
 ];
 
 Instruction.Code = {};

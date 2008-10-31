@@ -388,6 +388,65 @@ Evaluator.prototype = {
 				this.pc = data.pc - 1;
 			}
 			break;
+		case Instruction.Code.GOSUB:
+			this.subroutineJump(insn.opts[0].pos);
+			break;
+		case Instruction.Code.GOTO_EXPR:
+			this.pc = this.scanArg(this.stack.pop(), 'l').toValue().pos - 1;
+			break;
+		case Instruction.Code.GOSUB_EXPR:
+			this.subroutineJump(this.scanArg(this.stack.pop(), 'l').toValue().pos);
+			break;
+		case Instruction.Code.EXGOTO:
+			var pos = this.scanArg(this.stack.pop(), 'l').toValue().pos;
+			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
+			var mode = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
+			var a = this.scanArg(this.scanArg(this.stack.pop(), 'v'), 'i').toIntValue()._value;
+			if(mode >= 0) {
+				if(a >= b) this.pc = pos - 1;
+			} else {
+				if(a <= b) this.pc = pos - 1;
+			}
+			break;
+		case Instruction.Code.EXGOTO_OPT1:
+			var a = this.scanArg(this.variables[insn.opts[0]].at(0), 'i').toIntValue()._value;
+			var pos = insn.opts[1].pos;
+			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
+			var mode = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
+			if(mode >= 0) {
+				if(a >= b) this.pc = pos - 1;
+			} else {
+				if(a <= b) this.pc = pos - 1;
+			}
+			break;
+		case Instruction.Code.EXGOTO_OPT2:
+			var a = this.scanArg(this.variables[insn.opts[0]].at(0), 'i').toIntValue()._value;
+			var pos = insn.opts[1].pos;
+			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
+			if(a >= b) this.pc = pos - 1;
+			break;
+		case Instruction.Code.EXGOTO_OPT3:
+			var a = this.scanArg(this.variables[insn.opts[0]].at(0), 'i').toIntValue()._value;
+			var pos = insn.opts[1].pos;
+			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
+			if(a <= b) this.pc = pos - 1;
+			break;
+		case Instruction.Code.ON:
+			var argc = insn.opts[0];
+			var isGosub = insn.opts[1];
+			for(var i = this.stack.length - argc, l = this.stack.length; i < l; i ++) {
+				this.scanArg(this.stack[i], 'l');
+			}
+			var n = this.scanArg(this.stack[this.stack.length - argc - 1], 'n').toIntValue()._value;
+			if(!(0 <= n && n < argc)) break;
+			var pos = this.stack[this.stack.length - argc + n].toValue().pos;
+			this.stack.length -= argc + 1;
+			if(isGosub) {
+				this.subroutineJump(pos);
+			} else {
+				this.pc = pos - 1;
+			}
+			break;
 		default:
 			throw new Error("未対応の命令コード: "+insn.code);
 		}
@@ -464,12 +523,12 @@ Evaluator.prototype = {
 		this.frameStack.push(new Frame(this.pc + 1, userDefFunc, args, callback));
 		this.pc = userDefFunc.label.pos - 1;
 	},
-	subroutineJump: function subroutineJump(label) {
+	subroutineJump: function subroutineJump(pos) {
 		if(this.frameStack.length >= 256) {
 			throw new HSPError(ErrorCode.STACK_OVERFLOW);
 		}
 		this.frameStack.push(new Frame(this.pc + 1, null, null));
-		this.pc = label.pos - 1;
+		this.pc = pos - 1;
 	},
 	popIndices: function popIndices(argc) {
 		var indices = Utils.aryPopN(this.stack, argc);
@@ -653,7 +712,7 @@ Evaluator.prototype = {
 	scanArg: function scanArg(arg, c, isOptionalArguments) {
 		if(arg == undefined) {
 			if(isOptionalArguments) {
-				return;
+				return arg;
 			} else {
 				throw new HSPError(ErrorCode.NO_DEFAULT);
 			}
@@ -707,6 +766,7 @@ Evaluator.prototype = {
 		case '.':
 			break;
 		}
+		return arg;
 	}
 };
 

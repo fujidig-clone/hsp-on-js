@@ -126,7 +126,23 @@ Compiler.prototype = {
 				                 [this.labels[labelToken.code]]);
 				this.tokensPos += 2;
 			} else {
-				this.compileCommand(sequence);
+				this.tokensPos ++;
+				var argc = this.compileParameters(sequence);
+				if(argc != 1) throw this.error('goto の引数の数が違います', token);
+				this.pushNewInsn(sequence, Instruction.Code.GOTO_EXPR, [], token);
+			}
+			break;
+		case 0x01: // gosub
+			var labelToken = this.ax.tokens[this.tokensPos + 1];
+			if(labelToken && labelToken.type == Token.Type.LABEL && !labelToken.ex2 && (!this.ax.tokens[this.tokensPos + 2] || this.ax.tokens[this.tokensPos + 2].ex1)) {
+				this.pushNewInsn(sequence, Instruction.Code.GOSUB,
+				                 [this.labels[labelToken.code]]);
+				this.tokensPos += 2;
+			} else {
+				this.tokensPos ++;
+				var argc = this.compileParameters(sequence);
+				if(argc != 1) throw this.error('gosub の引数の数が違います', token);
+				this.pushNewInsn(sequence, Instruction.Code.GOSUB_EXPR, [], token);
 			}
 			break;
 		case 0x02: // return
@@ -218,6 +234,64 @@ Compiler.prototype = {
 			var argc = this.compileParameters(sequence);
 			if(argc != 1) throw this.error('delmod の引数の数が違います', token);
 			this.pushNewInsn(sequence, Instruction.Code.DELMOD, [], token);
+			break;
+		case 0x18: // exgoto
+			this.tokensPos ++;
+			// exgoto <添字指定のない静的変数>, p2, p3, <ラベルリテラル> を最適化
+			var pos = this.tokensPos;
+			var varToken = this.ax.tokens[pos];
+			if(!varToken.ex1 && !varToken.ex2 &&
+			   varToken.type == Token.Type.VAR && this.ax.tokens[pos + 1].ex2) {
+				pos ++;
+				var secondParamPos = pos;
+				pos += this.skipParameter(pos);
+				var thirdParamPos = pos;
+				pos += this.skipParameter(pos);
+				var labelToken = this.ax.tokens[pos];
+				if(labelToken && !labelToken.ex1 &&
+				   labelToken.type == Token.Type.LABEL && this.ax.tokens[pos+1]) {
+					// p2 が整数リテラルの場合はさらに最適化
+					if(secondParamPos + 1 == thirdParamPos && this.ax.tokens[secondParamPos].type == Token.Type.INUM) {
+						this.tokensPos = thirdParamPos;
+						this.compileParameter(sequence);
+						if(this.ax.tokens[secondParamPos].code >= 0) {
+							this.pushNewInsn(sequence, Instruction.Code.EXGOTO_OPT2,
+							                 [varToken.code, this.labels[labelToken.code]], token);
+						} else {
+							this.pushNewInsn(sequence, Instruction.Code.EXGOTO_OPT3,
+							                 [varToken.code, this.labels[labelToken.code]], token);
+						}
+						this.tokensPos = pos + 1;
+						break;
+					}
+					this.tokensPos = secondParamPos;
+					this.compileParameter(sequence);
+					this.compileParameter(sequence);
+					this.pushNewInsn(sequence, Instruction.Code.EXGOTO_OPT1,
+					                 [varToken.code, this.labels[labelToken.code]], token);
+					this.tokensPos = pos + 1;
+					break;
+				}
+			}
+			var argc = this.compileParameters(sequence);
+			if(argc != 4) throw this.error('exgoto の引数の数が違います', token);
+			this.pushNewInsn(sequence, Instruction.Code.EXGOTO, [], token);
+			break;
+		case 0x19: // on
+			this.tokensPos ++;
+			var paramToken = this.ax.tokens[this.tokensPos];
+			if(paramToken.ex1 || paramToken.ex2) {
+				throw this.error('パラメータは省略できません', token);
+			}
+			this.compileParameter(sequence);
+			var jumpTypeToken = this.ax.tokens[this.tokensPos];
+			if(jumpTypeToken.ex1 || jumpTypeToken.type != Token.Type.PROGCMD || jumpTypeToken.code > 1) {
+				throw this.error('goto / gosub が指定されていません', token);
+			}
+			var isGosub = jumpTypeToken.code == 1;
+			this.tokensPos ++;
+			var argc = this.compileParametersSub(sequence);
+			this.pushNewInsn(sequence, Instruction.Code.ON, [argc, isGosub], token);
 			break;
 		default:
 			this.compileCommand(sequence);
@@ -346,6 +420,34 @@ Compiler.prototype = {
 			}
 			token = this.ax.tokens[this.tokensPos];
 			if(token && token.ex2) return;
+		}
+	},
+	skipParameter: function skipParameter(pos) {
+		var size = 0;
+		var parenLevel = 0;
+		while(true) {
+			var token = this.ax.tokens[pos + size];
+			if(!token || token.ex1) return size;
+			if(token.type == Token.Type.MARK) {
+				switch(token.val) {
+				case 40:
+					parenLevel ++;
+					break;
+				case 41:
+					if(parenLevel == 0) return size;
+					parenLevel --;
+					if(parenLevel == 0) return size + 1;
+					break;
+				case 63:
+					return size + 1;
+					break;
+				}
+			}
+			size ++;
+			token = this.ax.tokens[pos + size];
+			if(parenLevel == 0 && token && token.ex2) {
+				return size;
+			}
 		}
 	},
 	compileOperator: function compileOperator(sequence) {
