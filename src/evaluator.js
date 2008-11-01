@@ -327,6 +327,7 @@ Evaluator.prototype = {
 		case Instruction.Code.CNT:
 			if(this.loopStack.length == 0) {
 				this.stack.push(new IntValue(0));
+				break;
 			}
 			this.stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));
 			break;
