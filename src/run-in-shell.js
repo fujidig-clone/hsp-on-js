@@ -1,3 +1,6 @@
+var nameSpace = {};
+with(nameSpace) {
+
 function main(){
 	var axdata = new AXData(axbinary);
 	var compiler = new Compiler(axdata);
@@ -33,7 +36,7 @@ function main(){
 }
 
 if(typeof HSPonJS != 'undefined') {
-	HSPonJS.Utils.objectExtend(this, HSPonJS);
+	HSPonJS.Utils.objectExtend(nameSpace, HSPonJS);
 }
 
 BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
@@ -61,6 +64,7 @@ Evaluator.prototype.disposeException = function disposeException(e) {
 	}
 	throw e;
 };
+}
 
 try {
 	main();
