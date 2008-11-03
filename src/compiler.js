@@ -169,7 +169,14 @@ Compiler.prototype = {
 			if(labelToken.type != Token.Type.LABEL) {
 				throw this.error();
 			}
-			var argc = this.compileParameters(sequence);
+			var argc;
+			if(this.ax.tokens[this.tokensPos].ex2) {
+				this.pushNewInsn(sequence, Instruction.Code.PUSH,
+				                 [new IntValue(-1)], token);
+				argc = 1 + this.compileParametersSub(sequence);
+			} else {
+				argc = this.compileParameters(sequence);
+			}
 			if(argc > 2) throw new this.error('repeat の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.REPEAT,
 			                 [this.labels[labelToken.code], argc], token);
