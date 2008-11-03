@@ -1,7 +1,7 @@
 var nameSpace = {};
 with(nameSpace) {
 
-function main(){
+function main() {
 	var axdata = new AXData(axbinary);
 	var compiler = new Compiler(axdata);
 	try {
@@ -12,7 +12,7 @@ function main(){
 		print(e.hspFileName+':'+e.hspLineNumber);
 		return null;
 	}
-	
+
 	if(showSequence) {
 		var fileName, lineNo;
 		sequence.forEach(function(insn, i) {
@@ -25,7 +25,7 @@ function main(){
 				lineNo = insn.lineNo;
 				out += '('+lineNo+') ';
 			}
-			out = out.replace(/\s*$/, '');
+			out = out.replace(/\s+$/, '');
 			print(out);
 		});
 	}
@@ -68,7 +68,7 @@ Evaluator.prototype.disposeException = function disposeException(e) {
 
 try {
 	main();
-}catch(e){
+}catch(e) {
 	print(e);
 	print(e.stack);
 }
