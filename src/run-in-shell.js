@@ -1,7 +1,7 @@
 var nameSpace = {};
 with(nameSpace) {
 
-function main() {
+var main = function main() {
 	var axdata = new AXData(axbinary);
 	var compiler = new Compiler(axdata);
 	try {
@@ -68,7 +68,7 @@ Evaluator.prototype.disposeException = function disposeException(e) {
 
 try {
 	main();
-}catch(e) {
+} catch(e) {
 	print(e);
 	print(e.stack);
 }

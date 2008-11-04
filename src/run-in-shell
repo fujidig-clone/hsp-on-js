@@ -4,17 +4,19 @@ require 'optparse'
 use_repl = false
 package_path = nil
 show_sequence = false
-js = 'js'
+js_type = 'spider-monkey'
+js = nil
 
 opt = OptionParser.new
 opt.on('--repl') {|v| use_repl = v}
 opt.on('--package=PATH') {|v| package_path = v }
 opt.on('--[no-]show-sequence') {|v| show_sequence = v }
 opt.on('--js=COMMAND') {|v| js = v }
-opt.on('--v8') {|v| js = 'v8' }
-opt.on('--rhino') {|v| js = 'rhino' }
+opt.on('--v8') {|v| js ||= js_type = 'v8' }
+opt.on('--rhino') {|v| js ||= js_type = 'rhino' }
 
 opt.parse!(ARGV)
+js ||= 'js'
 
 message = IO.popen('hspcmp -d t.hsp'){|io|io.read}
 if $?.exitstatus != 0
@@ -73,16 +75,16 @@ end
 
 filenames << 't.ax.js' << 'run-in-shell.js'
 
-if use_repl
+if use_repl and js_type != 'v8'
   filenames << '-'
 end
 
-case js
+case js_type
 when 'rhino'
-  system('rhino', *filenames.map{|i|["-f", i]}.flatten)
+  system(js, *filenames.map{|i|["-f", i]}.flatten)
 when 'v8'
-  system('v8', *filenames)
+  system(js, *(use_repl ? ['--shell'] : []), *filenames)
 else
-  system('js', '-s', '-w', *filenames.map{|i|["-f", i]}.flatten)
+  system(js, '-s', '-w', *filenames.map{|i|["-f", i]}.flatten)
 end
 
