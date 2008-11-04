@@ -33,7 +33,7 @@ var main = function main() {
 	var evaluator = new Evaluator(axdata, sequence);
 	evaluator.evaluate();
 	return evaluator;
-}
+};
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Utils.objectExtend(nameSpace, HSPonJS);
