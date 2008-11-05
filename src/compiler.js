@@ -560,14 +560,14 @@ Compiler.prototype = {
 			var destructor = funcInfo.otindex != 0 ? this.getUserDefFunc(funcInfo.otindex) : null;
 			var constructorFinfoId = this.ax.prmsInfo[funcInfo.prmindex].offset;
 			var constructor = constructorFinfoId != -1 ? this.getUserDefFunc(constructorFinfoId) : null;
-			return this.userDefFuncs[finfoId] = new Module(funcInfo.name, constructor, destructor, funcInfo.prmmax - 1);
+			return this.userDefFuncs[finfoId] = new Module(funcInfo.name, constructor, destructor, funcInfo.prmmax - 1, finfoId);
 		}
 		var isCType = funcInfo.index == -2; // STRUCTDAT_INDEX_CFUNC
 		var paramTypes = [];
 		for(var i = 0; i < funcInfo.prmmax; i ++) {
 			paramTypes[i] = this.ax.prmsInfo[funcInfo.prmindex + i].mptype;
 		}
-		return this.userDefFuncs[finfoId] = new UserDefFunc(isCType, funcInfo.name, this.labels[funcInfo.otindex], paramTypes);
+		return this.userDefFuncs[finfoId] = new UserDefFunc(isCType, funcInfo.name, this.labels[funcInfo.otindex], paramTypes, finfoId);
 	},
 	compileFuncall: function compileFuncall(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];

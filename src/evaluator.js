@@ -17,6 +17,35 @@ function Evaluator(axdata, sequence) {
 	this.refstr = new StrArray();
 	this.strsize = new IntValue(0);
 	this.random = new VCRandom();
+	
+	var mainLoop;
+	var literals = [];
+	var variables = this.variables;
+	var userDefFuncs = [];
+	this.evaluate = function evaluate() {
+		mainLoop = eval('(function mainLoop(self, stack, literals, variables, userDefFuncs) {\n' + 
+		                this.createMainLoop(literals, userDefFuncs) + '\n})');
+		try {
+			mainLoop(this, this.stack, literals, variables, userDefFuncs);
+		} catch(e) {
+			if(!(e instanceof HSPException)) {
+				throw e;
+			}
+			this.disposeException(e);
+		}
+	};
+	this.resume = function resume(callback) {
+		try {
+			if(callback) callback();
+			this.pc ++;
+			mainLoop(this, this.stack, literals, variables, userDefFuncs);
+		} catch(e) {
+			if(!(e instanceof HSPException)) {
+				throw e;
+			}
+			this.disposeException(e);
+		}
+	};
 }
 
 function LoopData(cnt, end, pc) {
@@ -33,425 +62,381 @@ function Frame(pc, userDefFunc, args, callback) {
 }
 
 Evaluator.prototype = {
-	evaluate: function evaluate() {
-		try {
-			while(true) {
-				var insn = this.sequence[this.pc];
-				this.dispatch(insn);
-			}
-		} catch(e) {
-			if(!(e instanceof HSPException)) {
-				throw e;
-			}
-			this.disposeException(e);
+	createMainLoop: function createMainLoop(literals, userDefFuncs) {
+		function push(line) {
+			lines.push(Utils.strTimes('\t', indent) + line);
 		}
-	},
-	resume: function resume(callback) {
-		try {
-			if(callback) callback();
-			this.pc ++;
-			while(true) {
-				var insn = this.sequence[this.pc];
-				this.dispatch(insn);
-			}
-		} catch(e) {
-			if(!(e instanceof HSPException)) {
-				throw e;
-			}
-			this.disposeException(e);
+		function pushJumpSubroutineCode(posExpr) {
+			push('if(self.frameStack.length >= 256) {');
+			push('	throw new HSPError(ErrorCode.STACK_OVERFLOW);');
+			push('}');
+			push('self.frameStack.push(new Frame(self.pc + 1, null, null));');
+			push('self.pc = '+posExpr+';');
 		}
-	},
-	dispatch: function dispatch(insn) {
-		var lhs, rhs;
-		switch(insn.code) {
-		case Instruction.Code.NOP:
-			break;
-		case Instruction.Code.PUSH:
-			this.stack.push(insn.opts[0]);
-			break;
-		case Instruction.Code.PUSH_VAR:
-			var varId = insn.opts[0];
-			var argc = insn.opts[1];
-			var indices = this.popIndices(argc);
-			this.stack.push(new VariableAgent(this.variables[varId], indices));
-			break;
-		case Instruction.Code.POP:
-			this.stack.pop();
-			break;
-		case Instruction.Code.DUP:
-			this.stack.push(this.stack[this.stack.length-1]);
-			break;
-		case Instruction.Code.ADD:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.add(rhs));
-			break;
-		case Instruction.Code.SUB:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.sub(rhs));
-			break;
-		case Instruction.Code.MUL:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.mul(rhs));
-			break;
-		case Instruction.Code.DIV:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.div(rhs));
-			break;
-		case Instruction.Code.MOD:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.mod(rhs));
-			break;
-		case Instruction.Code.AND:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.and(rhs));
-			break;
-		case Instruction.Code.OR:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.or(rhs));
-			break;
-		case Instruction.Code.XOR:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.xor(rhs));
-			break;
-		case Instruction.Code.EQ:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.eq(rhs));
-			break;
-		case Instruction.Code.NE:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.ne(rhs));
-			break;
-		case Instruction.Code.GT:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.gt(rhs));
-			break;
-		case Instruction.Code.LT:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.lt(rhs));
-			break;
-		case Instruction.Code.GTEQ:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.gteq(rhs));
-			break;
-		case Instruction.Code.LTEQ:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.lteq(rhs));
-			break;
-		case Instruction.Code.RSH:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.rsh(rhs));
-			break;
-		case Instruction.Code.LSH:
-			rhs = this.stack.pop(), lhs = this.stack.pop();
-			this.stack.push(lhs.lsh(rhs));
-			break;
-		case Instruction.Code.GOTO:
-			this.pc = insn.opts[0].pos;
-			return;
-		case Instruction.Code.IFNE:
-			if(this.stack.pop().toIntValue()._value) {
-				this.pc = insn.opts[0].pos;
-				return;
-			}
-			break;
-		case Instruction.Code.IFEQ:
-			if(!this.stack.pop().toIntValue()._value) {
-				this.pc = insn.opts[0].pos;
-				return;
-			}
-			break;
-		case Instruction.Code.SETVAR:
-			var argc = insn.opts[0];
-			var args = Utils.aryPopN(this.stack, argc);
-			var agent = this.stack.pop();
-			var variable = agent.variable;
-			var indices = agent.indices.slice();
-			variable.assign(indices, args[0]);
-			if(indices.length == 0) indices[0] = 0;
-			indices[0] ++;
-			for(var i = 1; i < argc; i ++) {
-				variable.assign(indices, args[i]);
-				indices[0] ++;
-			}
-			break;
-		case Instruction.Code.EXPANDARRAY:
-			var agent = this.stack[this.stack.length - 1];
-			agent.variable.expand(agent.indices);
-			break;
-		case Instruction.Code.INC:
-			var agent = this.stack.pop();
-			agent.variable.expand(agent.indices);
-			agent.assign(agent.add(new IntValue(1)));
-			break;
-		case Instruction.Code.DEC:
-			var agent = this.stack.pop();
-			agent.variable.expand(agent.indices);
-			agent.assign(agent.sub(new IntValue(1)));
-			break;
-		case Instruction.Code.CALL_BUILTIN_CMD:
-			this.callBuiltinFunc(insn);
-			break;
-		case Instruction.Code.CALL_BUILTIN_FUNC:
-			this.stack.push(this.callBuiltinFunc(insn));
-			break;
-		case Instruction.Code.CALL_USERDEF_CMD:
-		case Instruction.Code.CALL_USERDEF_FUNC:
-			var userDefFunc = insn.opts[0];
-			var argc = insn.opts[1];
-			var args = Utils.aryPopN(this.stack, argc);
-			this.callUserDefFunc(userDefFunc, args);
-			break;
-		case Instruction.Code.GETARG:
-			var argNum = insn.opts[0];
-			this.stack.push(this.getArg(argNum));
-			break;
-		case Instruction.Code.PUSH_ARG_VAR:
-			var argNum = insn.opts[0];
-			var argc = insn.opts[1];
-			var variable = this.getArg(argNum);
-			var indices = this.popIndices(argc);
-			this.stack.push(new VariableAgent(variable, indices));
-			break;
-		case Instruction.Code.PUSH_MEMBER:
-			var memberNum = insn.opts[0];
-			var argc = insn.opts[1];
-			var struct = this.getThismod().toValue();
-			var indices = this.popIndices(argc);
-			this.stack.push(new VariableAgent(struct.members[memberNum], indices));
-			break;
-		case Instruction.Code.THISMOD:
-			this.stack.push(this.getThismod());
-			break;
-		case Instruction.Code.NEWMOD:
-			var module = insn.opts[0];
-			var argc = insn.opts[1];
-			var args = Utils.aryPopN(this.stack, argc);
-			var agent = args[0];
-			this.scanArg(agent, 'a', false);
-			if(agent.getType() != VarType.STRUCT) {
-				agent.variable.dim(VarType.STRUCT, 1, 0, 0, 0);
-			}
-			var array = agent.variable.value;
-			var offset = array.newmod(module);
-			if(module.constructor) {
-				args[0] = new VariableAgent(agent.variable, [offset]);
-				this.callUserDefFunc(module.constructor, args);
-			} else if(args.length > 1) {
-				throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
-			}
-			break;
-		case Instruction.Code.RETURN:
-			var val = insn.opts[0] ? this.stack.pop() : undefined;
-			if(this.frameStack.length == 0) {
-				throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);
-			}
-			var frame = this.frameStack.pop();
-			if(frame.userDefFunc && frame.userDefFunc.isCType) {
-				if(!val) throw new HSPError(ErrorCode.NORETVAL);
-				this.stack.push(val.toValue());
-			} else if(val) {
-				switch(val.getType()) {
-				case VarType.STR:
-					this.refstr.assign(0, val.toStrValue());
-					break;
-				case VarType.DOUBLE:
-					this.refdval.assign(0, val.toDoubleValue());
-					break;
-				case VarType.INT:
-					this.stat.assign(0, val.toIntValue());
-					break;
-				default:
-					throw new HSPError(ErrorCode.TYPE_MISMATCH);
-				}
-			}
-			this.pc = frame.pc - 1;
-			var runCallback = function() {
-				if(frame.callback) {
-					var fn = frame.callback();
-					while(fn) {
-						fn = fn();
+		var lines = [];
+		var indent = 0;
+		var sequence = this.sequence;
+		var operateMethodNames = 'add,sub,mul,div,mod,and,or,xor,eq,ne,gt,lt,gteq,lteq,rsh,lsh'.split(',');
+		
+		push('for(;;) {'); indent ++;
+		push('switch(self.pc) {');
+		for(var pc = 0; pc < sequence.length; pc ++) {
+			var insn = sequence[pc];
+			push('case '+pc+':'); indent ++;
+			switch(insn.code) {
+			case Instruction.Code.NOP:
+				break;
+			case Instruction.Code.PUSH:
+				literals.push(insn.opts[0]);
+				push('stack.push(literals['+(literals.length - 1)+']);');
+				break;
+			case Instruction.Code.PUSH_VAR:
+				var varId = insn.opts[0];
+				var argc = insn.opts[1];
+				push('stack.push(new VariableAgent(variables['+varId+'], self.popIndices('+argc+')));');
+				break;
+			case Instruction.Code.POP:
+				push('stack.pop();');
+				break;
+			case Instruction.Code.DUP:
+				push('stack.push(stack[stack.length-1]);');
+				break;
+			case Instruction.Code.ADD:
+			case Instruction.Code.SUB:
+			case Instruction.Code.MUL:
+			case Instruction.Code.DIV:
+			case Instruction.Code.MOD:
+			case Instruction.Code.AND:
+			case Instruction.Code.OR:
+			case Instruction.Code.XOR:
+			case Instruction.Code.EQ:
+			case Instruction.Code.NE:
+			case Instruction.Code.GT:
+			case Instruction.Code.LT:
+			case Instruction.Code.GTEQ:
+			case Instruction.Code.LTEQ:
+			case Instruction.Code.RSH:
+			case Instruction.Code.LSH:
+				push('var rhs = stack.pop();');
+				push('stack[stack.length - 1] = stack[stack.length - 1].'+
+					 operateMethodNames[insn.code - Instruction.Code.ADD]+'(rhs);');
+				break;
+			case Instruction.Code.GOTO:
+				push('self.pc = '+insn.opts[0].pos+';');
+				push('continue;');
+				break;
+			case Instruction.Code.IFNE:
+				push('if(stack.pop().toIntValue()._value) {');
+				push('    self.pc = '+insn.opts[0].pos+';');
+				push('    continue;');
+				push('}');
+				break;
+			case Instruction.Code.IFEQ:
+				push('if(!stack.pop().toIntValue()._value) {');
+				push('    self.pc = '+insn.opts[0].pos+';');
+				push('    continue;');
+				push('}');
+				break;
+			case Instruction.Code.SETVAR:
+				var argc = insn.opts[0];
+				if(argc > 1) {
+					push('var args = Utils.aryPopN(stack, '+argc+');');
+					push('var agent = stack.pop();');
+					push('var variable = agent.variable;');
+					push('var indices = agent.indices.slice();');
+					push('if(indices.length == 0) indices[0] = 0;');
+					for(var i = 0; i < argc; i ++) {
+						push('variable.assign(indices, args['+i+']);');
+						push('indices[0] ++;');
 					}
+				} else {
+					push('var arg = stack.pop();');
+					push('var agent = stack.pop();');
+					push('agent.variable.assign(agent.indices, arg);');
 				}
-			};
-			if(frame.userDefFunc) {
-				this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, runCallback);
-			} else {
-				runCallback();
-			}
-			break;
-		case Instruction.Code.DELMOD:
-			var v = this.stack.pop();
-			this.scanArg(v, 'v', false);
-			if(v.getType() != VarType.STRUCT) {
-				throw new HSPError(ErrorCode.TYPE_MISMATCH);
-			}
-			this.deleteStruct(v);
-			break;
-		case Instruction.Code.REPEAT:
-			if(this.loopStack.length >= 31) {
-				throw new HSPError(ErrorCode.TOO_MANY_NEST);
-			}
-			var label = insn.opts[0];
-			var argc = insn.opts[1];
-			var begin = 0, end = Infinity;
-			if(argc == 2) {
-				var begin = this.stack.pop();
-				this.scanArg(begin, 'n', false);
-				begin = begin.toIntValue()._value;
-			}
-			if(argc >= 1) {
-				var end = this.stack.pop();
-				this.scanArg(end, 'n', false);
-				end = end.toIntValue()._value;
-				if(end < 0) end = Infinity;
-			}
-			if(end == 0) {
-				this.pc = label.pos - 1;
 				break;
-			}
-			end += begin;
-			this.loopStack.push(new LoopData(begin, end, this.pc + 1));
-			break;
-		case Instruction.Code.LOOP:
-			if(this.loopStack.length == 0) {
-				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-			}
-			var data = this.loopStack[this.loopStack.length - 1];
-			data.cnt ++;
-			if(data.cnt >= data.end) {
-				this.loopStack.pop();
+			case Instruction.Code.EXPANDARRAY:
+				push('var agent = stack[stack.length - 1];');
+				push('agent.variable.expand(agent.indices);');
 				break;
-			}
-			this.pc = data.pc - 1;
-			break;
-		case Instruction.Code.CNT:
-			if(this.loopStack.length == 0) {
-				this.stack.push(new IntValue(0));
+			case Instruction.Code.INC:
+				push('var agent = stack.pop();');
+				push('agent.variable.expand(agent.indices);');
+				push('agent.assign(agent.add(new IntValue(1)));');
 				break;
-			}
-			this.stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));
-			break;
-		case Instruction.Code.CONTINUE:
-			if(this.loopStack.length == 0) {
-				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-			}
-			var data = this.loopStack[this.loopStack.length - 1];
-			var label = insn.opts[0];
-			var argc = insn.opts[1];
-			var newCnt = data.cnt + 1;
-			if(argc) {
-				newCnt = this.stack.pop();
-				this.scanArg(newCnt, 'n', false);
-				newCnt = newCnt.toIntValue()._value;
-			}
-			data.cnt = newCnt;
-			if(data.cnt >= data.end) {
-				this.loopStack.pop();
-				this.pc = label.pos - 1;
+			case Instruction.Code.DEC:
+				push('var agent = stack.pop();');
+				push('agent.variable.expand(agent.indices);');
+				push('agent.assign(agent.sub(new IntValue(1)));');
 				break;
-			}
-			this.pc = data.pc - 1;
-			break;
-		case Instruction.Code.BREAK:
-			if(this.loopStack.length == 0) {
-				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-			}
-			var label = insn.opts[0];
-			this.loopStack.pop();
-			this.pc = label.pos - 1;
-			break;
-		case Instruction.Code.FOREACH:
-			if(this.loopStack.length >= 31) {
-				throw new HSPError(ErrorCode.TOO_MANY_NEST);
-			}
-			this.loopStack.push(new LoopData(0, Infinity, this.pc + 1));
-			break;
-		case Instruction.Code.EACHCHK:
-			if(this.loopStack.length == 0) {
-				throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);
-			}
-			var label = insn.opts[0];
-			var v = this.stack.pop();
-			this.scanArg(v, 'v', false);
-			var data = this.loopStack[this.loopStack.length - 1];
-			if(data.cnt >= v.variable.getL0()) {
-				this.loopStack.pop();
-				this.pc = label.pos - 1;
-				break;
-			}
-			if(v.variable.at([data.cnt]).isUsing() == false) { // label 型 や struct 型の empty を飛ばす
-				data.cnt ++;
-				if(data.cnt >= data.end) {
-					this.loopStack.pop();
-					this.pc = label.pos - 1;
-					break;
+			case Instruction.Code.CALL_BUILTIN_CMD:
+			case Instruction.Code.CALL_BUILTIN_FUNC:
+				var type = insn.opts[0];
+				var subid = insn.opts[1];
+				var argc = insn.opts[2];
+				push('var func = BuiltinFuncs['+type+']['+subid+'];');
+				push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
+				push('var args = Utils.aryPopN(stack, '+argc+');');
+				if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
+					push('stack.push(func.apply(self, args));');
+				} else {
+					push('func.apply(self, args);');
 				}
-				this.pc = data.pc - 1;
+				break;
+			case Instruction.Code.CALL_USERDEF_CMD:
+			case Instruction.Code.CALL_USERDEF_FUNC:
+				var userDefFunc = insn.opts[0];
+				var argc = insn.opts[1];
+				if(!userDefFuncs[userDefFunc.id]) {
+					userDefFuncs[userDefFunc.id] = userDefFunc;
+				}
+				push('self.callUserDefFunc(userDefFuncs['+userDefFunc.id+'], '+
+					 'Utils.aryPopN(stack, '+argc+'));');
+				push('self.pc ++;');
+				push('continue;');
+				break;
+			case Instruction.Code.GETARG:
+				var argNum = insn.opts[0];
+				push('stack.push(self.getArg('+argNum+'));');
+				break;
+			case Instruction.Code.PUSH_ARG_VAR:
+				var argNum = insn.opts[0];
+				var argc = insn.opts[1];
+				push('var variable = self.getArg('+argNum+');');
+				push('var indices = self.popIndices('+argc+');');
+				push('stack.push(new VariableAgent(variable, indices));');
+				break;
+			case Instruction.Code.PUSH_MEMBER:
+				var memberNum = insn.opts[0];
+				var argc = insn.opts[1];
+				push('var struct = self.getThismod().toValue();');
+				push('var indices = self.popIndices('+argc+');');
+				push('stack.push(new VariableAgent(struct.members['+memberNum+'], indices));');
+				break;
+			case Instruction.Code.THISMOD:
+				push('stack.push(self.getThismod());');
+				break;
+			case Instruction.Code.NEWMOD:
+				var module = insn.opts[0];
+				var argc = insn.opts[1];
+				if(!userDefFuncs[module.id]) {
+					userDefFuncs[module.id] = module;
+				}
+				var moduleExpr = 'userDefFuncs['+module.id+']';
+				push('var args = Utils.aryPopN(stack, '+argc+');');
+				push('var agent = self.scanArg(args[0], "a");');
+				push('if(agent.getType() != '+VarType.STRUCT+') {');
+				push('    agent.variable.dim('+VarType.STRUCT+', 1, 0, 0, 0);');
+				push('}');
+				push('var array = agent.variable.value;');
+				push('var offset = array.newmod('+moduleExpr+');');
+				if(module.constructor) {
+					push('args[0] = new VariableAgent(agent.variable, [offset]);');
+					if(!userDefFuncs[module.constructor.id]) {
+						userDefFuncs[module.constructor.id] = module.constructor;
+					}
+					push('self.callUserDefFunc(userDefFuncs['+module.constructor.id+'], args);');
+					push('self.pc ++;');
+					push('continue;');
+				} else if(argc > 1) {
+					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
+				}
+				break;
+			case Instruction.Code.RETURN:
+				if(insn.opts[0]) {
+					push('self.return_(stack.pop());');
+				} else {
+					push('self.return_();');
+				}
+				push('self.pc ++;');
+				push('continue;');
+				break;
+			case Instruction.Code.DELMOD:
+				push('var v = self.scanArg(stack.pop(), "v");');
+				push('if(v.getType() != VarType.STRUCT) {');
+				push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+				push('}');
+				push('self.deleteStruct(v);');
+				push('self.pc ++;');
+				push('continue;');
+				break;
+			case Instruction.Code.REPEAT:
+				var pos = insn.opts[0].pos;
+				var argc = insn.opts[1];
+				push('if(self.loopStack.length >= 31) {');
+				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
+				push('}');
+				if(argc == 2) {
+					push('var begin = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				} else {
+					push('var begin = 0;');
+				}
+				if(argc >= 1) {
+					push('var end = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+					push('if(end < 0) end = Infinity;');
+				} else {
+					push('var end = Infinity;');
+				}
+				push('if(end == 0) {');
+				push('    self.pc = '+pos+';');
+				push('    continue;');
+				push('}');
+				push('end += begin;');
+				push('self.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
+				break;
+			case Instruction.Code.LOOP:
+				push('if(self.loopStack.length == 0) {');
+				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
+				push('}');
+				push('var data = self.loopStack[self.loopStack.length - 1];');
+				push('data.cnt ++;');
+				push('if(data.cnt < data.end) {');
+				push('    self.pc = data.pc;');
+				push('    continue;');
+				push('}');
+				push('self.loopStack.pop();');
+				break;
+			case Instruction.Code.CNT:
+				push('if(self.loopStack.length == 0) {');
+				push('    stack.push(new IntValue(0));');
+				push('} else {');
+				push('    stack.push(new IntValue(self.loopStack[self.loopStack.length - 1].cnt));');
+				push('}');
+				break;
+			case Instruction.Code.CONTINUE:
+				var pos = insn.opts[0].pos;
+				var argc = insn.opts[1];
+				push('if(self.loopStack.length == 0) {');
+				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
+				push('}');
+				push('var data = self.loopStack[self.loopStack.length - 1];');
+				var newCntExpr;
+				if(argc) {
+					newCntExpr = '(data.cnt = self.scanArg(self.stack.pop(), "n").toIntValue()._value)';
+				} else {
+					newCntExpr = '++data.cnt';
+				}
+				push('if('+newCntExpr+' >= data.end) {');
+				push('    self.loopStack.pop();');
+				push('    self.pc = '+pos+';');
+				push('} else {');
+				push('    self.pc = data.pc;');
+				push('}');
+				push('continue;');
+				break;
+			case Instruction.Code.BREAK:
+				var label = insn.opts[0];
+				push('if(self.loopStack.length == 0) {');
+				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
+				push('}');
+				push('self.loopStack.pop();');
+				push('self.pc = '+label.pos+';');
+				push('continue;');
+				break;
+			case Instruction.Code.FOREACH:
+				push('if(self.loopStack.length >= 31) {');
+				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
+				push('}');
+				push('self.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
+				break;
+			case Instruction.Code.EACHCHK:
+				push('if(self.loopStack.length == 0) {');
+				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
+				push('}')
+				var pos = insn.opts[0].pos;
+				push('var v = self.scanArg(stack.pop(), "v");');
+				push('var data = self.loopStack[self.loopStack.length - 1];');
+				push('if(data.cnt >= v.variable.getL0()) {')
+				push('    self.loopStack.pop();');
+				push('    self.pc = '+pos+';');
+				push('    continue;');
+				push('}');
+				push('if(v.variable.at([data.cnt]).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
+				push('    data.cnt ++;');
+				push('    if(data.cnt >= data.end) {');
+				push('        self.loopStack.pop();');
+				push('        self.pc = '+pos+';');
+				push('    } else {');
+				push('        self.pc = data.pc - 1;');
+				push('    }');
+				push('    continue;');
+				push('}');
+				break;
+			case Instruction.Code.GOSUB:
+				pushJumpSubroutineCode(insn.opts[0].pos);
+				push('continue;');
+				break;
+			case Instruction.Code.GOTO_EXPR:
+				push('self.pc = self.scanArg(stack.pop(), "l").toValue().pos;');
+				push('continue;');
+				break;
+			case Instruction.Code.GOSUB_EXPR:
+				pushJumpSubroutineCode('self.scanArg(stack.pop(), "l").toValue().pos');
+				push('continue;');
+				break;
+			case Instruction.Code.EXGOTO:
+				push('var pos = self.scanArg(stack.pop(), "l").toValue().pos;');
+				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var mode = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var a = self.scanArg(self.scanArg(stack.pop(), "v"), "i").toIntValue()._value;');
+				push('if(mode >= 0) {');
+				push('	if(a >= b) { self.pc = pos; continue; }');
+				push('} else {');
+				push('	if(a <= b) { self.pc = pos; continue; }');
+				push('}');
+				break;
+			case Instruction.Code.EXGOTO_OPT1:
+				var pos = insn.opts[1].pos;
+				push('var a = self.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
+				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var mode = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('if(mode >= 0) {');
+				push('	if(a >= b) { self.pc = '+pos+'; continue; }');
+				push('} else {');
+				push('	if(a <= b) { self.pc = '+pos+'; continue; }');
+				push('}');
+				break;
+			case Instruction.Code.EXGOTO_OPT2:
+				var pos = insn.opts[1].pos;
+				push('var a = self.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
+				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('if(a >= b) { self.pc = '+pos+'; continue; }');
+				break;
+			case Instruction.Code.EXGOTO_OPT3:
+				var pos = insn.opts[1].pos;
+				push('var a = self.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
+				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('if(a <= b) { self.pc = '+pos+'; continue; }');
+				break;
+			case Instruction.Code.ON:
+				var argc = insn.opts[0];
+				var isGosub = insn.opts[1];
+				push('var len = stack.length;');
+				for(var i = 0; i < argc; i ++) {
+					push('self.scanArg(stack[len - '+(argc - i)+'], "l");');
+				}
+				push('var n = self.scanArg(stack[len - '+(argc + 1)+'], "n").toIntValue()._value;');
+				push('if(!(0 <= n && n < argc)) break;');
+				push('var pos = stack[len - '+argc+' + n].toValue().pos;');
+				push('stack.length -= '+(argc + 1)+';');
+				if(isGosub) {
+					pushJumpSubroutineCode('pos');
+					push('continue;');
+				} else {
+					push('self.pc = pos;');
+					push('continue;');
+				}
+				break;
+			default:
+				throw new Error("未対応の命令コード: "+insn.code);
 			}
-			break;
-		case Instruction.Code.GOSUB:
-			this.subroutineJump(insn.opts[0].pos);
-			break;
-		case Instruction.Code.GOTO_EXPR:
-			this.pc = this.scanArg(this.stack.pop(), 'l').toValue().pos - 1;
-			break;
-		case Instruction.Code.GOSUB_EXPR:
-			this.subroutineJump(this.scanArg(this.stack.pop(), 'l').toValue().pos);
-			break;
-		case Instruction.Code.EXGOTO:
-			var pos = this.scanArg(this.stack.pop(), 'l').toValue().pos;
-			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
-			var mode = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
-			var a = this.scanArg(this.scanArg(this.stack.pop(), 'v'), 'i').toIntValue()._value;
-			if(mode >= 0) {
-				if(a >= b) this.pc = pos - 1;
-			} else {
-				if(a <= b) this.pc = pos - 1;
-			}
-			break;
-		case Instruction.Code.EXGOTO_OPT1:
-			var a = this.scanArg(this.variables[insn.opts[0]].at(0), 'i').toIntValue()._value;
-			var pos = insn.opts[1].pos;
-			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
-			var mode = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
-			if(mode >= 0) {
-				if(a >= b) this.pc = pos - 1;
-			} else {
-				if(a <= b) this.pc = pos - 1;
-			}
-			break;
-		case Instruction.Code.EXGOTO_OPT2:
-			var a = this.scanArg(this.variables[insn.opts[0]].at(0), 'i').toIntValue()._value;
-			var pos = insn.opts[1].pos;
-			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
-			if(a >= b) this.pc = pos - 1;
-			break;
-		case Instruction.Code.EXGOTO_OPT3:
-			var a = this.scanArg(this.variables[insn.opts[0]].at(0), 'i').toIntValue()._value;
-			var pos = insn.opts[1].pos;
-			var b = this.scanArg(this.stack.pop(), 'n').toIntValue()._value;
-			if(a <= b) this.pc = pos - 1;
-			break;
-		case Instruction.Code.ON:
-			var argc = insn.opts[0];
-			var isGosub = insn.opts[1];
-			for(var i = this.stack.length - argc, l = this.stack.length; i < l; i ++) {
-				this.scanArg(this.stack[i], 'l');
-			}
-			var n = this.scanArg(this.stack[this.stack.length - argc - 1], 'n').toIntValue()._value;
-			if(!(0 <= n && n < argc)) break;
-			var pos = this.stack[this.stack.length - argc + n].toValue().pos;
-			this.stack.length -= argc + 1;
-			if(isGosub) {
-				this.subroutineJump(pos);
-			} else {
-				this.pc = pos - 1;
-			}
-			break;
-		default:
-			throw new Error("未対応の命令コード: "+insn.code);
+			push('self.pc ++;');
+			indent --;
 		}
-		this.pc ++;
+		push('}');
+		indent --; push('}');
+		//print(lines.join("\n"));
+		return lines.join("\n");
 	},
 	callBuiltinFunc: function callBuiltinFunc(insn) {
 		var type = insn.opts[0];
@@ -524,12 +509,43 @@ Evaluator.prototype = {
 		this.frameStack.push(new Frame(this.pc + 1, userDefFunc, args, callback));
 		this.pc = userDefFunc.label.pos - 1;
 	},
-	subroutineJump: function subroutineJump(pos) {
-		if(this.frameStack.length >= 256) {
-			throw new HSPError(ErrorCode.STACK_OVERFLOW);
+	return_: function return_(val) {
+		if(this.frameStack.length == 0) {
+			throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);
 		}
-		this.frameStack.push(new Frame(this.pc + 1, null, null));
-		this.pc = pos - 1;
+		var frame = this.frameStack.pop();
+		if(frame.userDefFunc && frame.userDefFunc.isCType) {
+			if(!val) throw new HSPError(ErrorCode.NORETVAL);
+			this.stack.push(val.toValue());
+		} else if(val) {
+			switch(val.getType()) {
+			case VarType.STR:
+				this.refstr.assign(0, val.toStrValue());
+				break;
+			case VarType.DOUBLE:
+				this.refdval.assign(0, val.toDoubleValue());
+				break;
+			case VarType.INT:
+				this.stat.assign(0, val.toIntValue());
+				break;
+			default:
+				throw new HSPError(ErrorCode.TYPE_MISMATCH);
+			}
+		}
+		this.pc = frame.pc - 1;
+		var runCallback = function() {
+			if(frame.callback) {
+				var fn = frame.callback();
+				while(fn) {
+					fn = fn();
+				}
+			}
+		};
+		if(frame.userDefFunc) {
+			this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, runCallback);
+		} else {
+			runCallback();
+		}
 	},
 	popIndices: function popIndices(argc) {
 		var indices = Utils.aryPopN(this.stack, argc);
