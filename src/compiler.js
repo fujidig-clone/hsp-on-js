@@ -372,6 +372,7 @@ Compiler.prototype = {
 		}
 	},
 	compileParameter: function compileParameter(sequence) {
+		var headPos = this.tokensPos;
 		while(true) {
 			var token = this.ax.tokens[this.tokensPos];
 			if(!token || token.ex1) return;
@@ -383,7 +384,11 @@ Compiler.prototype = {
 				this.compileOperator(sequence);
 				break;
 			case Token.Type.VAR:
-				this.compileStaticVariable(sequence);
+				var nextTokenPos = this.tokensPos + 1;
+				nextTokenPos += this.skipParenAndParameters(nextTokenPos);
+				var nextToken = this.ax.tokens[nextTokenPos];
+				var onlyVar = this.tokensPos == headPos && (!nextToken || nextToken.ex1 || nextToken.ex2);
+				this.compileStaticVariable(sequence, !onlyVar);
 				break;
 			case Token.Type.STRING:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -443,7 +448,6 @@ Compiler.prototype = {
 				case 41:
 					if(parenLevel == 0) return size;
 					parenLevel --;
-					if(parenLevel == 0) return size + 1;
 					break;
 				case 63:
 					return size + 1;
@@ -456,6 +460,27 @@ Compiler.prototype = {
 				return size;
 			}
 		}
+	},
+	skipParameters: function skipParameters(pos) {
+		var skipped = 0;
+		var size = 0;
+		while((skipped = this.skipParameter(pos + size))) {
+			size += skipped;
+		}
+		return size;
+	},
+	skipParenAndParameters: function skipParenAndParameters(pos) {
+		var paren_token = this.ax.tokens[pos];
+		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40)) {
+			return 0;
+		}
+		var size = 1;
+		size += this.skipParameters(pos + size);
+		paren_token = this.ax.tokens[pos + size];
+		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
+			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', paren_token);
+		}
+		return size + 1;
 	},
 	compileOperator: function compileOperator(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
@@ -597,10 +622,10 @@ Compiler.prototype = {
 		}
 		throw this.error('変数が指定されていません');
 	},
-	compileStaticVariable: function compileStaticVariable(sequence) {
+	compileStaticVariable: function compileStaticVariable(sequence, useGetVar) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var argc = this.compileVariableSubscript(sequence);
-		this.pushNewInsn(sequence, Instruction.Code.PUSH_VAR,
+		this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_VAR : Instruction.Code.PUSH_VAR,
 		                 [token.code, argc], token);
 	},
 	compileProxyVariable: function compileProxyVariable(sequence) {

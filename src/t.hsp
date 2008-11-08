@@ -1,5 +1,7 @@
 st = gettime(-1)
-repeat 100000 : loop
+repeat 100000
+  a = 1 + a
+loop
 ed = gettime(-1)
 mes strf("%d ms", ed - st)
 

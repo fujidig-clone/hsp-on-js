@@ -13,6 +13,7 @@ Instruction.CodeNames = [
 	'NOP',
 	'PUSH',
 	'PUSH_VAR',
+	'GET_VAR',
 	'POP',
 	'DUP',
 	'ADD',

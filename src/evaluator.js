@@ -68,7 +68,7 @@ Evaluator.prototype = {
 		}
 		function pushJumpSubroutineCode(posExpr) {
 			push('if(self.frameStack.length >= 256) {');
-			push('	throw new HSPError(ErrorCode.STACK_OVERFLOW);');
+			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
 			push('self.frameStack.push(new Frame(self.pc + 1, null, null));');
 			push('self.pc = '+posExpr+';');
@@ -94,6 +94,25 @@ Evaluator.prototype = {
 				var varId = insn.opts[0];
 				var argc = insn.opts[1];
 				push('stack.push(new VariableAgent(variables['+varId+'], self.popIndices('+argc+')));');
+				break;
+			case Instruction.Code.GET_VAR:
+				var varId = insn.opts[0];
+				var argc = insn.opts[1];
+				push('var array = self.variables['+varId+'].value;');
+				if(argc > 1) {
+					push('var indices = self.popIndices('+argc+');');
+					push('var offset = array.getOffset(indices);');
+					push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+					push('stack.push(array.at(offset));');
+				} else if(argc == 1) {
+					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('if(!(0 <= offset && offset < array.getL0())) {');
+					push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+					push('}');
+					push('stack.push(array.at(offset));');
+				} else {
+					push('stack.push(array.at(0));');
+				}
 				break;
 			case Instruction.Code.POP:
 				push('stack.pop();');
@@ -380,9 +399,9 @@ Evaluator.prototype = {
 				push('var mode = self.scanArg(stack.pop(), "n").toIntValue()._value;');
 				push('var a = self.scanArg(self.scanArg(stack.pop(), "v"), "i").toIntValue()._value;');
 				push('if(mode >= 0) {');
-				push('	if(a >= b) { self.pc = pos; continue; }');
+				push('    if(a >= b) { self.pc = pos; continue; }');
 				push('} else {');
-				push('	if(a <= b) { self.pc = pos; continue; }');
+				push('    if(a <= b) { self.pc = pos; continue; }');
 				push('}');
 				break;
 			case Instruction.Code.EXGOTO_OPT1:
@@ -391,9 +410,9 @@ Evaluator.prototype = {
 				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
 				push('var mode = self.scanArg(stack.pop(), "n").toIntValue()._value;');
 				push('if(mode >= 0) {');
-				push('	if(a >= b) { self.pc = '+pos+'; continue; }');
+				push('    if(a >= b) { self.pc = '+pos+'; continue; }');
 				push('} else {');
-				push('	if(a <= b) { self.pc = '+pos+'; continue; }');
+				push('    if(a <= b) { self.pc = '+pos+'; continue; }');
 				push('}');
 				break;
 			case Instruction.Code.EXGOTO_OPT2:
