@@ -10,7 +10,7 @@ Utils.objectExtend(StrArray.prototype, {
 		this.values[offset].assign(rhs);
 	},
 	expand: function expand(indices) {
-		var isExpanded = HSPArray.prototype.expand.call(this, indices);
+		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
 			for(var i = this.values.length; i < newLen; i ++) {
@@ -19,6 +19,16 @@ Utils.objectExtend(StrArray.prototype, {
 		}
 		return isExpanded;
 	},
+	expand1D: function expand1D(index) {
+		var isExpanded = this.expandLen1D(index);
+		if(isExpanded) {
+			var newLen = this.l0;
+			for(var i = this.values.length; i < newLen; i ++) {
+				this.values[i] = new StrBuffer(64);
+			}
+		}
+		return isExpanded;
+	}, 
 	at: function at(offset) {
 		return this.values[offset].getValue();
 	},
@@ -30,7 +40,7 @@ Utils.objectExtend(StrArray.prototype, {
 			strLength = 64;
 		}
 		var indices = HSPArray.lengthToIndices(l0, l1, l2, l3);
-		HSPArray.prototype.expand.call(this, indices);
+		this.expandLen(indices);
 		var len = this.allLength();
 		for(var i = 0; i < len; i ++) {
 			this.values[i] = new StrBuffer(strLength);

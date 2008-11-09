@@ -10,32 +10,38 @@ Variable.prototype = {
 				throw new HSPError(ErrorCode.INVALID_ARRAYSTORE,
 				VarTypeNames[this.getType()]+' 型の配列変数に '+VarTypeNames[rhs.getType()]+' 型の値を代入しました');
 			}
-			switch(rhs.getType()) {
-			case VarType.LABEL:
-				this.value = new LabelArray();
-				break;
-			case VarType.STR:
-				this.value = new StrArray();
-				break;
-			case VarType.DOUBLE:
-				this.value = new DoubleArray();
-				break;
-			case VarType.INT:
-				this.value = new IntArray();
-				break;
-			case VarType.STRUCT:
-				this.value = new StructArray();
-				break;
-			default:
-				throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[rhs.getType()]+' 型の値は変数に代入できません');
-			}
+			this.reset(rhs.getType());
 			this.value.expand(indices);
 		}
 		var offset = this.value.getOffset(indices);
 		return this.value.assign(offset, rhs);
 	},
+	reset: function reset(type) {
+		switch(type) {
+		case VarType.LABEL:
+			this.value = new LabelArray();
+			break;
+		case VarType.STR:
+			this.value = new StrArray();
+			break;
+		case VarType.DOUBLE:
+			this.value = new DoubleArray();
+			break;
+		case VarType.INT:
+			this.value = new IntArray();
+			break;
+		case VarType.STRUCT:
+			this.value = new StructArray();
+			break;
+		default:
+			throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[type]+' 型の値は変数に代入できません');
+		}
+	},
 	expand: function expand(indices) {
 		return this.value.expand(indices);
+	},
+	expand1D: function expand1D(index) {
+		return this.value.expand1D(index);
 	},
 	getType: function getType() {
 		return this.value.getType();

@@ -7,7 +7,7 @@ IntArray.prototype = new HSPArray();
 
 Utils.objectExtend(IntArray.prototype, {
 	expand: function expand(indices) {
-		var isExpanded = HSPArray.prototype.expand.call(this, indices);
+		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
 			var zero = new IntValue(0);
@@ -17,6 +17,17 @@ Utils.objectExtend(IntArray.prototype, {
 		}
 		return isExpanded;
 	},
+	expand1D: function expand1D(index) {
+		var isExpanded = this.expandLen1D(index);
+		if(isExpanded) {
+			var newLen = this.l0;
+			var zero = new IntValue(0);
+			for(var i = this.values.length; i < newLen; i ++) {
+				this.values[i] = zero;
+			}
+		}
+		return isExpanded;
+	}, 
 	getType: function getType() {
 		return VarType.INT;
 	},

@@ -17,6 +17,15 @@ function CompileError(message, hspFileName, hspLineNumber) {
 CompileError.prototype = new Error;
 CompileError.prototype.name = 'CompileError';
 
+
+Compiler.ProxyVarType = {
+		THISMOD: 1,
+		MEMBER: 2,
+		ARG_VAR: 3,
+		ARG_ARRAY: 4,
+		ARG_LOCAL: 5
+};
+
 Compiler.prototype = {
 	compile: function compile() {
 		var sequence = [];
@@ -83,18 +92,66 @@ Compiler.prototype = {
 		return new CompileError(message, token.fileName, token.lineNo);
 	},
 	compileAssignment: function compileAssignment(sequence) {
-		this.compileVariable(sequence);
+		var varToken = this.ax.tokens[this.tokensPos];
+		var insnCode;
+		var opts;
+		switch(varToken.type) {
+		case Token.Type.VAR:
+			this.tokensPos ++;
+			insnCode = 1;
+			var indicesCount = this.compileVariableSubscript(sequence);
+			opts = [varToken.code, indicesCount];
+			break;
+		case Token.Type.STRUCT:
+			var proxyVarType = this.getProxyVarType();
+			if(!proxyVarType) {
+				throw this.error('変数が指定されていません');
+			}
+			var prmInfo = this.ax.prmsInfo[varToken.code];
+			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(varToken.code)];
+			switch(proxyVarType) {
+			case Compiler.ProxyVarType.THISMOD:
+				insnCode = 0;
+				opts = [];
+				this.compileProxyVariable(sequence);
+				break;
+			case Compiler.ProxyVarType.MEMBER:
+				insnCode = 3;
+				this.tokensPos ++;
+				var indicesCount = this.compileVariableSubscript(sequence);
+				opts = [varToken.code - funcInfo.prmindex - 1, indicesCount];
+				break;
+			case Compiler.ProxyVarType.ARG_VAR:
+				insnCode = 0;
+				opts = [];
+				this.compileProxyVariable(sequence);
+				break;
+			case Compiler.ProxyVarType.ARG_ARRAY:
+			case Compiler.ProxyVarType.ARG_LOCAL:
+				insnCode = 2;
+				this.tokensPos ++;
+				var indicesCount = this.compileVariableSubscript(sequence);
+				opts = [varToken.code - funcInfo.prmindex, indicesCount];
+				break;
+			default:
+				throw new Error('must not happen');
+			}
+			break;
+		default:
+			throw this.error('変数が指定されていません');
+		}
+
 		var token = this.ax.tokens[this.tokensPos++];
 		if(!(token && token.type == Token.Type.MARK)) {
 			throw this.error();
 		}
 		if(this.ax.tokens[this.tokensPos].ex1) {
 			if(token.val == 0) { // インクリメント
-				this.pushNewInsn(sequence, Instruction.Code.INC, [], token);
+				this.pushNewInsn(sequence, Instruction.Code.INC + insnCode, opts, token);
 				return;
 			}
 			if(token.val == 1) { // デクリメント
-				this.pushNewInsn(sequence, Instruction.Code.DEC, [], token);
+				this.pushNewInsn(sequence, Instruction.Code.DEC + insnCode, opts, token);
 				return;
 			}
 		}
@@ -104,14 +161,14 @@ Compiler.prototype = {
 			if(argc != 1) {
 				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
-			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN, [token.val], token);
+			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN + insnCode, [token.val].concat(opts), token);
 			return;
 		}
 		var argc = this.compileParameters(sequence, true);
 		if(argc == 0) {
 			throw this.error("代入のパラメータの数が間違っています。", token);
 		}
-		this.pushNewInsn(sequence, Instruction.Code.SETVAR, [argc], token);
+		this.pushNewInsn(sequence, Instruction.Code.ASSIGN + insnCode, opts.concat([argc]), token);
 	},
 	compileProgramCommand: function compileProgramCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
@@ -432,7 +489,7 @@ Compiler.prototype = {
 		var nextTokenPos = pos + 1;
 		nextTokenPos += this.skipParenAndParameters(nextTokenPos);
 		var nextToken = this.ax.tokens[nextTokenPos];
-		return (!nextToken || nextToken.ex1 || nextToken.ex2);
+		return (!nextToken || nextToken.ex1 || nextToken.ex2 || this.isRightParenToken(nextToken));
 	},
 	skipParameter: function skipParameter(pos) {
 		var size = 0;
@@ -629,39 +686,64 @@ Compiler.prototype = {
 		                 [token.code, argc], token);
 	},
 	compileProxyVariable: function compileProxyVariable(sequence, useGetVar) {
+		var proxyVarType = this.getProxyVarType();
 		var token = this.ax.tokens[this.tokensPos++];
-		if(token.code == -1) {
-			this.pushNewInsn(sequence, Instruction.Code.THISMOD, [], token);
-			if(this.ax.tokens[this.tokensPos].type == Token.Type.MARK && this.ax.tokens[this.tokensPos].code == 40) {
-				throw this.error('thismod に添字を指定しています');
-			}
-			return true;
-		}
 		var prmInfo = this.ax.prmsInfo[token.code];
 		var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
-		if(prmInfo.subid >= 0) {
+		switch(proxyVarType) {
+		case Compiler.ProxyVarType.THISMOD:
+			this.pushNewInsn(sequence, Instruction.Code.THISMOD, [], token);
+			return true;
+		case Compiler.ProxyVarType.MEMBER:
 			var argc = this.compileVariableSubscript(sequence);
 			this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_MEMBER : Instruction.Code.PUSH_MEMBER,
 				             [token.code - funcInfo.prmindex - 1, argc], token);
 			return true;
-		}
-		switch(prmInfo.mptype) {
-		case MPType.LOCALVAR:
-		case MPType.ARRAYVAR:
+		case Compiler.ProxyVarType.ARG_VAR:
+			this.pushNewInsn(sequence, Instruction.Code.GETARG,
+				             [token.code - funcInfo.prmindex], token);
+			return true;
+		case Compiler.ProxyVarType.ARG_ARRAY:
+		case Compiler.ProxyVarType.ARG_LOCAL:
 			var argc = this.compileVariableSubscript(sequence);
 			this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_ARG_VAR : Instruction.Code.PUSH_ARG_VAR,
 				             [token.code - funcInfo.prmindex, argc], token);
 			return true;
-		case MPType.SINGLEVAR:
-			this.pushNewInsn(sequence, Instruction.Code.GETARG,
-				             [token.code - funcInfo.prmindex], token);
-			if(this.ax.tokens[this.tokensPos].type == Token.Type.MARK && this.ax.tokens[this.tokensPos].code == 40) {
-				throw this.error('パラメータタイプ var の変数に添字を指定しています');
-			}
-			return true;
 		default:
 			return false;
 		}
+	},
+	getProxyVarType: function getProxyVarType() {
+		var token = this.ax.tokens[this.tokensPos];
+		if(token.code == -1) {
+			if(this.isLeftParenToken(this.ax.tokens[this.tokensPos + 1])) {
+				throw this.error('thismod に添字を指定しています');
+			}
+			return Compiler.ProxyVarType.THISMOD;
+		}
+		var prmInfo = this.ax.prmsInfo[token.code];
+		if(prmInfo.subid >= 0) {
+			return Compiler.ProxyVarType.MEMBER;
+		}
+		switch(prmInfo.mptype) {
+		case MPType.LOCALVAR:
+			return Compiler.ProxyVarType.ARG_LOCAL;
+		case MPType.ARRAYVAR:
+			return Compiler.ProxyVarType.ARG_ARRAY;
+		case MPType.SINGLEVAR:
+			if(this.isLeftParenToken(this.ax.tokens[this.tokensPos + 1])) {
+				throw this.error('パラメータタイプ var の変数に添字を指定しています');
+			}
+			return Compiler.ProxyVarType.ARG_VAR;
+		default:
+			return null;
+		}
+	},
+	isLeftParenToken: function isLeftParenToken(token) {
+		return token && token.type == Token.Type.MARK && token.code == 40;
+	},
+	isRightParenToken: function isRightParenToken(token) {
+		return token && token.type == Token.Type.MARK && token.code == 41;
 	},
 	compileVariableSubscript: function compileVariableSubscript(sequence) {
 		var argc = 0;

@@ -89,6 +89,77 @@ Evaluator.prototype = {
 				push('stack.push('+arrayExpr+'.at(0));');
 			}
 		}
+		function pushAssignCode(indicesCount, argc) {
+			if(indicesCount == 0) {
+				if(argc == 1) {
+					push('var arg = stack.pop();');
+					push('if(variable.value.getType() != arg.getType()) variable.reset(arg.getType());');
+					push('variable.value.assign(0, arg);');
+				} else {
+					push('var len = stack.length;');
+					push('var type = stack[len - '+argc+'].getType();');
+					push('if(variable.value.getType() != type) variable.reset(type);');
+					push('var array = variable.value;');
+					push('array.expand1D('+(argc-1)+');');
+					push('array.assign(0, stack[len - '+argc+']);');
+					for(var i = 1; i < argc; i ++) {
+						push('var arg = stack[len - '+(argc-i)+'];');
+						push('if(arg.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+						push('array.assign('+i+', arg);');
+					}
+					push('stack.length -= '+argc+';');
+				}
+			} else if(indicesCount == 1) {
+				if(argc == 1) {
+					push('var arg = stack.pop();');
+					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('if(variable.value.getType() != arg.getType()) {');
+					push('    if(offset == 0) {');
+					push('        variable.reset(arg.getType());');
+					push('    } else {');
+					push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+					push('    }');
+					push('}');
+					push('variable.value.expand1D(offset);');
+					push('variable.value.assign(offset, arg);');
+				} else {
+					push('var len = stack.length;');
+					push('var offset = self.scanArg(stack[len-'+(argc+1)+'], "i").toIntValue()._value;');
+					push('if(offset < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+					push('var type = variable.value.getType();');
+					push('if(type != stack[len - '+argc+'].getType()) {');
+					push('    if(offset == 0) {');
+					push('        type = stack[len - '+argc+'].getType();');
+					push('        variable.reset(type);');
+					push('    } else {');
+					push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+					push('    }');
+					push('}');
+					push('var array = variable.value;');
+					push('array.expand1D(offset + '+(argc-1)+');');
+					push('array.assign(offset, stack[len - '+argc+']);');
+					for(var i = 1; i < argc; i ++) {
+						push('var arg = stack[len - '+(argc-i)+'];');
+						push('if(arg.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+						push('array.assign(offset + '+i+', arg);');
+					}
+					push('stack.length -= '+(argc+1)+';');
+				}
+			} else {
+				push('var len = stack.length;');
+				push('var indices = [');
+				for(var i = 0; i < indicesCount; i ++) {
+					push('    self.scanArg(stack[len - '+(argc+indicesCount-i)+'], "i").toIntValue()._value'+
+					     (i == indicesCount - 1 ? '' : ','));
+				}
+				push('];');
+				for(var i = 0; i < argc; i ++) {
+					push('variable.assign(indices, stack[len - '+(argc-i)+']);');
+					if(i != argc - 1) push('indices[0] ++;');
+				}
+				push('stack.length -= '+(argc+indicesCount)+';');
+			}
+		}
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
@@ -159,7 +230,7 @@ Evaluator.prototype = {
 				push('    continue;');
 				push('}');
 				break;
-			case Instruction.Code.SETVAR:
+			case Instruction.Code.ASSIGN:
 				var argc = insn.opts[0];
 				if(argc > 1) {
 					push('var args = Utils.aryPopN(stack, '+argc+');');
@@ -177,18 +248,53 @@ Evaluator.prototype = {
 					push('agent.variable.assign(agent.indices, arg);');
 				}
 				break;
-			case Instruction.Code.COMPOUND_ASSIGN:
+			case Instruction.Code.ASSIGN_STATIC_VAR:
+				var varId = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				var argc = insn.opts[2];
+				push('var variable = variables['+varId+'];');
+				pushAssignCode(indicesCount, argc);
+				break;
+			case Instruction.Code.ASSIGN_ARG_ARRAY:
+				var argNum = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				var argc = insn.opts[2];
+				push('var variable = self.getArg('+argNum+');');
+				pushAssignCode(indicesCount, argc);
+				break;
+			case Instruction.Code.ASSIGN_MEMBER:
+				var memberNum = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				var argc = insn.opts[2];
+				push('var variable = self.getThismod().toValue().members['+memberNum+'];');
+				pushAssignCode(indicesCount, argc);
+				break;
+			//case Instruction.Code.COMPOUND_ASSIGN:
+			//case Instruction.Code.COMPOUND_ASSIGN_STATIC_VAR:
+			//case Instruction.Code.COMPOUND_ASSIGN_ARG_ARRAY:
+			//case Instruction.Code.COMPOUND_ASSIGN_MEMBER:
+			//case Instruction.Code.INC:
+			//case Instruction.Code.INC_STATIC_VAR:
+			//case Instruction.Code.INC_ARG_ARRAY:
+			//case Instruction.Code.INC_MEMBER:
+			//case Instruction.Code.DEC:
+			//case Instruction.Code.DEC_STATIC_VAR:
+			//case Instruction.Code.DEC_ARG_ARRAY:
+			//case Instruction.Code.DEC_MEMBER:
+			
+			
+			//case Instruction.Code.COMPOUND_ASSIGN:
 				push('var arg = stack.pop();');
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
 				push('agent.assign(agent.'+operateMethodNames[insn.opts[0]]+'(arg));');
 				break;
-			case Instruction.Code.INC:
+			//case Instruction.Code.INC:
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
 				push('agent.assign(agent.add(new IntValue(1)));');
 				break;
-			case Instruction.Code.DEC:
+			//case Instruction.Code.DEC:
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
 				push('agent.assign(agent.sub(new IntValue(1)));');

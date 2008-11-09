@@ -15,6 +15,12 @@ Reference.prototype = {
 		}
 		return false;
 	},
+	expand1D: function expand1D(index) {
+		if(index < 0 || index >= this.l0) {
+			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		}
+		return false;
+	},
 	getOffset: function getOffset(indices) {
 		var offset = indices.length > 0 ? indices[0] : 0;
 		if(indices.length > 1 || offset < 0 || offset >= this.l0) {

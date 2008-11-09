@@ -9,7 +9,7 @@ HSPArray.prototype = {
 	assign: function assign(offset, rhs) {
 		this.values[offset] = rhs.toValue();
 	},
-	expand: function expand(indices) {
+	expandLen: function expandLen(indices) {
 		if(indices.length > 4) {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
@@ -49,6 +49,13 @@ HSPArray.prototype = {
 		this.l1 = l1;
 		this.l2 = l2;
 		this.l3 = l3;
+		return true;
+	},
+	expandLen1D: function expandLen1D(index) {
+		if(index < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		if(index < this.l0) return false;
+		if(this.l1) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		this.l0 = index + 1;
 		return true;
 	},
 	getOffset: function getOffset(indices) {
