@@ -1,7 +1,13 @@
+#module
+#deffunc f local a
+	a = 0
+	repeat 100000
+		a = a + 1
+	loop
+	return 
+#global
+
 st = gettime(-1)
-repeat 100000
-  a = 1 + a
-loop
+f
 ed = gettime(-1)
 mes strf("%d ms", ed - st)
-

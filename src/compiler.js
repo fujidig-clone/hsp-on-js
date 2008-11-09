@@ -381,11 +381,7 @@ Compiler.prototype = {
 				this.compileOperator(sequence);
 				break;
 			case Token.Type.VAR:
-				var nextTokenPos = this.tokensPos + 1;
-				nextTokenPos += this.skipParenAndParameters(nextTokenPos);
-				var nextToken = this.ax.tokens[nextTokenPos];
-				var onlyVar = this.tokensPos == headPos && (!nextToken || nextToken.ex1 || nextToken.ex2);
-				this.compileStaticVariable(sequence, !onlyVar);
+				this.compileStaticVariable(sequence, !this.isOnlyVar(this.tokensPos, headPos));
 				break;
 			case Token.Type.STRING:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -403,7 +399,7 @@ Compiler.prototype = {
 				this.tokensPos ++;
 				break;
 			case Token.Type.STRUCT:
-				this.compileStruct(sequence);
+				this.compileStruct(sequence, !this.isOnlyVar(this.tokensPos, headPos));
 				break;
 			case Token.Type.LABEL:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -430,6 +426,13 @@ Compiler.prototype = {
 			token = this.ax.tokens[this.tokensPos];
 			if(token && token.ex2) return;
 		}
+	},
+	isOnlyVar: function isOnlyVar(pos, headPos) {
+		if(pos != headPos) return false;
+		var nextTokenPos = pos + 1;
+		nextTokenPos += this.skipParenAndParameters(nextTokenPos);
+		var nextToken = this.ax.tokens[nextTokenPos];
+		return (!nextToken || nextToken.ex1 || nextToken.ex2);
 	},
 	skipParameter: function skipParameter(pos) {
 		var size = 0;
@@ -531,10 +534,10 @@ Compiler.prototype = {
 			this.compileSysvar(sequence);
 		}
 	},
-	compileStruct: function compileStruct(sequence) {
+	compileStruct: function compileStruct(sequence, useGetVar) {
 		var token = this.ax.tokens[this.tokensPos];
 		var prmInfo = this.ax.prmsInfo[token.code];
-		if(!this.compileProxyVariable(sequence)) {
+		if(!this.compileProxyVariable(sequence, useGetVar)) {
 			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
 			this.pushNewInsn(sequence, Instruction.Code.GETARG,
 				             [token.code - funcInfo.prmindex], token);
@@ -625,7 +628,7 @@ Compiler.prototype = {
 		this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_VAR : Instruction.Code.PUSH_VAR,
 		                 [token.code, argc], token);
 	},
-	compileProxyVariable: function compileProxyVariable(sequence) {
+	compileProxyVariable: function compileProxyVariable(sequence, useGetVar) {
 		var token = this.ax.tokens[this.tokensPos++];
 		if(token.code == -1) {
 			this.pushNewInsn(sequence, Instruction.Code.THISMOD, [], token);
@@ -638,7 +641,7 @@ Compiler.prototype = {
 		var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
 		if(prmInfo.subid >= 0) {
 			var argc = this.compileVariableSubscript(sequence);
-			this.pushNewInsn(sequence, Instruction.Code.PUSH_MEMBER,
+			this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_MEMBER : Instruction.Code.PUSH_MEMBER,
 				             [token.code - funcInfo.prmindex - 1, argc], token);
 			return true;
 		}
@@ -646,7 +649,7 @@ Compiler.prototype = {
 		case MPType.LOCALVAR:
 		case MPType.ARRAYVAR:
 			var argc = this.compileVariableSubscript(sequence);
-			this.pushNewInsn(sequence, Instruction.Code.PUSH_ARG_VAR,
+			this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_ARG_VAR : Instruction.Code.PUSH_ARG_VAR,
 				             [token.code - funcInfo.prmindex, argc], token);
 			return true;
 		case MPType.SINGLEVAR:
