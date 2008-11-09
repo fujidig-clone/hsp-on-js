@@ -66,12 +66,28 @@ Evaluator.prototype = {
 		function push(line) {
 			lines.push(Utils.strTimes('\t', indent) + line);
 		}
-		function pushJumpSubroutineCode(posExpr) {
+		function pushJumpingSubroutineCode(posExpr) {
 			push('if(self.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
 			push('self.frameStack.push(new Frame(self.pc + 1, null, null));');
 			push('self.pc = '+posExpr+';');
+		}
+		function pushGettingArrayValueCode(arrayExpr, argc) {
+			if(argc > 1) {
+				push('var indices = self.popIndices('+argc+');');
+				push('var offset = '+arrayExpr+'.getOffset(indices);');
+				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+				push('stack.push('+arrayExpr+'.at(offset));');
+			} else if(argc == 1) {
+				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('if(!(0 <= offset && offset < '+arrayExpr+'.getL0())) {');
+				push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+				push('}');
+				push('stack.push('+arrayExpr+'.at(offset));');
+			} else {
+				push('stack.push('+arrayExpr+'.at(0));');
+			}
 		}
 		var lines = [];
 		var indent = 0;
@@ -99,20 +115,7 @@ Evaluator.prototype = {
 				var varId = insn.opts[0];
 				var argc = insn.opts[1];
 				push('var array = self.variables['+varId+'].value;');
-				if(argc > 1) {
-					push('var indices = self.popIndices('+argc+');');
-					push('var offset = array.getOffset(indices);');
-					push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-					push('stack.push(array.at(offset));');
-				} else if(argc == 1) {
-					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
-					push('if(!(0 <= offset && offset < array.getL0())) {');
-					push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-					push('}');
-					push('stack.push(array.at(offset));');
-				} else {
-					push('stack.push(array.at(0));');
-				}
+				pushGettingArrayValueCode('array', argc);
 				break;
 			case Instruction.Code.POP:
 				push('stack.pop();');
@@ -227,12 +230,25 @@ Evaluator.prototype = {
 				push('var indices = self.popIndices('+argc+');');
 				push('stack.push(new VariableAgent(variable, indices));');
 				break;
+			case Instruction.Code.GET_ARG_VAR:
+				var argNum = insn.opts[0];
+				var argc = insn.opts[1];
+				push('var array = self.getArg('+argNum+').value;');
+				pushGettingArrayValueCode('array', argc);
+				break;
 			case Instruction.Code.PUSH_MEMBER:
 				var memberNum = insn.opts[0];
 				var argc = insn.opts[1];
 				push('var struct = self.getThismod().toValue();');
 				push('var indices = self.popIndices('+argc+');');
 				push('stack.push(new VariableAgent(struct.members['+memberNum+'], indices));');
+				break;
+			case Instruction.Code.GET_MEMBER:
+				var memberNum = insn.opts[0];
+				var argc = insn.opts[1];
+				push('var struct = self.getThismod().toValue();');
+				push('var array = struct.members['+memberNum+'].value;');
+				pushGettingArrayValueCode('array', argc);
 				break;
 			case Instruction.Code.THISMOD:
 				push('stack.push(self.getThismod());');
@@ -384,7 +400,7 @@ Evaluator.prototype = {
 				push('}');
 				break;
 			case Instruction.Code.GOSUB:
-				pushJumpSubroutineCode(insn.opts[0].pos);
+				pushJumpingSubroutineCode(insn.opts[0].pos);
 				push('continue;');
 				break;
 			case Instruction.Code.GOTO_EXPR:
@@ -392,7 +408,7 @@ Evaluator.prototype = {
 				push('continue;');
 				break;
 			case Instruction.Code.GOSUB_EXPR:
-				pushJumpSubroutineCode('self.scanArg(stack.pop(), "l").toValue().pos');
+				pushJumpingSubroutineCode('self.scanArg(stack.pop(), "l").toValue().pos');
 				push('continue;');
 				break;
 			case Instruction.Code.EXGOTO:
@@ -441,7 +457,7 @@ Evaluator.prototype = {
 				push('var pos = stack[len - '+argc+' + n].toValue().pos;');
 				push('stack.length -= '+(argc + 1)+';');
 				if(isGosub) {
-					pushJumpSubroutineCode('pos');
+					pushJumpingSubroutineCode('pos');
 					push('continue;');
 				} else {
 					push('self.pc = pos;');
