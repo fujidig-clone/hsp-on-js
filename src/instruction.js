@@ -36,7 +36,7 @@ Instruction.CodeNames = [
 	'IFNE',
 	'IFEQ',
 	'SETVAR',
-	'EXPANDARRAY',
+	'COMPOUND_ASSIGN',
 	'INC',
 	'DEC',
 	'CALL_BUILTIN_CMD',

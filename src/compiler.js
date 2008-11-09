@@ -100,14 +100,11 @@ Compiler.prototype = {
 		}
 		if(token.val != 8) { // CALCCODE_EQ
 			// 複合代入
-			this.pushNewInsn(sequence, Instruction.Code.DUP, [], token);
-			this.pushNewInsn(sequence, Instruction.Code.EXPANDARRAY, [], token);
 			var argc = this.compileParameters(sequence, true);
 			if(argc != 1) {
 				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
-			this.pushNewInsn(sequence, Instruction.Code.ADD + token.val, [], token);
-			this.pushNewInsn(sequence, Instruction.Code.SETVAR, [argc], token);
+			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN, [token.val], token);
 			return;
 		}
 		var argc = this.compileParameters(sequence, true);

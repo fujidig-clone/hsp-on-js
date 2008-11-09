@@ -174,9 +174,11 @@ Evaluator.prototype = {
 					push('agent.variable.assign(agent.indices, arg);');
 				}
 				break;
-			case Instruction.Code.EXPANDARRAY:
-				push('var agent = stack[stack.length - 1];');
+			case Instruction.Code.COMPOUND_ASSIGN:
+				push('var arg = stack.pop();');
+				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
+				push('agent.assign(agent.'+operateMethodNames[insn.opts[0]]+'(arg));');
 				break;
 			case Instruction.Code.INC:
 				push('var agent = stack.pop();');
