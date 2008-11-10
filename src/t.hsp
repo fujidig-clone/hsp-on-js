@@ -1,40 +1,13 @@
-
-st = gettime(-1)
-repeat 1000
-a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1
-a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1
-a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1
-a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1
-a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1:a=1
-loop
-ed = gettime(-1)
-mes strf("%d ms", ed - st)
-
-#if 0
-
-
-#module
-#deffunc shuffle array a
-	foreach a
-		tmp = a.cnt
-		index = rnd(length(a)-cnt)+cnt
-		a.cnt = a.index
-		a.index = tmp
-	loop
-	return
-#global
+#define q a+=1
 
 st = gettime(-1)
 repeat 10000
-	a.cnt = cnt
+q:q:q:q:q:q:q:q:q:q
+q:q:q:q:q:q:q:q:q:q
+q:q:q:q:q:q:q:q:q:q
+q:q:q:q:q:q:q:q:q:q
+q:q:q:q:q:q:q:q:q:q
 loop
-
-shuffle a
 ed = gettime(-1)
 mes strf("%d ms", ed - st)
-
-stop
-foreach a
-	mes strf("a.%d = %d", cnt, a.cnt)
-loop
 

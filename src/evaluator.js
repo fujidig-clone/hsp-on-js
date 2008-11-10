@@ -89,6 +89,15 @@ Evaluator.prototype = {
 				push('stack.push('+arrayExpr+'.at(0));');
 			}
 		}
+		function pushGettingIndicesCode(indicesCount, offset) {
+			push('var len = stack.length;');
+			push('var indices = [');
+			for(var i = 0; i < indicesCount; i ++) {
+				push('    self.scanArg(stack[len - '+(offset+indicesCount-i)+'], "i").toIntValue()._value'+
+				     (i == indicesCount - 1 ? '' : ','));
+			}
+			push('];');
+		}
 		function pushAssignCode(indicesCount, argc) {
 			if(indicesCount == 0) {
 				if(argc == 1) {
@@ -146,18 +155,28 @@ Evaluator.prototype = {
 					push('stack.length -= '+(argc+1)+';');
 				}
 			} else {
-				push('var len = stack.length;');
-				push('var indices = [');
-				for(var i = 0; i < indicesCount; i ++) {
-					push('    self.scanArg(stack[len - '+(argc+indicesCount-i)+'], "i").toIntValue()._value'+
-					     (i == indicesCount - 1 ? '' : ','));
-				}
-				push('];');
+				pushGettingIndicesCode(indicesCount, argc);
 				for(var i = 0; i < argc; i ++) {
 					push('variable.assign(indices, stack[len - '+(argc-i)+']);');
 					if(i != argc - 1) push('indices[0] ++;');
 				}
 				push('stack.length -= '+(argc+indicesCount)+';');
+			}
+		}
+		function pushCompoundAssignCode(calcCode, indicesCount) {
+			push('var arg = stack.pop();');
+			if(indicesCount == 0) {
+				push('array.assign(0, array.at(0).'+operateMethodNames[calcCode]+'(arg));');
+			} else if(indicesCount == 1) {
+				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('array.expand1D(offset);');
+				push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+			} else {
+				pushGettingIndicesCode(indicesCount, 0);
+				push('stack.length -= '+indicesCount+';');
+				push('array.expand(indices);');
+				push('var offset = array.getOffset(indices);');
+				push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
 			}
 		}
 		var lines = [];
@@ -269,36 +288,50 @@ Evaluator.prototype = {
 				push('var variable = self.getThismod().toValue().members['+memberNum+'];');
 				pushAssignCode(indicesCount, argc);
 				break;
-			//case Instruction.Code.COMPOUND_ASSIGN:
-			//case Instruction.Code.COMPOUND_ASSIGN_STATIC_VAR:
-			//case Instruction.Code.COMPOUND_ASSIGN_ARG_ARRAY:
-			//case Instruction.Code.COMPOUND_ASSIGN_MEMBER:
-			//case Instruction.Code.INC:
-			//case Instruction.Code.INC_STATIC_VAR:
-			//case Instruction.Code.INC_ARG_ARRAY:
-			//case Instruction.Code.INC_MEMBER:
-			//case Instruction.Code.DEC:
-			//case Instruction.Code.DEC_STATIC_VAR:
-			//case Instruction.Code.DEC_ARG_ARRAY:
-			//case Instruction.Code.DEC_MEMBER:
-			
-			
-			//case Instruction.Code.COMPOUND_ASSIGN:
+			case Instruction.Code.COMPOUND_ASSIGN:
 				push('var arg = stack.pop();');
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
 				push('agent.assign(agent.'+operateMethodNames[insn.opts[0]]+'(arg));');
+				break;
+			case Instruction.Code.COMPOUND_ASSIGN_STATIC_VAR:
+				var calcCode = insn.opts[0];
+				var varId = insn.opts[1];
+				var indicesCount = insn.opts[2];
+				push('var array = variables['+varId+'].value;');
+				pushCompoundAssignCode(calcCode, indicesCount);
+				break;
+			case Instruction.Code.COMPOUND_ASSIGN_ARG_ARRAY:
+				var calcCode = insn.opts[0];
+				var argNum = insn.opts[1];
+				var indicesCount = insn.opts[2];
+				push('var array = self.getArg('+argNum+').value;');
+				pushCompoundAssignCode(calcCode, indicesCount);
+				break;
+			case Instruction.Code.COMPOUND_ASSIGN_MEMBER:
+				var calcCode = insn.opts[0];
+				var memberNum = insn.opts[1];
+				var indicesCount = insn.opts[2];
+				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
+				pushCompoundAssignCode(calcCode, indicesCount);
 				break;
 			//case Instruction.Code.INC:
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
 				push('agent.assign(agent.add(new IntValue(1)));');
 				break;
+			//case Instruction.Code.INC_STATIC_VAR:
+			//case Instruction.Code.INC_ARG_ARRAY:
+			//case Instruction.Code.INC_MEMBER:
 			//case Instruction.Code.DEC:
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
 				push('agent.assign(agent.sub(new IntValue(1)));');
 				break;
+			//case Instruction.Code.DEC_STATIC_VAR:
+			//case Instruction.Code.DEC_ARG_ARRAY:
+			//case Instruction.Code.DEC_MEMBER:
+			
 			case Instruction.Code.CALL_BUILTIN_CMD:
 			case Instruction.Code.CALL_BUILTIN_FUNC:
 				var type = insn.opts[0];
