@@ -101,6 +101,12 @@ VariableAgent.prototype = {
 		var offset = this.variable.value.getOffset(this.indices);
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		return offset;
+	},
+	inc: function inc() {
+		return this.variable.inc(this.getOffset());
+	},
+	dec: function dec() {
+		return this.variable.dec(this.getOffset());
 	}
 };
 

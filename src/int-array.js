@@ -50,6 +50,12 @@ Utils.objectExtend(IntArray.prototype, {
 	},
 	getByteSize: function getByteSize(offset) {
 		return (this.values.length - offset) * 4;
+	},
+	inc: function inc(offset) {
+		this.values[offset] = new IntValue(this.values[offset]._value + 1);
+	},
+	dec: function dec(offset) {
+		this.values[offset] = new IntValue(this.values[offset]._value - 1);
 	}
 });
 

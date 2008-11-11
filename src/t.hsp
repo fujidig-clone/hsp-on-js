@@ -1,4 +1,4 @@
-#define q a+=1
+#define q a++
 
 st = gettime(-1)
 repeat 10000

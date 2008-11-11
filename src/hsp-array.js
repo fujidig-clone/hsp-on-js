@@ -132,6 +132,14 @@ HSPArray.prototype = {
 	},
 	bufferAt: function bufferAt(offset) {
 		throw new HSPError(ErrorCode.TYPE_MISMATCH);
+	},
+	inc: function inc(offset) {
+		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
+		                   VarTypeNames[this.getType()]+" 型はインクリメントに対応していません");
+	},
+	dec: function dec(offset) {
+		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
+		                   VarTypeNames[this.getType()]+" 型はデクリメントに対応していません");
 	}
 };
 

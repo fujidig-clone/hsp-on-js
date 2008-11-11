@@ -66,6 +66,10 @@ Utils.objectExtend(StrArray.prototype, {
 	},
 	bufferAt: function bufferAt(offset) {
 		return this.values[offset];
+	},
+	inc: function inc(offset) {
+		var buf = this.values[offset];
+		buf.assign(new StrValue(buf.getValue()._value + '1'));
 	}
 });
 

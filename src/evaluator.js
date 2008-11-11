@@ -179,6 +179,36 @@ Evaluator.prototype = {
 				push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
 			}
 		}
+		function pushIncCode(indicesCount) {
+			if(indicesCount == 0) {
+				push('array.inc(0);');
+			} else if(indicesCount == 1) {
+				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('array.expand1D(offset);');
+				push('array.inc(offset);');
+			} else {
+				pushGettingIndicesCode(indicesCount, 0);
+				push('stack.length -= '+indicesCount+';');
+				push('array.expand(indices);');
+				push('var offset = array.getOffset(indices);');
+				push('array.inc(offset);');
+			}
+		}
+		function pushDecCode(indicesCount) {
+			if(indicesCount == 0) {
+				push('array.dec(0);');
+			} else if(indicesCount == 1) {
+				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('array.expand1D(offset);');
+				push('array.dec(offset);');
+			} else {
+				pushGettingIndicesCode(indicesCount, 0);
+				push('stack.length -= '+indicesCount+';');
+				push('array.expand(indices);');
+				push('var offset = array.getOffset(indices);');
+				push('array.dec(offset);');
+			}
+		}
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
@@ -315,23 +345,52 @@ Evaluator.prototype = {
 				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
 				pushCompoundAssignCode(calcCode, indicesCount);
 				break;
-			//case Instruction.Code.INC:
+			case Instruction.Code.INC:
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
-				push('agent.assign(agent.add(new IntValue(1)));');
+				push('agent.assign(agent.inc());');
 				break;
-			//case Instruction.Code.INC_STATIC_VAR:
-			//case Instruction.Code.INC_ARG_ARRAY:
-			//case Instruction.Code.INC_MEMBER:
-			//case Instruction.Code.DEC:
+			case Instruction.Code.INC_STATIC_VAR:
+				var varId = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				push('var array = variables['+varId+'].value;');
+				pushIncCode(indicesCount);
+				break;
+			case Instruction.Code.INC_ARG_ARRAY:
+				var argNum = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				push('var array = self.getArg('+argNum+').value;');
+				pushIncCode(indicesCount);
+				break;
+			case Instruction.Code.INC_MEMBER:
+				var memberNum = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
+				pushIncCode(indicesCount);
+				break;
+			case Instruction.Code.DEC:
 				push('var agent = stack.pop();');
 				push('agent.variable.expand(agent.indices);');
-				push('agent.assign(agent.sub(new IntValue(1)));');
+				push('agent.assign(agent.dec());');
 				break;
-			//case Instruction.Code.DEC_STATIC_VAR:
-			//case Instruction.Code.DEC_ARG_ARRAY:
-			//case Instruction.Code.DEC_MEMBER:
-			
+			case Instruction.Code.DEC_STATIC_VAR:
+				var varId = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				push('var array = variables['+varId+'].value;');
+				pushDecCode(indicesCount);
+				break;
+			case Instruction.Code.DEC_ARG_ARRAY:
+				var argNum = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				push('var array = self.getArg('+argNum+').value;');
+				pushDecCode(indicesCount);
+				break;
+			case Instruction.Code.DEC_MEMBER:
+				var memberNum = insn.opts[0];
+				var indicesCount = insn.opts[1];
+				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
+				pushDecCode(indicesCount);
+				break;
 			case Instruction.Code.CALL_BUILTIN_CMD:
 			case Instruction.Code.CALL_BUILTIN_FUNC:
 				var type = insn.opts[0];

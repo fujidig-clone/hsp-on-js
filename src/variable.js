@@ -109,6 +109,12 @@ Variable.prototype = {
 	},
 	ref: function ref(offset) {
 		return this.value.ref(offset);
+	},
+	inc: function inc(offset) {
+		return this.value.inc(offset);
+	},
+	dec: function dec(offset) {
+		return this.value.dec(offset);
 	}
 };
 
