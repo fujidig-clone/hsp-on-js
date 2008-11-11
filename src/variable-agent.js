@@ -46,10 +46,10 @@ VariableAgent.prototype = {
 	lteq: function lteq(rhs) {
 		return this.toValue().lteq(rhs);
 	},
-	rsh: function rhs(rhs) {
+	rsh: function rsh(rhs) {
 		return this.toValue().rsh(rhs);
 	},
-	lsh: function lhs(rhs) {
+	lsh: function lsh(rhs) {
 		return this.toValue().lsh(rhs);
 	},
 	getType: function getType() {

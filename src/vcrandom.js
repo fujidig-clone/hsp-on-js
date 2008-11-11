@@ -3,7 +3,7 @@ function VCRandom() {
 }
 
 VCRandom.prototype = {
-	srand: function(s) {
+	srand: function srand(s) {
 		this.x = s|0;
 	},
 	rand: function rand() {
