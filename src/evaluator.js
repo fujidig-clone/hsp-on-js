@@ -23,7 +23,7 @@ function Evaluator(axdata, sequence) {
 	var variables = this.variables;
 	var userDefFuncs = [];
 	this.evaluate = function evaluate() {
-		mainLoop = eval('(function mainLoop(self, stack, literals, variables, userDefFuncs) {\n' + 
+		mainLoop = eval('Object(function mainLoop(self, stack, literals, variables, userDefFuncs) {\n' + 
 		                this.createMainLoop(literals, userDefFuncs) + '\n})');
 		try {
 			mainLoop(this, this.stack, literals, variables, userDefFuncs);
