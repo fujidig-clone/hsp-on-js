@@ -1,3 +1,5 @@
+(function(){
+
 function Color(r, g, b, a) {
 	this.r = r & 255;
 	this.g = g & 255;
@@ -36,10 +38,27 @@ Color.prototype = {
 	}
 };
 
-function initializeEvaluator() {
+var addEvent = (function(){
+    return window.addEventListener
+        ?  function(e, n, f){ e.addEventListener(n, f, false) }
+        :  window.attachEvent 
+        ?  function(e, n, f){ e.attachEvent('on' + n, f) }
+        :  null;
+})();
+
+var removeEvent = (function(){
+    return window.removeEventListener
+        ?  function(e, n, f){ e.removeEventListener(n, f, false) }
+        :  window.attachEvent 
+        ?  function(e, n, f){ e.detachEvent('on' + n, f) }
+        :  function(e, n, f){ delete window['on' + n] };
+})();
+
+HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 	this.currentX = this.currentY = 0;
 	this.currentR = this.currentG = this.currentB = 0;
 	this.mesX = this.mesY = 0;
+	this.mouseX = this.mouseY = 0;
 	this.fontSize = 18;
 	this.fontStyle = 0;
 
@@ -48,7 +67,23 @@ function initializeEvaluator() {
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 	ctx.fillStyle = '#000';
 	ctx.font = this.fontSize+'px monospace';
-}
+	
+	ctx.canvas.style.position = 'relative'; // for layerX, layerY in Firefox
+	var self = this;
+	function onmousemove(e) {
+		if(e.offsetX != undefined) {
+			self.mouseX = e.offsetX;
+			self.mouseY = e.offsetY;
+		} else {
+			self.mouseX = e.layerX;
+			self.mouseY = e.layerY;
+		}
+	}
+	addEvent(ctx.canvas, 'mousemove', onmousemove);
+	this.removeEvents = function() {
+		removeEvent(ctx.canvas, 'mousemove', onmousemove);
+	};
+};
 
 with(HSPonJS) {
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTCMD], {
@@ -183,6 +218,12 @@ with(HSPonJS) {
 		},
 	});
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTSYSVAR], {
+		0x000: function mousex() {
+			return new IntValue(this.mouseX);
+		},
+		0x001: function mousey() {
+			return new IntValue(this.mouseY);
+		},
 		0x100: function ginfo(type) {
 			this.scanArgs(arguments, 'n');
 			type = type.toIntValue()._value;
@@ -207,3 +248,5 @@ with(HSPonJS) {
 		}
 	});
 }
+
+})();

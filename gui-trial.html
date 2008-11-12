@@ -90,6 +90,7 @@ with(HSPonJS) {
 			this.fileReadXHR.abort();
 			this.fileReadXHR = null;
 		}
+		this.removeEvents();
 	};
 }
 
@@ -149,7 +150,7 @@ $(function() {
 				evaluator.ctx = canvas.getContext('2d');
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
-				initializeEvaluator.call(evaluator);
+				evaluator.guiInitialize();
 				canvas.style.display = 'block';
 				resetButton.style.display = '';
 				evaluator.evaluate();
