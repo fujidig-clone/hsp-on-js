@@ -66,6 +66,7 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 	ctx.fillStyle = '#fff';
 	ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 	ctx.fillStyle = '#000';
+	ctx.strokeStyle = '#000';
 	ctx.font = this.fontSize+'px monospace';
 	
 	ctx.canvas.style.position = 'relative'; // for layerX, layerY in Firefox
