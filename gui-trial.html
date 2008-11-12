@@ -154,6 +154,7 @@ $(function() {
 				evaluators[i] = evaluator;
 				canvas.style.display = 'block';
 				resetButton.style.display = '';
+				initializeEvaluator.call(evaluator);
 				evaluator.evaluate();
 			});
 		});
