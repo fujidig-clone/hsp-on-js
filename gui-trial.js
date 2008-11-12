@@ -202,7 +202,7 @@ with(HSPonJS) {
 			var v1 = (v*(mv-s*32)    +mp)/mv|0;
 			var v2 = (v*(mv-s*t)     +mp)/mv|0;
 			var v3 = (v*(mv-s*(32-t))+mp)/mv|0;
-			var r, g, b;
+			var r = 0, g = 0, b = 0;
 			switch(i){
 			case 0:
 			case 6:
