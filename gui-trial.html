@@ -125,10 +125,6 @@ $(function() {
 		var compileCount = 0;
 		$(runButton).click(function() {
 			var script = textarea.value;
-			var ctx = canvas.getContext('2d');
-			ctx.fillStyle = '#fff';
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-			ctx.fillStyle = '#000';
 			quitEvaluator(i);
 			messageSpan.style.display = '';
 			var curCount = ++ compileCount;
@@ -149,12 +145,12 @@ $(function() {
 					return;
 				}
 				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
-				evaluator.ctx = ctx;
+				evaluator.ctx = canvas.getContext('2d');
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
+				initializeEvaluator.call(evaluator);
 				canvas.style.display = 'block';
 				resetButton.style.display = '';
-				initializeEvaluator.call(evaluator);
 				evaluator.evaluate();
 			});
 		});
