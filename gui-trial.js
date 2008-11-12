@@ -69,6 +69,7 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 	ctx.strokeStyle = '#000';
 	ctx.font = this.fontSize+'px monospace';
 	
+	
 	ctx.canvas.style.position = 'relative'; // for layerX, layerY in Firefox
 	var self = this;
 	function onmousemove(e) {
@@ -80,9 +81,39 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 			self.mouseY = e.layerY;
 		}
 	}
+	this.keyPressed = [];
+	function onkeydown(e) {
+		self.keyPressed[e.keyCode] = true;
+	}
+	function onkeyup(e) {
+		self.keyPressed[e.keyCode] = false;
+	}
+	function onmousedown(e) {
+		switch(e.button) {
+		case 0: self.keyPressed[1] = true; break;
+		case 1: self.keyPressed[4] = true; break;
+		case 2: self.keyPressed[2] = true; break;
+		}
+	}
+	function onmouseup(e) {
+		switch(e.button) {
+		case 0: self.keyPressed[1] = false; break;
+		case 1: self.keyPressed[4] = false; break;
+		case 2: self.keyPressed[2] = false; break;
+		}
+	}
 	addEvent(ctx.canvas, 'mousemove', onmousemove);
+	addEvent(document, 'keydown', onkeydown);
+	addEvent(document, 'keyup', onkeyup);
+	addEvent(ctx.canvas, 'mousedown', onmousedown);
+	addEvent(ctx.canvas, 'mouseup', onmouseup);
+	
 	this.removeEvents = function() {
 		removeEvent(ctx.canvas, 'mousemove', onmousemove);
+		removeEvent(ctx.canvas, 'keydown', onkeydown);
+		removeEvent(ctx.canvas, 'keyup', onkeyup);
+		removeEvent(ctx.canvas, 'mousedown', onmousedown);
+		removeEvent(ctx.canvas, 'mouseup', onmouseup);
 	};
 };
 
@@ -222,6 +253,11 @@ with(HSPonJS) {
 			this.currentR = r;
 			this.currentG = g;
 			this.currentB = b;
+		},
+		0x23: function getkey(v, key) {
+			this.scanArgs(arguments, 'vN');
+			key = key ? key.toIntValue()._value : 1;
+			v.assign(new IntValue(this.keyPressed[key]));
 		},
 		0x2f: function line(x1, y1, x2, y2) {
 			// FIXME アンチエイリアスのかかった線が描画されてしまう
