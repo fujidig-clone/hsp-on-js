@@ -298,6 +298,10 @@ with(HSPonJS) {
 			this.scanArgs(arguments, 'n');
 			type = type.toIntValue()._value;
 			switch(type) {
+			case 12: // ginfo_winx
+				return new IntValue(this.ctx.canvas.width);
+			case 13: // ginfo_winy
+				return new IntValue(this.ctx.canvas.height);
 			case 14: // ginfo_mesx
 				return new IntValue(this.mesX);
 			case 15: // ginfo_mesy
@@ -312,6 +316,10 @@ with(HSPonJS) {
 				return new IntValue(this.currentX);
 			case 23: // ginfo_cy
 				return new IntValue(this.currentY);
+			case 26: // ginfo_sx
+				return new IntValue(this.ctx.canvas.width);
+			case 27: // ginfo_sy
+				return new IntValue(this.ctx.canvas.height);
 			default:
 				throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 			}
