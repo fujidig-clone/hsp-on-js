@@ -11,6 +11,15 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		var msec = (n ? n.toIntValue()._value : 100) * 10;
 		throw new WaitException(msec);
 	},
+	0x08: function await(n) {
+		this.scanArgs(arguments, 'N');
+		var msec = n ? n.toIntValue()._value : 0;
+		if(this.lastWaitTime) {
+			throw new WaitException(this.lastWaitTime + msec - new Date);
+		} else {
+			throw new WaitException(msec);
+		}
+	},
 	0x09: function dim(v, l0, l1, l2, l3) {
 		this.scanArgs(arguments, 'aNNNN');
 		l0 = l0 ? l0.toIntValue()._value : 0;
