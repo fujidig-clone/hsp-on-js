@@ -190,6 +190,39 @@ with(HSPonJS) {
 			this.currentG = g;
 			this.currentB = b;
 		},
+		0x22: function hsvcolor(h, s, v) {
+			this.scanArgs(arguments, 'NNN');
+			h = h ? h.toIntValue()._value % 192 : 0;
+			s = s ? s.toIntValue()._value & 255 : 0;
+			v = v ? v.toIntValue()._value & 255 : 0;
+			var mv = 255 * 32;
+			var mp = 255 * 16;
+			var i = h / 32 | 0; 
+			var t = h % 32;
+			var v1 = (v*(mv-s*32)    +mp)/mv|0;
+			var v2 = (v*(mv-s*t)     +mp)/mv|0;
+			var v3 = (v*(mv-s*(32-t))+mp)/mv|0;
+			var r, g, b;
+			switch(i){
+			case 0:
+			case 6:
+				r=v;	g=v3;	b=v1;	break;
+			case 1:
+				r=v2;	g=v;	b=v1;	break;
+			case 2:
+				r=v1;	g=v;	b=v3;	break;
+			case 3:
+				r=v1;	g=v2;	b=v;	break;
+			case 4:
+				r=v3;	g=v1;	b=v;	break;
+			case 5:
+				r=v;	g=v1;	b=v2;	break;
+			}
+			this.ctx.fillStyle = this.ctx.strokeStyle = Color.toRGBString(r, g, b);
+			this.currentR = r;
+			this.currentG = g;
+			this.currentB = b;
+		},
 		0x2f: function line(x1, y1, x2, y2) {
 			// FIXME アンチエイリアスのかかった線が描画されてしまう
 			this.scanArgs(arguments, 'NNNN');
