@@ -119,6 +119,19 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 
 with(HSPonJS) {
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTCMD], {
+		0x03: function dialog(message, type, option) {
+			this.scanArgs(arguments, '.?NSN');
+			message = message ? CP932.decode(message.toStrValue()._value) : "";
+			type = type ? type.toIntValue()._value : 0;
+			option = option ? CP932.decode(option.toStrValue()._value) : "";
+			if(type & ~0xf) return;
+			if(type & 2) {
+				this.stat.assign(0, new IntValue(window.confirm(message) ? 6 : 7));
+			} else {
+				window.alert(message);
+				this.stat.assign(0, new IntValue(1));
+			}
+		},
 		0x0c: function pset(x, y) {
 			this.scanArgs(arguments, 'NN');
 			x = x ? x.toIntValue()._value : this.currentX;
@@ -286,6 +299,26 @@ with(HSPonJS) {
 			var y = Math.min(y1, y2);
 			this.ctx.fillRect(x, y, width, height);
 		},
+		0x34: function stick(v, notrigerMask) {
+			this.scanArgs(arguments, 'vNN');
+			notrigerMask = notrigerMask ? notrigerMask.toIntValue()._value : 0;
+			var state = 0;
+			if(this.keyPressed[37]) state |= 1;     // カーソルキー左(←)
+			if(this.keyPressed[38]) state |= 2;     // カーソルキー上(↑)
+			if(this.keyPressed[39]) state |= 4;     // カーソルキー右(→)
+			if(this.keyPressed[40]) state |= 8;     // カーソルキー下(↓)
+			if(this.keyPressed[32]) state |= 16;    // スペースキー
+			if(this.keyPressed[13]) state |= 32;    // Enterキー
+			if(this.keyPressed[17]) state |= 64;    // Ctrlキー
+			if(this.keyPressed[27]) state |= 128;   // ESCキー
+			if(this.keyPressed[1])  state |= 256;   // マウスの左ボタン
+			if(this.keyPressed[2])  state |= 512;   // マウスの右ボタン
+			if(this.keyPressed[9])  state |= 1024;  // TABキー
+			var lastState = this.lastStickState || 0;
+			var trigger = state & ~lastState;
+			this.lastStickState = state;
+			v.assign(new IntValue(trigger | state & notrigerMask));
+		}
 	});
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTSYSVAR], {
 		0x000: function mousex() {
