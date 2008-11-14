@@ -174,9 +174,9 @@ $(function() {
 				evaluator.iframe = iframe;
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
-				evaluator.guiInitialize();
 				iframe.style.display = 'block';
 				resetButton.style.display = '';
+				evaluator.guiInitialize();
 				setTimeout(function(){ win.focus(); }, 0);
 				evaluator.evaluate();
 			});
