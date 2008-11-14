@@ -91,6 +91,7 @@ with(HSPonJS) {
 			this.fileReadXHR = null;
 		}
 		this.removeEvents();
+		this.iframe = this.ctx = null;
 	};
 }
 
@@ -120,10 +121,32 @@ $(function() {
 		resetButton.setAttribute('type', 'button');
 		resetButton.style.display = 'none';
 		resetButton.appendChild(document.createTextNode('リセット'));
-		var canvas = document.createElement('canvas');
+		
+		var iframe = document.createElement('iframe');
+		iframe.setAttribute('width', 640);
+		iframe.setAttribute('height', 480);
+		iframe.style.border = 'none';
+		iframe.style.display = 'none';
+		
+		$(textarea)
+			.after(iframe)
+			.after(resetButton)
+			.after(messageSpan)
+			.after(runButton)
+			.keyup(function(){resizeTextarea(this);});
+		
+		var win = iframe.contentWindow;
+		var doc = win.document;
+		doc.write("<body></body>");
+		doc.close();
+		doc.body.style.margin = '0';
+		doc.documentElement.style.overflow = 'hidden'; // for Safari and Google Chrome
+
+		var canvas = doc.createElement('canvas');
 		canvas.width = 640;
 		canvas.height = 480;
-		canvas.style.display = 'none';
+		doc.body.appendChild(canvas);
+
 		var compileCount = 0;
 		$(runButton).click(function() {
 			var script = textarea.value;
@@ -148,25 +171,21 @@ $(function() {
 				}
 				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
 				evaluator.ctx = canvas.getContext('2d');
+				evaluator.iframe = iframe;
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
 				evaluator.guiInitialize();
-				canvas.style.display = 'block';
+				iframe.style.display = 'block';
 				resetButton.style.display = '';
+				setTimeout(function(){ win.focus(); }, 0);
 				evaluator.evaluate();
 			});
 		});
 		$(resetButton).click(function() {
 			quitEvaluator(i);
-			canvas.style.display = 'none';
+			iframe.style.display = 'none';
 			resetButton.style.display = 'none';
 		});
-		$(textarea)
-			.after(canvas)
-			.after(resetButton)
-			.after(messageSpan)
-			.after(runButton)
-			.keyup(function(){resizeTextarea(this);});
 	});
 });
 </script>

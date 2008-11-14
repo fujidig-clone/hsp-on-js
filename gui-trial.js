@@ -84,6 +84,11 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 	this.keyPressed = [];
 	function onkeydown(e) {
 		self.keyPressed[e.keyCode] = true;
+		e.preventDefault();
+	}
+	function onkeypress(e) {
+		// for Opera
+		e.preventDefault();
 	}
 	function onkeyup(e) {
 		self.keyPressed[e.keyCode] = false;
@@ -102,16 +107,20 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		case 2: self.keyPressed[2] = false; break;
 		}
 	}
+	
+	var doc = this.iframe.contentWindow.document;
 	addEvent(ctx.canvas, 'mousemove', onmousemove);
-	addEvent(document, 'keydown', onkeydown);
-	addEvent(document, 'keyup', onkeyup);
+	addEvent(doc, 'keydown', onkeydown);
+	addEvent(doc, 'keypress', onkeypress);
+	addEvent(doc, 'keyup', onkeyup);
 	addEvent(ctx.canvas, 'mousedown', onmousedown);
 	addEvent(ctx.canvas, 'mouseup', onmouseup);
 	
 	this.removeEvents = function() {
 		removeEvent(ctx.canvas, 'mousemove', onmousemove);
-		removeEvent(ctx.canvas, 'keydown', onkeydown);
-		removeEvent(ctx.canvas, 'keyup', onkeyup);
+		removeEvent(doc, 'keypress', onkeypress);
+		removeEvent(doc, 'keydown', onkeydown);
+		removeEvent(doc, 'keyup', onkeyup);
 		removeEvent(ctx.canvas, 'mousedown', onmousedown);
 		removeEvent(ctx.canvas, 'mouseup', onmouseup);
 	};
