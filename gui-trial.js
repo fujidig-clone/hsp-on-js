@@ -58,7 +58,7 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 	this.currentX = this.currentY = 0;
 	this.currentR = this.currentG = this.currentB = 0;
 	this.mesX = this.mesY = 0;
-	this.mouseX = this.mouseY = 0;
+	this.mouseX = this.mouseY = this.mouseW = 0;
 	this.fontSize = 18;
 	this.fontStyle = 0;
 
@@ -111,13 +111,20 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		e.preventDefault();
 		e.stopPropagation();
 	}
+	function onscroll(e) {
+		self.mouseW = e.detail * -40;
+		e.preventDefault();
+	}
 	
-	var doc = this.iframe.contentWindow.document;
+	var win = this.iframe.contentWindow;
+	var doc = win.document;
 	addEvent(ctx.canvas, 'mousemove', onmousemove);
 	addEvent(doc, 'keydown', onkeydown);
 	addEvent(doc, 'keypress', onkeypress);
 	addEvent(doc, 'keyup', onkeyup);
 	addEvent(doc, 'contextmenu', oncontextmenu);
+	addEvent(win, 'DOMMouseScroll', onscroll);
+	addEvent(doc, 'mousewheel', onscroll);
 	addEvent(ctx.canvas, 'mousedown', onmousedown);
 	addEvent(ctx.canvas, 'mouseup', onmouseup);
 	
@@ -127,6 +134,8 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		removeEvent(doc, 'keydown', onkeydown);
 		removeEvent(doc, 'keyup', onkeyup);
 		removeEvent(doc, 'contextmenu', oncontextmenu);
+		removeEvent(win, 'DOMMouseScroll', onscroll);
+		removeEvent(doc, 'mousewheel', onscroll);
 		removeEvent(ctx.canvas, 'mousedown', onmousedown);
 		removeEvent(ctx.canvas, 'mouseup', onmouseup);
 	};
@@ -341,6 +350,11 @@ with(HSPonJS) {
 		},
 		0x001: function mousey() {
 			return new IntValue(this.mouseY);
+		},
+		0x002: function mousew() {
+			var result = this.mouseW;
+			this.mouseW = 0;
+			return new IntValue(result);
 		},
 		0x100: function ginfo(type) {
 			this.scanArgs(arguments, 'n');
