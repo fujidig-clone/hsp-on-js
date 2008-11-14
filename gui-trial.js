@@ -107,12 +107,17 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		case 2: self.keyPressed[2] = false; break;
 		}
 	}
+	function oncontextmenu(e) {
+		e.preventDefault();
+		e.stopPropagation();
+	}
 	
 	var doc = this.iframe.contentWindow.document;
 	addEvent(ctx.canvas, 'mousemove', onmousemove);
 	addEvent(doc, 'keydown', onkeydown);
 	addEvent(doc, 'keypress', onkeypress);
 	addEvent(doc, 'keyup', onkeyup);
+	addEvent(doc, 'contextmenu', oncontextmenu);
 	addEvent(ctx.canvas, 'mousedown', onmousedown);
 	addEvent(ctx.canvas, 'mouseup', onmouseup);
 	
@@ -121,6 +126,7 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		removeEvent(doc, 'keypress', onkeypress);
 		removeEvent(doc, 'keydown', onkeydown);
 		removeEvent(doc, 'keyup', onkeyup);
+		removeEvent(doc, 'contextmenu', oncontextmenu);
 		removeEvent(ctx.canvas, 'mousedown', onmousedown);
 		removeEvent(ctx.canvas, 'mouseup', onmouseup);
 	};

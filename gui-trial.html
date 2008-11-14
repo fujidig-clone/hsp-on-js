@@ -125,7 +125,7 @@ $(function() {
 		var iframe = document.createElement('iframe');
 		iframe.setAttribute('width', 640);
 		iframe.setAttribute('height', 480);
-		iframe.style.border = 'none';
+		iframe.className = 'hsp-on-js-frame';
 		iframe.style.display = 'none';
 		
 		$(textarea)
@@ -191,6 +191,7 @@ $(function() {
 </script>
 <style type="text/css">
 textarea { width: 100%; }
+iframe.hsp-on-js-frame { border: 1px solid #000; }
 </style>
 </head>
 <body>
