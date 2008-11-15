@@ -91,7 +91,7 @@ with(HSPonJS) {
 			this.fileReadXHR = null;
 		}
 		this.removeEvents();
-		this.iframe = this.ctx = null;
+		this.removeCanvasElement();
 	};
 }
 
@@ -123,8 +123,6 @@ $(function() {
 		resetButton.appendChild(document.createTextNode('リセット'));
 		
 		var iframe = document.createElement('iframe');
-		iframe.setAttribute('width', 640);
-		iframe.setAttribute('height', 480);
 		iframe.className = 'hsp-on-js-frame';
 		iframe.style.display = 'none';
 		
@@ -141,11 +139,6 @@ $(function() {
 		doc.close();
 		doc.body.style.margin = '0';
 		doc.documentElement.style.overflow = 'hidden'; // for Safari and Google Chrome
-
-		var canvas = doc.createElement('canvas');
-		canvas.width = 640;
-		canvas.height = 480;
-		doc.body.appendChild(canvas);
 
 		var compileCount = 0;
 		$(runButton).click(function() {
@@ -170,13 +163,11 @@ $(function() {
 					return;
 				}
 				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
-				evaluator.ctx = canvas.getContext('2d');
-				evaluator.iframe = iframe;
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
 				iframe.style.display = 'block';
 				resetButton.style.display = '';
-				evaluator.guiInitialize();
+				evaluator.guiInitialize(iframe, 640, 480);
 				setTimeout(function(){ win.focus(); }, 0);
 				evaluator.evaluate();
 			});
