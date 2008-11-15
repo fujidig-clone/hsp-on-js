@@ -112,18 +112,21 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		e.stopPropagation();
 	}
 	function onscroll(e) {
-		self.mouseW = e.detail * -40;
+		if(e.wheelDelta) {
+			self.mouseW = e.wheelDelta;
+		} else {
+			self.mouseW = e.detail * -40;
+		}
 		e.preventDefault();
 	}
 	
-	var win = this.iframe.contentWindow;
-	var doc = win.document;
+	var doc = this.iframe.contentWindow.document;
 	addEvent(ctx.canvas, 'mousemove', onmousemove);
 	addEvent(doc, 'keydown', onkeydown);
 	addEvent(doc, 'keypress', onkeypress);
 	addEvent(doc, 'keyup', onkeyup);
 	addEvent(doc, 'contextmenu', oncontextmenu);
-	addEvent(win, 'DOMMouseScroll', onscroll);
+	addEvent(doc, 'DOMMouseScroll', onscroll);
 	addEvent(doc, 'mousewheel', onscroll);
 	addEvent(ctx.canvas, 'mousedown', onmousedown);
 	addEvent(ctx.canvas, 'mouseup', onmouseup);
@@ -134,7 +137,7 @@ HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize() {
 		removeEvent(doc, 'keydown', onkeydown);
 		removeEvent(doc, 'keyup', onkeyup);
 		removeEvent(doc, 'contextmenu', oncontextmenu);
-		removeEvent(win, 'DOMMouseScroll', onscroll);
+		removeEvent(doc, 'DOMMouseScroll', onscroll);
 		removeEvent(doc, 'mousewheel', onscroll);
 		removeEvent(ctx.canvas, 'mousedown', onmousedown);
 		removeEvent(ctx.canvas, 'mouseup', onmouseup);
