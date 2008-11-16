@@ -63,6 +63,7 @@ function Screen() {
 	this.fontSize = 18;
 	this.fontStyle = 0;
 	this.width = this.height = null;
+	this.copyWidth = this.copyHeight = 32;
 }
 
 Screen.prototype = {
@@ -90,7 +91,7 @@ Screen.prototype = {
 		v = v & 255;
 		var mv = 255 * 32;
 		var mp = 255 * 16;
-		var i = h / 32 | 0; 
+		var i = h / 32 | 0;
 		var t = h % 32;
 		var v1 = (v*(mv-s*32)    +mp)/mv|0;
 		var v2 = (v*(mv-s*t)     +mp)/mv|0;
@@ -183,108 +184,112 @@ Screen.prototype = {
 	}
 };
 
-HSPonJS.Evaluator.prototype.guiInitialize = function guiInitialize(iframe, width, height) {
-	this.iframe = iframe;
-	var doc = this.iframeDoc = iframe.contentWindow.document;
-	var mainScreen = this.mainScreen = new Screen;
-	
-	this.changeMainCanvas(width, height);
-	
-	this.currentScreen = mainScreen;
-	this.currentScreenId = 0;
-	this.screens = [mainScreen];
-	
-	var canvas = mainScreen.ctx.canvas;
-	canvas.style.position = 'relative'; // for layerX, layerY in Firefox
-	var self = this;
-	function onmousemove(e) {
-		if(e.offsetX != undefined) {
-			mainScreen.mouseX = e.offsetX;
-			mainScreen.mouseY = e.offsetY;
-		} else {
-			mainScreen.mouseX = e.layerX;
-			mainScreen.mouseY = e.layerY;
-		}
-	}
-	this.keyPressed = [];
-	function onkeydown(e) {
-		self.keyPressed[e.keyCode] = true;
-		e.preventDefault();
-	}
-	function onkeypress(e) {
-		// for Opera
-		e.preventDefault();
-	}
-	function onkeyup(e) {
-		self.keyPressed[e.keyCode] = false;
-	}
-	function onmousedown(e) {
-		switch(e.button) {
-		case 0: self.keyPressed[1] = true; break;
-		case 1: self.keyPressed[4] = true; break;
-		case 2: self.keyPressed[2] = true; break;
-		}
-	}
-	function onmouseup(e) {
-		switch(e.button) {
-		case 0: self.keyPressed[1] = false; break;
-		case 1: self.keyPressed[4] = false; break;
-		case 2: self.keyPressed[2] = false; break;
-		}
-	}
-	function oncontextmenu(e) {
-		e.preventDefault();
-		e.stopPropagation();
-	}
-	function onscroll(e) {
-		if(e.wheelDelta) {
-			mainScreen.mouseW = e.wheelDelta;
-		} else {
-			mainScreen.mouseW = e.detail * -40;
-		}
-		e.preventDefault();
-	}
-	
-	addEvent(canvas, 'mousemove', onmousemove);
-	addEvent(doc, 'keydown', onkeydown);
-	addEvent(doc, 'keypress', onkeypress);
-	addEvent(doc, 'keyup', onkeyup);
-	addEvent(doc, 'contextmenu', oncontextmenu);
-	addEvent(doc, 'DOMMouseScroll', onscroll);
-	addEvent(doc, 'mousewheel', onscroll);
-	addEvent(canvas, 'mousedown', onmousedown);
-	addEvent(canvas, 'mouseup', onmouseup);
-	
-	this.removeEvents = function() {
-		removeEvent(canvas, 'mousemove', onmousemove);
-		removeEvent(doc, 'keypress', onkeypress);
-		removeEvent(doc, 'keydown', onkeydown);
-		removeEvent(doc, 'keyup', onkeyup);
-		removeEvent(doc, 'contextmenu', oncontextmenu);
-		removeEvent(doc, 'DOMMouseScroll', onscroll);
-		removeEvent(doc, 'mousewheel', onscroll);
-		removeEvent(canvas, 'mousedown', onmousedown);
-		removeEvent(canvas, 'mouseup', onmouseup);
-	};
-};
+HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
+	guiInitialize: function guiInitialize(iframe, width, height) {
+		this.iframe = iframe;
+		var doc = this.iframeDoc = iframe.contentWindow.document;
+		var mainScreen = this.mainScreen = new Screen;
 
-HSPonJS.Evaluator.prototype.removeCanvasElement = function removeCanvasElement() {
-	if(this.mainScreen.ctx) {
-		this.iframeDoc.body.removeChild(this.mainScreen.ctx.canvas);
-	}
-};
+		this.changeMainCanvas(width, height);
 
-HSPonJS.Evaluator.prototype.changeMainCanvas = function changeMainCanvas(width, height) {
-	this.iframe.setAttribute('width', width);
-	this.iframe.setAttribute('height', height);
-	var canvas = this.iframeDoc.createElement('canvas');
-	canvas.width = width;
-	canvas.height = height;
-	this.removeCanvasElement();
-	this.iframeDoc.body.appendChild(canvas);
-	this.mainScreen.setContext(canvas.getContext('2d'));
-	this.mainScreen.clear();
-}
+		this.currentScreen = mainScreen;
+		this.currentScreenId = 0;
+		this.screens = [mainScreen];
+
+		mainScreen.ctx.canvas.style.position = 'relative'; // for layerX, layerY in Firefox
+		var self = this;
+		function onmousemove(e) {
+			if(e.offsetX != undefined) {
+				mainScreen.mouseX = e.offsetX;
+				mainScreen.mouseY = e.offsetY;
+			} else {
+				mainScreen.mouseX = e.layerX;
+				mainScreen.mouseY = e.layerY;
+			}
+		}
+		this.keyPressed = [];
+		function onkeydown(e) {
+			self.keyPressed[e.keyCode] = true;
+			e.preventDefault();
+		}
+		function onkeypress(e) {
+			// for Opera
+			e.preventDefault();
+		}
+		function onkeyup(e) {
+			self.keyPressed[e.keyCode] = false;
+		}
+		function onmousedown(e) {
+			switch(e.button) {
+			case 0: self.keyPressed[1] = true; break;
+			case 1: self.keyPressed[4] = true; break;
+			case 2: self.keyPressed[2] = true; break;
+			}
+		}
+		function onmouseup(e) {
+			switch(e.button) {
+			case 0: self.keyPressed[1] = false; break;
+			case 1: self.keyPressed[4] = false; break;
+			case 2: self.keyPressed[2] = false; break;
+			}
+		}
+		function oncontextmenu(e) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+		function onscroll(e) {
+			if(e.wheelDelta) {
+				mainScreen.mouseW = e.wheelDelta;
+			} else {
+				mainScreen.mouseW = e.detail * -40;
+			}
+			e.preventDefault();
+		}
+
+		addEvent(doc, 'mousemove', onmousemove);
+		addEvent(doc, 'keydown', onkeydown);
+		addEvent(doc, 'keypress', onkeypress);
+		addEvent(doc, 'keyup', onkeyup);
+		addEvent(doc, 'contextmenu', oncontextmenu);
+		addEvent(doc, 'DOMMouseScroll', onscroll);
+		addEvent(doc, 'mousewheel', onscroll);
+		addEvent(doc, 'mousedown', onmousedown);
+		addEvent(doc, 'mouseup', onmouseup);
+
+		this.removeEvents = function() {
+			removeEvent(doc, 'mousemove', onmousemove);
+			removeEvent(doc, 'keypress', onkeypress);
+			removeEvent(doc, 'keydown', onkeydown);
+			removeEvent(doc, 'keyup', onkeyup);
+			removeEvent(doc, 'contextmenu', oncontextmenu);
+			removeEvent(doc, 'DOMMouseScroll', onscroll);
+			removeEvent(doc, 'mousewheel', onscroll);
+			removeEvent(doc, 'mousedown', onmousedown);
+			removeEvent(doc, 'mouseup', onmouseup);
+		};
+	},
+	removeCanvasElement: function removeCanvasElement() {
+		if(this.mainScreen.ctx) {
+			this.iframeDoc.body.removeChild(this.mainScreen.ctx.canvas);
+		}
+	},
+	changeMainCanvas: function changeMainCanvas(width, height) {
+		this.iframe.setAttribute('width', width);
+		this.iframe.setAttribute('height', height);
+		var canvas = this.iframeDoc.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		this.removeCanvasElement();
+		this.iframeDoc.body.appendChild(canvas);
+		this.mainScreen.setContext(canvas.getContext('2d'));
+		this.mainScreen.clear();
+	},
+	getScreen: function getScreen(id) {
+		var screen = this.screens[id];
+		if(!screen) throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		return screen;
+	}
+});
 
 with(HSPonJS) {
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTCMD], {
@@ -336,7 +341,7 @@ with(HSPonJS) {
 			x1 = x1 ? x1.toIntValue()._value : 0;
 			y1 = y1 ? y1.toIntValue()._value : 0;
 			x2 = x2 ? x2.toIntValue()._value : this.currentScreen.width;
-			y2 = y2 ? y2.toIntValue()._value : this.currentScreen..height;
+			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.height;
 			fill_p = fill_p ? fill_p.toIntValue()._value : 1;
 			
 			this.currentScreen.drawEllipse(x1, y1, x2, y2, fill_p);
@@ -355,13 +360,48 @@ with(HSPonJS) {
 			b = b ? b.toIntValue()._value & 255 : 0;
 			this.currentScreen.selectColor(r, g, b);
 		},
+		0x1b: function redraw() {
+			this.scanArgs(arguments, 'NNNNN');
+			// 何もしない
+		},
 		0x1d: function gsel(screenId) {
 			this.scanArgs(arguments, 'N');
 			screenId = screenId ? screenId.toIntValue()._value : 0;
-			var screen = this.screens[screenId];
-			if(!screen) throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+			var screen = this.getScreen(screenId);
 			this.currentScreen = screen;
 			this.currentScreenId = screenId;
+		},
+		0x1e: function gcopy(srcScreenId, srcX, srcY, width, height) {
+			this.scanArgs(arguments, 'NNNNN');
+			var screen = this.currentScreen;
+			srcScreenId = srcScreenId ? srcScreenId.toIntValue()._value : 0;
+			var srcScreen = this.getScreen(srcScreenId);
+			srcX = srcX ? srcX.toIntValue()._value : 0;
+			srcY = srcY ? srcY.toIntValue()._value : 0;
+			width = width ? width.toIntValue()._value : screen.copyWidth;
+			height = height ? height.toIntValue()._value : screen.copyHeight;
+
+			var destOffsetX = 0, destOffsetY = 0;
+			if(srcX > srcScreen.width) srcX = srcScreen.width;
+			if(srcY > srcScreen.height) srcY = srcScreen.height;
+			if(srcX < 0) {
+				destOffsetX = -srcX;
+				width -= destOffsetX;
+				srcX = 0;
+			}
+			if(srcY < 0) {
+				destOffsetY = -srcY;
+				height -= destOffsetY;
+				srcY = 0;
+			}
+			if(width > srcScreen.width - srcX) width = srcScreen.width - srcX;
+			if(height > srcScreen.height - srcY) height = srcScreen.height - srcY;
+			if(width < 0) width = 0;
+			if(height < 0) height = 0;
+
+			// なぜか srcScreen.ctx.canvas が null でエラーが出ることがある。調査中
+			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
+			                     screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
 		},
 		0x22: function hsvcolor(h, s, v) {
 			this.scanArgs(arguments, 'NNN');
@@ -384,7 +424,7 @@ with(HSPonJS) {
 			if(!(screen = this.screens[screenId])) {
 				screen = this.screens[screenId] = new Screen;
 			}
-			var canvas = this.iframeDoc.createElement('canvas');
+			var canvas = document.createElement('canvas');
 			canvas.width = width;
 			canvas.height = height;
 			screen.setContext(canvas.getContext('2d'));
@@ -488,3 +528,4 @@ with(HSPonJS) {
 }
 
 })();
+
