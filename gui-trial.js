@@ -85,16 +85,8 @@ function XHRReadURL(url, success, error) {
 
 function Screen() {
 	this.ctx = null;
-	this.currentX = this.currentY = 0;
-	this.currentR = this.currentG = this.currentB = 0;
-	this.mesX = this.mesY = 0;
-	this.mouseX = this.mouseY = this.mouseW = 0;
-	this.fontSize = 18;
-	this.fontStyle = 0;
 	this.width = this.height = null;
-	this.copyWidth = this.copyHeight = 32;
-	this.copyMode = 0;
-	this.copyAlpha = 0;
+	this.clearInfo();
 }
 
 Screen.prototype = {
@@ -105,11 +97,30 @@ Screen.prototype = {
 		this.canvas = ctx.canvas;
 	},
 	clear: function clear() {
+		this.clearInfo();
 		var ctx = this.ctx;
 		ctx.fillStyle = '#fff';
 		ctx.fillRect(0, 0, this.width, this.height);
 		this.selectColor(0, 0, 0);
 		this.setFont('monospace', 18, 0);
+	},
+	clearInfo: function clearInfo() {
+		this.currentX = this.currentY = 0;
+		this.currentR = this.currentG = this.currentB = 0;
+		this.mesX = this.mesY = 0;
+		this.mouseX = this.mouseY = this.mouseW = 0;
+		this.fontSize = 18;
+		this.fontStyle = 0;
+		this.copyWidth = this.copyHeight = 32;
+		this.copyMode = 0;
+		this.copyAlpha = 0;
+	},
+	changeToNewCanvas: function changeToNewCanvas(doc, width, height) {
+		var canvas = doc.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		this.setContext(canvas.getContext('2d'));
+		this.clear();
 	},
 	selectColor: function selectColor(r, g, b) {
 		this.currentR = r & 255;
@@ -221,6 +232,8 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		this.iframe = iframe;
 		var doc = this.iframeDoc = iframe.contentWindow.document;
 		var mainScreen = this.mainScreen = new Screen;
+		this.locked = false; // true である間、 onclick などのイベントの実行をしない
+		this.atQuitCallbacks = [];
 
 		this.changeMainCanvas(width, height);
 
@@ -308,19 +321,21 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 	changeMainCanvas: function changeMainCanvas(width, height) {
 		this.iframe.setAttribute('width', width);
 		this.iframe.setAttribute('height', height);
-		var canvas = this.iframeDoc.createElement('canvas');
-		canvas.width = width;
-		canvas.height = height;
 		this.removeCanvasElement();
-		this.iframeDoc.body.appendChild(canvas);
-		Screen.call(this.mainScreen);
-		this.mainScreen.setContext(canvas.getContext('2d'));
-		this.mainScreen.clear();
+		this.mainScreen.changeToNewCanvas(this.iframeDoc, width, height);
+		this.iframeDoc.body.appendChild(this.mainScreen.ctx.canvas);
 	},
 	getScreen: function getScreen(id) {
 		var screen = this.screens[id];
 		if(!screen) throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 		return screen;
+	},
+	changeScreenCanvas: function changeScreenCanvas(screen, width, height) {
+		if(screen == this.mainScreen) {
+			this.changeMainCanvas(width, height);
+		} else {
+			screen.changeToNewCanvas(document, width, height);
+		}
 	},
 	quit: function quit() {
 		if(this.timeoutID != undefined) {
@@ -330,8 +345,14 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 			this.fileReadXHR.abort();
 			this.fileReadXHR = null;
 		}
+		while(this.atQuitCallbacks.length) {
+			this.atQuitCallbacks.pop()();
+		}
 		this.removeEvents();
 		this.removeCanvasElement();
+	},
+	atQuit: function atQuit(callback) {
+		this.atQuitCallbacks.push(callback);
 	}
 });
 
@@ -355,7 +376,7 @@ with(HSPonJS) {
 		}
 		if(e instanceof WaitException) {
 			var self = this;
-			this.timeoutID = setTimeout(function(){
+			this.timeoutID = setTimeout(function() {
 				self.timeoutID = undefined;
 				self.lastWaitTime = +new Date;
 				self.resume();
@@ -374,6 +395,9 @@ with(HSPonJS) {
 					self.fileReadXHR = null;
 					self.resume(function(){ e.error.call(self); });
 				});
+			return;
+		}
+		if(e instanceof VoidException) {
 			return;
 		}
 		throw e;
@@ -438,6 +462,30 @@ with(HSPonJS) {
 			size = size ? size.toIntValue()._value : 18;
 			style = style ? style.toIntValue()._value : 0;
 			this.currentScreen.setFont(name, size, style);
+		},
+		0x17: function picload(path, mode) {
+			this.scanArgs(arguments, 'sN');
+			path = CP932.decode(path.toStrValue()._value);
+			mode = mode ? mode.toIntValue()._value : 0;
+			var image = new Image;
+			image.src = path;
+			var self = this;
+			image.onload = function() {
+				var screen = self.currentScreen;
+				if(mode == 0) {
+					self.changeScreenCanvas(screen, image.width, image.height);
+				}
+				screen.ctx.drawImage(image, screen.currentX, screen.currentY);
+				self.resume();
+			};
+			image.onerror = function() {
+				self.resume(function() { throw new HSPError(ErrorCode.PICTURE_MISSING); });
+			};
+			this.atQuit(function() {
+				delete image.onload;
+				delete image.onerror;
+			});
+			throw new VoidException;
 		},
 		0x18: function color(r, g, b) {
 			this.scanArgs(arguments, 'NNN');
@@ -533,12 +581,7 @@ with(HSPonJS) {
 			if(!(screen = this.screens[screenId])) {
 				screen = this.screens[screenId] = new Screen;
 			}
-			var canvas = document.createElement('canvas');
-			canvas.width = width;
-			canvas.height = height;
-			Screen.call(screen);
-			screen.setContext(canvas.getContext('2d'));
-			screen.clear();
+			screen.changeToNewCanvas(document, width, height);
 			this.currentScreen = screen;
 			this.currentScreenId = screenId;
 		},

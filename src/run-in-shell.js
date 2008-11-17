@@ -58,6 +58,9 @@ Evaluator.prototype.disposeException = function disposeException(e) {
 	if(e instanceof StopException) {
 		return;
 	}
+	if(e instanceof VoidException) {
+		return;
+	}
 	throw e;
 };
 }
