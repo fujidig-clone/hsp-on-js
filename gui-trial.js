@@ -71,6 +71,7 @@ Screen.prototype = {
 		this.ctx = ctx;
 		this.width = ctx.canvas.width;
 		this.height = ctx.canvas.height;
+		this.canvas = ctx.canvas;
 	},
 	clear: function clear() {
 		var ctx = this.ctx;
@@ -399,7 +400,6 @@ with(HSPonJS) {
 			if(width < 0) width = 0;
 			if(height < 0) height = 0;
 
-			// なぜか srcScreen.ctx.canvas が null でエラーが出ることがある。調査中
 			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
 			                     screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
 		},
