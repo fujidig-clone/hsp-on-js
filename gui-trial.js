@@ -93,6 +93,8 @@ function Screen() {
 	this.fontStyle = 0;
 	this.width = this.height = null;
 	this.copyWidth = this.copyHeight = 32;
+	this.copyMode = 0;
+	this.copyAlpha = 0;
 }
 
 Screen.prototype = {
@@ -311,6 +313,7 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		canvas.height = height;
 		this.removeCanvasElement();
 		this.iframeDoc.body.appendChild(canvas);
+		Screen.call(this.mainScreen);
 		this.mainScreen.setContext(canvas.getContext('2d'));
 		this.mainScreen.clear();
 	},
@@ -482,8 +485,32 @@ with(HSPonJS) {
 			if(width < 0) width = 0;
 			if(height < 0) height = 0;
 
+			screen.ctx.save();
+			switch(screen.copyMode) {
+			case 3: // gmode_alpha
+				screen.ctx.globalAlpha = screen.copyAlpha / 256;
+				break;
+			case 5: // gmode_add
+				screen.ctx.globalAlpha = screen.copyAlpha / 256;
+				screen.ctx.globalCompositeOperation = 'lighter';
+				break;
+			}
 			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
 			                     screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
+			screen.ctx.restore();
+		},
+		0x20: function gmode(mode, width, height, alpha) {
+			this.scanArgs(arguments, 'NNNN');
+			mode = mode ? mode.toIntValue()._value : 0;
+			width = width ? width.toIntValue()._value : 32;
+			height = height ? height.toIntValue()._value : 32;
+			alpha = alpha ? alpha.toIntValue()._value : 0;
+			var screen = this.currentScreen;
+			
+			screen.copyMode = mode;
+			screen.copyWidth = width;
+			screen.copyHeight = height;
+			screen.copyAlpha = alpha;
 		},
 		0x22: function hsvcolor(h, s, v) {
 			this.scanArgs(arguments, 'NNN');
@@ -509,6 +536,7 @@ with(HSPonJS) {
 			var canvas = document.createElement('canvas');
 			canvas.width = width;
 			canvas.height = height;
+			Screen.call(screen);
 			screen.setContext(canvas.getContext('2d'));
 			screen.clear();
 			this.currentScreen = screen;
@@ -580,6 +608,8 @@ with(HSPonJS) {
 			this.scanArgs(arguments, 'n');
 			type = type.toIntValue()._value;
 			switch(type) {
+			case 3: // ginfo_sel
+				return new IntValue(this.currentScreenId);
 			case 12: // ginfo_winx
 				return new IntValue(this.currentScreen.width);
 			case 13: // ginfo_winy
