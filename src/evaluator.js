@@ -28,9 +28,6 @@ function Evaluator(axdata, sequence) {
 		try {
 			mainLoop(this, this.stack, literals, variables, userDefFuncs);
 		} catch(e) {
-			if(!(e instanceof HSPException)) {
-				throw e;
-			}
 			this.disposeException(e);
 		}
 	};
@@ -40,9 +37,6 @@ function Evaluator(axdata, sequence) {
 			this.pc ++;
 			mainLoop(this, this.stack, literals, variables, userDefFuncs);
 		} catch(e) {
-			if(!(e instanceof HSPException)) {
-				throw e;
-			}
 			this.disposeException(e);
 		}
 	};

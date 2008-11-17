@@ -54,6 +54,35 @@ var removeEvent = (function(){
         :  function(e, n, f){ delete window['on' + n] };
 })();
 
+HSPonJS.emptyFunction = function(){};
+
+function XHRReadURL(url, success, error) {
+	var xhr;
+	if(window.XMLHttpRequest) {
+		xhr = new XMLHttpRequest();
+	} else {
+		try {
+			xhr = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch(e) {
+			xhr = new ActiveXObject("Microsoft.XMLHTTP");
+		}
+	}
+	xhr.open("GET", url, true);
+	xhr.onreadystatechange = function(){
+		if(!(xhr && xhr.readyState == 4)) return;
+		if(200 <= xhr.status && xhr.status < 300) {
+			var data = xhr.responseText;
+			setTimeout(function(){success(data)}, 0);
+		} else if(xhr.status) {
+			setTimeout(function(){error()}, 0);
+		}
+		xhr.onreadystatechange = HSPonJS.emptyFunction;
+		xhr = null;
+	};
+	xhr.send(null);
+	return xhr;
+}
+
 function Screen() {
 	this.ctx = null;
 	this.currentX = this.currentY = 0;
@@ -289,10 +318,63 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		var screen = this.screens[id];
 		if(!screen) throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 		return screen;
+	},
+	quit: function quit() {
+		if(this.timeoutID != undefined) {
+			clearTimeout(this.timeoutID);
+		}
+		if(this.fileReadXHR) {
+			this.fileReadXHR.abort();
+			this.fileReadXHR = null;
+		}
+		this.removeEvents();
+		this.removeCanvasElement();
 	}
 });
 
 with(HSPonJS) {
+	Evaluator.prototype.disposeException = function disposeException(e) {
+		if(!(e instanceof HSPException)) {
+			alert('JavaScript Error!\n'+e.name+': '+e.message+'\n'+e.fileName+':'+e.lineNumber);
+			throw e;
+		}
+		if(e instanceof HSPError) {
+			var insn = this.sequence[this.pc];
+			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
+			msg += this.getBuiltinFuncName(insn)||'';
+			msg += "\n";
+			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
+			alert(msg);
+			return;
+		}
+		if(e instanceof StopException) {
+			return;
+		}
+		if(e instanceof WaitException) {
+			var self = this;
+			this.timeoutID = setTimeout(function(){
+				self.timeoutID = undefined;
+				self.lastWaitTime = +new Date;
+				self.resume();
+			}, e.msec);
+			return;
+		}
+		if(e instanceof FileReadException) {
+			var self = this;
+			self.fileReadXHR = XHRReadURL(
+				e.path,
+				function(data){
+					self.fileReadXHR = null;
+					self.resume(function(){ e.success.call(self, data); });
+				},
+				function() {
+					self.fileReadXHR = null;
+					self.resume(function(){ e.error.call(self); });
+				});
+			return;
+		}
+		throw e;
+	};
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTCMD], {
 		0x03: function dialog(message, type, option) {
 			this.scanArgs(arguments, '.?NSN');

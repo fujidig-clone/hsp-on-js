@@ -58,10 +58,6 @@ Evaluator.prototype.disposeException = function disposeException(e) {
 	if(e instanceof StopException) {
 		return;
 	}
-	if(e instanceof CallbackException) {
-		this.resume(e.callback);
-		return;
-	}
 	throw e;
 };
 }

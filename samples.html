@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.11.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.12.js" charset="utf-8"></script>
 <script type="text/javascript">
 HSPonJS.emptyFunction = function(){};
 
@@ -40,6 +40,10 @@ function XHRReadURL(url, success, error) {
 
 with(HSPonJS) {
 	Evaluator.prototype.disposeException = function disposeException(e) {
+		if(!(e instanceof HSPException)) {
+			alert('JavaScript Error!\n'+e.name+': '+e.message+'\n'+e.fileName+':'+e.lineNumber);
+			throw e;
+		}
 		if(e instanceof HSPError) {
 			var insn = this.sequence[this.pc];
 			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';

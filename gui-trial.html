@@ -7,95 +7,9 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS GUI の試み</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.11.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.12.js" charset="utf-8"></script>
 <script type="text/javascript" src="gui-trial.js" charset="utf-8"></script>
 <script type="text/javascript">
-HSPonJS.emptyFunction = function(){};
-
-function XHRReadURL(url, success, error) {
-	var xhr;
-	if(window.XMLHttpRequest) {
-		xhr = new XMLHttpRequest();
-	} else {
-		try {
-			xhr = new ActiveXObject("Msxml2.XMLHTTP");
-		} catch(e) {
-			xhr = new ActiveXObject("Microsoft.XMLHTTP");
-		}
-	}
-	xhr.open("GET", url, true);
-	xhr.onreadystatechange = function(){
-		if(!(xhr && xhr.readyState == 4)) return;
-		if(200 <= xhr.status && xhr.status < 300) {
-			var data = xhr.responseText;
-			setTimeout(function(){success(data)}, 0);
-		} else if(xhr.status) {
-			setTimeout(function(){error()}, 0);
-		}
-		xhr.onreadystatechange = HSPonJS.emptyFunction;
-		xhr = null;
-	};
-	xhr.send(null);
-	return xhr;
-}
-
-with(HSPonJS) {
-	Evaluator.prototype.disposeException = function disposeException(e) {
-		if(e instanceof HSPError) {
-			var insn = this.sequence[this.pc];
-			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
-			msg += this.getBuiltinFuncName(insn)||'';
-			msg += "\n";
-			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
-			alert(msg);
-			return;
-		}
-		if(e instanceof StopException) {
-			return;
-		}
-		if(e instanceof WaitException) {
-			var self = this;
-			this.timeoutID = setTimeout(function(){
-				self.timeoutID = undefined;
-				self.lastWaitTime = +new Date;
-				self.resume();
-			}, e.msec);
-			return;
-		}
-		if(e instanceof FileReadException) {
-			var self = this;
-			self.fileReadXHR = XHRReadURL(
-				e.path,
-				function(data){
-					self.fileReadXHR = null;
-					self.resume(function(){ e.success.call(self, data); });
-				},
-				function() {
-					self.fileReadXHR = null;
-					self.resume(function(){ e.error.call(self); });
-				});
-			return;
-		}
-		if(e instanceof CallbackException) {
-			this.resume(e.callback);
-			return;
-		}
-		throw e;
-	};
-	Evaluator.prototype.quit = function quit() {
-		if(this.timeoutID != undefined) {
-			clearTimeout(this.timeoutID);
-		}
-		if(this.fileReadXHR) {
-			this.fileReadXHR.abort();
-			this.fileReadXHR = null;
-		}
-		this.removeEvents();
-		this.removeCanvasElement();
-	};
-}
-
-
 function resizeTextarea(textarea) {
 	textarea.setAttribute('rows', textarea.value.split("\n").length);
 }
