@@ -233,6 +233,7 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		var doc = this.iframeDoc = iframe.contentWindow.document;
 		var mainScreen = this.mainScreen = new Screen;
 		this.locked = false; // true である間、 onclick などのイベントの実行をしない
+		this.quited = false;
 		this.atQuitCallbacks = [];
 
 		this.changeMainCanvas(width, height);
@@ -350,9 +351,16 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		}
 		this.removeEvents();
 		this.removeCanvasElement();
+		this.quited = true;
 	},
-	atQuit: function atQuit(callback) {
+	addCallbackOnQuit: function addCallbackOnQuit(callback) {
 		this.atQuitCallbacks.push(callback);
+	},
+	removeCallbackOnQuit: function removeCallbackOnQuit(callback) {
+		var index = this.atQuitCallbacks.indexOf(callback);
+		if(index >= 0) {
+			this.atQuitCallbacks.splice(index, 1);
+		}
 	}
 });
 
@@ -471,6 +479,9 @@ with(HSPonJS) {
 			image.src = path;
 			var self = this;
 			image.onload = function() {
+				if(self.quited) return;
+				self.locked = false;
+				self.removeCallbackOnQuit(callback);
 				var screen = self.currentScreen;
 				if(mode == 0) {
 					self.changeScreenCanvas(screen, image.width, image.height);
@@ -479,12 +490,17 @@ with(HSPonJS) {
 				self.resume();
 			};
 			image.onerror = function() {
+				if(self.quited) return;
+				self.locked = false;
+				self.removeCallbackOnQuit(callback);
 				self.resume(function() { throw new HSPError(ErrorCode.PICTURE_MISSING); });
 			};
-			this.atQuit(function() {
+			this.locked = true;
+			var callback = function() {
 				delete image.onload;
 				delete image.onerror;
-			});
+			};
+			this.addCallbackOnQuit(callback);
 			throw new VoidException;
 		},
 		0x18: function color(r, g, b) {
@@ -546,6 +562,30 @@ with(HSPonJS) {
 			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
 			                     screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
 			screen.ctx.restore();
+		},
+		0x1f: function gzoom(destWidth, destHeight, srcScreenId, srcX, srcY, srcWidth, srcHeight, mode) {
+			this.scanArgs(arguments, 'NNNNNNNN');
+			var screen = this.currentScreen;
+			destWidth = destWidth ? destWidth.toIntValue()._value : screen.width;
+			destHeight = destHeight ? destHeight.toIntValue()._value : screen.height;
+			srcScreenId = srcScreenId ? srcScreenId.toIntValue()._value : 0;
+			srcX = srcX ? srcX.toIntValue()._value : 0;
+			srcY = srcY ? srcY.toIntValue()._value : 0;
+			srcWidth = srcWidth ? srcWidth.toIntValue()._value : screen.copyWidth;
+			srcHeight = srcHeight ? srcHeight.toIntValue()._value : screen.copyHeight;
+			mode = mode ? mode.toIntValue()._value : 0;
+			var srcScreen = this.getScreen(srcScreenId);
+			
+			if(srcX > srcScreen.width) srcX = srcScreen.width;
+			if(srcY > srcScreen.height) srcY = srcScreen.height;
+			if(srcWidth > srcScreen.width - srcX) srcWidth = srcScreen.width - srcX;
+			if(srcHeight > srcScreen.height - srcY) srcHeight = srcScreen.height - srcY;
+			if(srcWidth < 0) srcWidth = 0;
+			if(srcHeight < 0) srcHeight = 0;
+			
+			// TODO: srcX, srcY, srcWidth, srcHeight, destWidth, destHeight がそれぞれ負数の場合の考慮
+			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, srcWidth, srcHeight,
+			                     screen.currentX, screen.currentY, destWidth, destHeight);
 		},
 		0x20: function gmode(mode, width, height, alpha) {
 			this.scanArgs(arguments, 'NNNN');
@@ -680,6 +720,13 @@ with(HSPonJS) {
 			}
 		}
 	});
+	BuiltinFuncs[Token.Type.PROGCMD][0x1c] = function logmes(text) {
+		this.scanArgs(arguments, 's');
+		text = CP932.decode(text.toStrValue()._value);
+		if(typeof console != 'undefined' && typeof console.log == 'function') {
+			console.log(text);
+		}
+	};
 }
 
 })();
