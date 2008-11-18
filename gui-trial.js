@@ -115,8 +115,8 @@ Screen.prototype = {
 		this.copyMode = 0;
 		this.copyAlpha = 0;
 	},
-	changeToNewCanvas: function changeToNewCanvas(doc, width, height) {
-		var canvas = doc.createElement('canvas');
+	changeToNewCanvas: function changeToNewCanvas(width, height) {
+		var canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
 		this.setContext(canvas.getContext('2d'));
@@ -235,8 +235,22 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		this.locked = false; // true である間、 onclick などのイベントの実行をしない
 		this.quited = false;
 		this.atQuitCallbacks = [];
+		
+		mainScreen.changeToNewCanvas = function changeToNewCanvas(width, height) {
+			iframe.setAttribute('width', width);
+			iframe.setAttribute('height', height);
+			if(this.ctx) {
+				doc.body.removeChild(this.ctx.canvas);
+			}
+			var canvas = doc.createElement('canvas');
+			canvas.width = width;
+			canvas.height = height;
+			this.setContext(canvas.getContext('2d'));
+			doc.body.appendChild(canvas);
+			this.clear();
+		};
 
-		this.changeMainCanvas(width, height);
+		mainScreen.changeToNewCanvas(width, height);
 
 		this.currentScreen = mainScreen;
 		this.currentScreenId = 0;
@@ -319,24 +333,10 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 			this.iframeDoc.body.removeChild(this.mainScreen.ctx.canvas);
 		}
 	},
-	changeMainCanvas: function changeMainCanvas(width, height) {
-		this.iframe.setAttribute('width', width);
-		this.iframe.setAttribute('height', height);
-		this.removeCanvasElement();
-		this.mainScreen.changeToNewCanvas(this.iframeDoc, width, height);
-		this.iframeDoc.body.appendChild(this.mainScreen.ctx.canvas);
-	},
 	getScreen: function getScreen(id) {
 		var screen = this.screens[id];
 		if(!screen) throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 		return screen;
-	},
-	changeScreenCanvas: function changeScreenCanvas(screen, width, height) {
-		if(screen == this.mainScreen) {
-			this.changeMainCanvas(width, height);
-		} else {
-			screen.changeToNewCanvas(document, width, height);
-		}
 	},
 	quit: function quit() {
 		if(this.timeoutID != undefined) {
@@ -484,7 +484,7 @@ with(HSPonJS) {
 				self.removeCallbackOnQuit(callback);
 				var screen = self.currentScreen;
 				if(mode == 0) {
-					self.changeScreenCanvas(screen, image.width, image.height);
+					screen.changeToNewCanvas(image.width, image.height);
 				}
 				screen.ctx.drawImage(image, screen.currentX, screen.currentY);
 				self.resume();
@@ -621,7 +621,7 @@ with(HSPonJS) {
 			if(!(screen = this.screens[screenId])) {
 				screen = this.screens[screenId] = new Screen;
 			}
-			screen.changeToNewCanvas(document, width, height);
+			screen.changeToNewCanvas(width, height);
 			this.currentScreen = screen;
 			this.currentScreenId = screenId;
 		},
@@ -631,7 +631,7 @@ with(HSPonJS) {
 			width = width ? width.toIntValue()._value : 640;
 			height = height ? height.toIntValue()._value : 480;
 			if(screenId == 0) {
-				this.changeMainCanvas(width, height);
+				this.mainScreen.changeToNewCanvas(width, height);
 				this.currentScreen = this.mainScreen;
 				this.currentScreenId = 0;
 			} else {
