@@ -96,10 +96,27 @@ Screen.prototype = {
 		this.height = ctx.canvas.height;
 		this.canvas = ctx.canvas;
 	},
-	clear: function clear() {
+	clear: function clear(n) {
 		this.clearInfo();
 		var ctx = this.ctx;
-		ctx.fillStyle = '#fff';
+		switch(n) {
+		default:
+		case 0:
+			ctx.fillStyle = '#fff';
+			break;
+		case 1:
+			ctx.fillStyle = '#c0c0c0';
+			break;
+		case 2:
+			ctx.fillStyle = '#808080';
+			break;
+		case 3:
+			ctx.fillStyle = '#404040';
+			break;
+		case 4:
+			ctx.fillStyle = '#000';
+			break;
+		}
 		ctx.fillRect(0, 0, this.width, this.height);
 		this.selectColor(0, 0, 0);
 		this.setFont('monospace', 18, 0);
@@ -461,8 +478,13 @@ with(HSPonJS) {
 			x2 = x2 ? x2.toIntValue()._value : this.currentScreen.width;
 			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.height;
 			fill_p = fill_p ? fill_p.toIntValue()._value : 1;
-			
+
 			this.currentScreen.drawEllipse(x1, y1, x2, y2, fill_p);
+		},
+		0x13: function cls(color) {
+			this.scanArgs(arguments, 'N');
+			color = color ? color.toIntValue()._value : 0;
+			this.currentScreen.clear(color);
 		},
 		0x14: function font(name, size, style) {
 			this.scanArgs(arguments, 'sNN');
@@ -549,19 +571,20 @@ with(HSPonJS) {
 			if(width < 0) width = 0;
 			if(height < 0) height = 0;
 
-			screen.ctx.save();
+			var ctx = screen.ctx;
+			ctx.save();
 			switch(screen.copyMode) {
 			case 3: // gmode_alpha
-				screen.ctx.globalAlpha = screen.copyAlpha / 256;
+				ctx.globalAlpha = screen.copyAlpha / 256;
 				break;
 			case 5: // gmode_add
-				screen.ctx.globalAlpha = screen.copyAlpha / 256;
-				screen.ctx.globalCompositeOperation = 'lighter';
+				ctx.globalAlpha = screen.copyAlpha / 256;
+				ctx.globalCompositeOperation = 'lighter';
 				break;
 			}
-			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
-			                     screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
-			screen.ctx.restore();
+			ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
+			              screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
+			ctx.restore();
 		},
 		0x1f: function gzoom(destWidth, destHeight, srcScreenId, srcX, srcY, srcWidth, srcHeight, mode) {
 			this.scanArgs(arguments, 'NNNNNNNN');
@@ -575,17 +598,73 @@ with(HSPonJS) {
 			srcHeight = srcHeight ? srcHeight.toIntValue()._value : screen.copyHeight;
 			mode = mode ? mode.toIntValue()._value : 0;
 			var srcScreen = this.getScreen(srcScreenId);
+
+			if(srcWidth == 0 || srcHeight == 0) return;
 			
+			var signX = 1, signY = 1; // 反転させるとき -1
+			var destOffsetX = 0, destOffsetY = 0;
+			if(srcWidth < 0) {
+				srcWidth *= -1;
+				srcX -= srcWidth;
+				if(srcX < 0) {
+					destWidth = Math.round((1 + srcX / srcWidth) * destWidth);
+					srcWidth += srcX;
+					if(srcWidth <= 0) return;
+					srcX = 0;
+				}
+				destOffsetX = destWidth;
+				signX *= -1;
+			}
+			if(srcHeight < 0) {
+				srcHeight *= -1;
+				srcY -= srcHeight;
+				if(srcY < 0) {
+					destHeight = Math.round((1 + srcY / srcHeight) * destHeight);
+					srcHeight += srcY;
+					if(srcHeight <= 0) return;
+					srcY = 0;
+				}
+				destOffsetY = destHeight;
+				signY *= -1;
+			}
 			if(srcX > srcScreen.width) srcX = srcScreen.width;
 			if(srcY > srcScreen.height) srcY = srcScreen.height;
-			if(srcWidth > srcScreen.width - srcX) srcWidth = srcScreen.width - srcX;
-			if(srcHeight > srcScreen.height - srcY) srcHeight = srcScreen.height - srcY;
-			if(srcWidth < 0) srcWidth = 0;
-			if(srcHeight < 0) srcHeight = 0;
-			
-			// TODO: srcX, srcY, srcWidth, srcHeight, destWidth, destHeight がそれぞれ負数の場合の考慮
-			screen.ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, srcWidth, srcHeight,
-			                     screen.currentX, screen.currentY, destWidth, destHeight);
+			if(srcX < 0) {
+				destOffsetX = Math.round(-srcX / srcWidth * destWidth);
+				srcWidth += srcX;
+				if(srcWidth <= 0) return;
+				destWidth -= destOffsetX;
+				srcX = 0;
+			}
+			if(srcY < 0) {
+				destOffsetY = Math.round(-srcY / srcHeight * destHeight);
+				srcHeight += srcY;
+				if(srcHeight <= 0) return;
+				destHeight -= destOffsetY;
+				srcY = 0;
+			}
+			if(srcWidth > srcScreen.width - srcX) {
+				destWidth = Math.round((srcScreen.width - srcX) / srcWidth * destWidth);
+				srcWidth = srcScreen.width - srcX;
+			}
+			if(srcHeight > srcScreen.height - srcY) {
+				destHeight = Math.round((srcScreen.height - srcY) / srcHeight * destHeight);
+				srcHeight = srcScreen.height - srcY;
+			}
+			if(destWidth < 0) {
+				destWidth *= -1;
+				signX *= -1;
+			}
+			if(destHeight < 0) {
+				destHeight *= -1;
+				signY *= -1;
+			}
+			var ctx = screen.ctx;
+			ctx.save();
+			ctx.translate(screen.currentX + destOffsetX, screen.currentY + destOffsetY);
+			ctx.scale(signX, signY);
+			ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
+			ctx.restore();
 		},
 		0x20: function gmode(mode, width, height, alpha) {
 			this.scanArgs(arguments, 'NNNN');
