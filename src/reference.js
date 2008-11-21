@@ -72,6 +72,12 @@ Reference.prototype = {
 			return this;
 		}
 		return new Reference(this.value, this.base + offset);
+	},
+	inc: function inc(offset) {
+		return this.value.inc(this.base + offset);
+	},
+	dec: function dec(offset) {
+		return this.value.dec(this.base + offset);
 	}
 };
 
