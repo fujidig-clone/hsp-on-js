@@ -759,8 +759,8 @@ with(HSPonJS) {
 			x = x ? x.toIntValue()._value : 0;
 			y = y ? y.toIntValue()._value : 0;
 			rad = rad ? rad.toDoubleValue()._value : 0;
-			width = width ? width.toIntValue()._value : screen.copyWidth;
-			height = height ? height.toIntValue()._value : screen.copyHeight;
+			width = width ? Math.abs(width.toIntValue()._value) : screen.copyWidth;
+			height = height ? Math.abs(height.toIntValue()._value) : screen.copyHeight;
 			var ctx = screen.ctx;
 			ctx.save();
 			switch(screen.copyMode) {
