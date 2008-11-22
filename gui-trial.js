@@ -752,6 +752,30 @@ with(HSPonJS) {
 			var trigger = state & ~lastState;
 			this.lastStickState = state;
 			v.assign(new IntValue(trigger | state & notrigerMask));
+		},
+		0x35: function grect(x, y, rad, width, height) {
+			this.scanArgs(arguments, 'NNNNN');
+			var screen = this.currentScreen;
+			x = x ? x.toIntValue()._value : 0;
+			y = y ? y.toIntValue()._value : 0;
+			rad = rad ? rad.toDoubleValue()._value : 0;
+			width = width ? width.toIntValue()._value : screen.copyWidth;
+			height = height ? height.toIntValue()._value : screen.copyHeight;
+			var ctx = screen.ctx;
+			ctx.save();
+			switch(screen.copyMode) {
+			case 3: // gmode_alpha
+				ctx.globalAlpha = screen.copyAlpha / 256;
+				break;
+			case 5: // gmode_add
+				ctx.globalAlpha = screen.copyAlpha / 256;
+				ctx.globalCompositeOperation = 'lighter';
+				break;
+			}
+			ctx.translate(x, y);
+			ctx.rotate(rad);
+			ctx.fillRect(-width / 2, -height / 2, width, height);
+			ctx.restore();
 		}
 	});
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTSYSVAR], {
