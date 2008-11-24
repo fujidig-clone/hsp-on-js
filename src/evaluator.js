@@ -645,7 +645,7 @@ Evaluator.prototype = {
 					push('self.scanArg(stack[len - '+(argc - i)+'], "l");');
 				}
 				push('var n = self.scanArg(stack[len - '+(argc + 1)+'], "n").toIntValue()._value;');
-				push('if(!(0 <= n && n < argc)) break;');
+				push('if(0 <= n && n < '+argc+') {'); indent ++;
 				push('var pos = stack[len - '+argc+' + n].toValue().pos;');
 				push('stack.length -= '+(argc + 1)+';');
 				if(isGosub) {
@@ -655,6 +655,7 @@ Evaluator.prototype = {
 					push('self.pc = pos;');
 					push('continue;');
 				}
+				indent --; push('}');
 				break;
 			default:
 				throw new Error("未対応の命令コード: "+insn.code);
