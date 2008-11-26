@@ -8,7 +8,7 @@ StructArray.prototype = new HSPArray();
 
 Utils.objectExtend(StructArray.prototype, {
 	assign: function assign(offset, rhs) {
-		this.values[offset] = rhs.toValue().clone();
+		this.values[offset] = rhs.toValue();
 		if(rhs == StructValue.EMPTY && offset < this.searchFrom) {
 			this.searchFrom = offset;
 		}
@@ -53,7 +53,7 @@ Utils.objectExtend(StructArray.prototype, {
 		for(var i = 0; i < module.membersCount; i ++) {
 			members[i] = new Variable;
 		}
-		this.values[index] = new StructValue(module, members, false);
+		this.values[index] = new StructValue(module, members);
 		return index;
 	}
 });

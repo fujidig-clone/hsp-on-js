@@ -1,7 +1,6 @@
-function StructValue(module, members, isClone) {
+function StructValue(module, members) {
 	this.module = module;
 	this.members = members;
-	this.isClone = isClone;
 }
 
 StructValue.prototype = new Value;
@@ -22,15 +21,7 @@ Utils.objectExtend(StructValue.prototype, {
 		return '<StructValue: module='+this.module.name+'>';
 	},
 	isUsing: function isUsing() {
-		if(this.isClone) return 2;
 		return 1;
-	},
-	clone: function clone() {
-		if(this.isClone) {
-			return this;
-		} else {
-			return new StructValue(this.module, this.members, true);
-		}
 	}
 });
 
@@ -38,7 +29,6 @@ Utils.objectExtend(StructValue.prototype, {
 StructValue.EMPTY = new StructValue(null, null);
 StructValue.EMPTY.toString = function() { return '<StructValue: EMPTY>'; };
 StructValue.EMPTY.isUsing = function() { return false; };
-StructValue.EMPTY.clone = function() { return this; };
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.StructValue = StructValue;

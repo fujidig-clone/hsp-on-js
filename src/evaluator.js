@@ -203,6 +203,62 @@ Evaluator.prototype = {
 				push('array.dec(offset);');
 			}
 		}
+		function pushCallingUserdefFuncCode(userDefFunc, argc) {
+			if(!userDefFuncs[userDefFunc.id]) {
+				userDefFuncs[userDefFunc.id] = userDefFunc;
+			}
+			push('var args = [];');
+			push('var len = stack.length;');
+			var origArgsCount = 0;
+			var argMax = userDefFunc.paramTypes.length;
+			var recvArgMax = 0; // local を除いた仮引数の数
+			for(var i = 0; i < argMax; i ++) {
+				if(userDefFunc.paramTypes[i] != MPType.LOCALVAR) recvArgMax ++; 
+			}
+			if(recvArgMax < argc) {
+				push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);');
+				return;
+			}
+			for(var i = 0; i < argMax; i ++) {
+				var mptype = userDefFunc.paramTypes[i];
+				push('var arg = stack[len - '+(argc-origArgsCount)+'];');
+				switch(mptype) {
+				case MPType.DNUM:
+					push('args['+i+'] = self.scanArg(arg, "n").toDoubleValue();');
+					break;
+				case MPType.INUM:
+					push('args['+i+'] = arg ? self.scanArg(arg, "n").toIntValue() : new IntValue(0);');
+					break;
+				case MPType.LOCALVAR:
+					push('args['+i+'] = new Variable;');
+					continue;
+				case MPType.ARRAYVAR:
+					push('args['+i+'] = self.scanArg(arg, "v").variable;');
+					break;
+				case MPType.SINGLEVAR:
+					push('args['+i+'] = self.scanArg(arg, "v");');
+					break;
+				case MPType.LOCALSTRING:
+					push('args['+i+'] = self.scanArg(arg, "s").toStrValue();');
+					break;
+				case MPType.MODULEVAR:
+					push('args['+i+'] = new ModVarData(self.scanArg(arg, "v").variable, arg.indices);');
+					break;
+				case MPType.IMODULEVAR:
+					push('args['+i+'] = arg;');
+					break;
+				default:
+					throw new Error('未対応のパラメータタイプ: '+mptype);
+				}
+				origArgsCount ++;
+			}
+			push('stack.length -= '+argc+';');
+			push('if(self.frameStack.length >= 256) {');
+			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
+			push('}');
+			push('self.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args));');
+			push('self.pc = '+userDefFunc.label.pos+';');
+		}
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
@@ -403,12 +459,7 @@ Evaluator.prototype = {
 			case Instruction.Code.CALL_USERDEF_FUNC:
 				var userDefFunc = insn.opts[0];
 				var argc = insn.opts[1];
-				if(!userDefFuncs[userDefFunc.id]) {
-					userDefFuncs[userDefFunc.id] = userDefFunc;
-				}
-				push('self.callUserDefFunc(userDefFuncs['+userDefFunc.id+'], '+
-					 'Utils.aryPopN(stack, '+argc+'));');
-				push('self.pc ++;');
+				pushCallingUserdefFuncCode(userDefFunc, argc);
 				push('continue;');
 				break;
 			case Instruction.Code.GETARG:
@@ -452,32 +503,52 @@ Evaluator.prototype = {
 					userDefFuncs[module.id] = module;
 				}
 				var moduleExpr = 'userDefFuncs['+module.id+']';
-				push('var args = Utils.aryPopN(stack, '+argc+');');
-				push('var agent = self.scanArg(args[0], "a");');
+				push('var len = stack.length;');
+				push('var agent = self.scanArg(stack[len - '+argc+'], "a");');
 				push('if(agent.getType() != '+VarType.STRUCT+') {');
 				push('    agent.variable.dim('+VarType.STRUCT+', 1, 0, 0, 0);');
 				push('}');
 				push('var array = agent.variable.value;');
 				push('var offset = array.newmod('+moduleExpr+');');
 				if(module.constructor) {
-					push('args[0] = new VariableAgent(agent.variable, [offset]);');
-					if(!userDefFuncs[module.constructor.id]) {
-						userDefFuncs[module.constructor.id] = module.constructor;
-					}
-					push('self.callUserDefFunc(userDefFuncs['+module.constructor.id+'], args);');
-					push('self.pc ++;');
+					push('stack[len - '+argc+'] = new ModVarData(agent.variable, [offset]);');
+					pushCallingUserdefFuncCode(module.constructor, argc);
 					push('continue;');
 				} else if(argc > 1) {
 					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
 				}
 				break;
 			case Instruction.Code.RETURN:
-				if(insn.opts[0]) {
-					push('self.return_(stack.pop());');
+				var existReturnVal = insn.opts[0];
+				push('if(self.frameStack.length == 0) {');
+				push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
+				push('}');
+				push('var frame = self.frameStack.pop();');
+				if(existReturnVal) {
+					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
+					push('    stack[stack.length - 1] = stack[stack.length - 1].toValue();');
+					push('} else {'); indent ++
+					push('var val = stack.pop();');
+					push('switch(val.getType()) {');
+					push('case '+VarType.STR+':');
+					push('    self.refstr.assign(0, val.toStrValue());');
+					push('    break;');
+					push('case '+VarType.DOUBLE+':');
+					push('    self.refdval.assign(0, val.toDoubleValue());');
+					push('    break;');
+					push('case '+VarType.INT+':');
+					push('    this.stat.assign(0, val.toIntValue());');
+					push('    break;');
+					push('default:');
+					push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+					push('}');
+					indent --; push('}');
 				} else {
-					push('self.return_();');
+					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
+					push('    throw new HSPError(ErrorCode.NORETVAL);');
+					push('}');
 				}
-				push('self.pc ++;');
+				push('self.pc = frame.pc;');
 				push('continue;');
 				break;
 			case Instruction.Code.DELMOD:
@@ -485,9 +556,7 @@ Evaluator.prototype = {
 				push('if(v.getType() != VarType.STRUCT) {');
 				push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 				push('}');
-				push('self.deleteStruct(v);');
-				push('self.pc ++;');
-				push('continue;');
+				push('agent.assign(StructValue.EMPTY);');
 				break;
 			case Instruction.Code.REPEAT:
 				var pos = insn.opts[0].pos;
@@ -668,115 +737,6 @@ Evaluator.prototype = {
 		//print(lines.join("\n"));
 		return lines.join("\n");
 	},
-	callBuiltinFunc: function callBuiltinFunc(insn) {
-		var type = insn.opts[0];
-		var subid = insn.opts[1];
-		var argc = insn.opts[2];
-		var func = BuiltinFuncs[type][subid];
-		if(!func) {
-			var name = this.getBuiltinFuncName(insn);
-			if(name) {
-				throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION, name + ' はサポートされていません');
-			} else {
-				throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);
-			}
-		}
-		var args = Utils.aryPopN(this.stack, argc);
-		return func.apply(this, args);
-	},
-	callUserDefFunc: function callUserDefFunc(userDefFunc, origArgs, callback) {
-		var args = [];
-		var origArgsCount = 0;
-		for(var i = 0; i < userDefFunc.paramTypes.length; i ++) {
-			var mptype = userDefFunc.paramTypes[i];
-			var arg = origArgs[origArgsCount];
-			switch(mptype) {
-			case MPType.DNUM:
-				this.scanArg(arg, 'n', false);
-				args.push(arg.toDoubleValue());
-				origArgsCount ++;
-				break;
-			case MPType.INUM:
-				this.scanArg(arg, 'n', true);
-				args.push(arg ? arg.toIntValue() : new IntValue(0));
-				origArgsCount ++;
-				break;
-			case MPType.LOCALVAR:
-				args.push(new Variable);
-				break;
-			case MPType.ARRAYVAR:
-				this.scanArg(arg, 'v', false);
-				args.push(arg.variable);
-				origArgsCount ++;
-				break;
-			case MPType.SINGLEVAR:
-				this.scanArg(arg, 'v', false);
-				args.push(arg);
-				origArgsCount ++;
-				break;
-			case MPType.LOCALSTRING:
-				this.scanArg(arg, 's', false);
-				args.push(arg.toStrValue());
-				origArgsCount ++;
-				break;
-			case MPType.MODULEVAR:
-			case MPType.IMODULEVAR:
-			case MPType.TMODULEVAR:
-				this.scanArg(arg, 'v', false);
-				args.push(new ModVarData(arg.variable, arg.indices));
-				origArgsCount ++;
-				break;
-			default:
-				throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
-			}
-		}
-		if(origArgsCount < origArgs.length) {
-			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
-		}
-		if(this.frameStack.length >= 256) {
-			throw new HSPError(ErrorCode.STACK_OVERFLOW);
-		}
-		this.frameStack.push(new Frame(this.pc + 1, userDefFunc, args, callback));
-		this.pc = userDefFunc.label.pos - 1;
-	},
-	return_: function return_(val) {
-		if(this.frameStack.length == 0) {
-			throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);
-		}
-		var frame = this.frameStack.pop();
-		if(frame.userDefFunc && frame.userDefFunc.isCType) {
-			if(!val) throw new HSPError(ErrorCode.NORETVAL);
-			this.stack.push(val.toValue());
-		} else if(val) {
-			switch(val.getType()) {
-			case VarType.STR:
-				this.refstr.assign(0, val.toStrValue());
-				break;
-			case VarType.DOUBLE:
-				this.refdval.assign(0, val.toDoubleValue());
-				break;
-			case VarType.INT:
-				this.stat.assign(0, val.toIntValue());
-				break;
-			default:
-				throw new HSPError(ErrorCode.TYPE_MISMATCH);
-			}
-		}
-		this.pc = frame.pc - 1;
-		var runCallback = function() {
-			if(frame.callback) {
-				var fn = frame.callback();
-				while(fn) {
-					fn = fn();
-				}
-			}
-		};
-		if(frame.userDefFunc) {
-			this.deleteLocalVars(frame.userDefFunc.paramTypes, frame.args, runCallback);
-		} else {
-			runCallback();
-		}
-	},
 	popIndices: function popIndices(argc) {
 		var indices = Utils.aryPopN(this.stack, argc);
 		for(var i = 0; i < argc; i ++) {
@@ -821,83 +781,6 @@ Evaluator.prototype = {
 			throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
 		}
 		return thismod;
-	},
-	deleteStruct: function deleteStruct(agent, callback) {
-		var fn = this.deleteStruct0(agent, callback);
-		while(fn) {
-			fn = fn();
-		}
-	},
-	deleteAllStruct: function deleteAllStruct(variable, callback) {
-		var fn = this.deleteAllStruct0(variable, callback);
-		while(fn) {
-			fn = fn();
-		}
-	},
-	deleteStruct0: function deleteStruct0(agent, callback) {
-		this.deleteStructRecursionLevel = 0;
-		var struct = agent.toValue();
-		var self = this;
-		if(struct.isUsing() != 1) {
-			if(callback) return callback();
-			return null;
-		}
-		var myCallback = function() {
-			var i = 0;
-			return (function() {
-				if(++self.deleteStructRecursionLevel >= 128) {
-					self.deleteStructRecursionLevel = 0;
-					return arguments.callee;
-				}
-				while(i < struct.members.length) {
-					var member = struct.members[i];
-					i ++;
-					if(member.getType() == VarType.STRUCT) {
-						return self.deleteAllStruct0(member, arguments.callee);
-					}
-				}
-				agent.assign(StructValue.EMPTY);
-				if(callback) return callback();
-				return null;
-			})();
-		}
-		if(struct.module.destructor) {
-			this.callUserDefFunc(struct.module.destructor, [agent], myCallback);
-			return null;
-		} else {
-			return myCallback;
-		}
-	},
-	deleteAllStruct0: function deleteAllStruct0(variable, callback) {
-		var i = 0;
-		var self = this;
-		return (function() {
-			while(i < variable.getL0()) {
-				var agent = new VariableAgent(variable, [i]);
-				i ++;
-				if(agent.isUsing() == 1) {
-					return self.deleteStruct0(agent, arguments.callee);
-				}
-			}
-			return callback();
-		})();
-	},
-	deleteLocalVars: function deleteLocalVars(paramTypes, args, callback) {
-		var i = 0;
-		var self = this;
-		(function() {
-			while(i < args.length) {
-				var paramType = paramTypes[i];
-				var arg = args[i];
-				i ++;
-				if(paramType == MPType.LOCALVAR && arg.getType() == VarType.STRUCT) {
-					self.deleteAllStruct(arg, arguments.callee);
-					return;
-				}
-			}
-			callback();
-			return;
-		})();
 	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
