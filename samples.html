@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.14.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.15.js" charset="utf-8"></script>
 <script type="text/javascript">
 HSPonJS.emptyFunction = function(){};
 
@@ -51,10 +51,15 @@ with(HSPonJS) {
 			msg += "\n";
 			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
 			alert(msg);
+			this.quit();
 			return;
 		}
 		if(e instanceof StopException) {
 			resizeTextarea(this.resultTextarea);
+			return;
+		}
+		if(e instanceof EndException) {
+			this.quit();
 			return;
 		}
 		if(e instanceof WaitException) {
@@ -90,6 +95,7 @@ with(HSPonJS) {
 		throw e;
 	};
 	Evaluator.prototype.quit = function quit() {
+		if(this.quited) return;
 		if(this.timeoutID != undefined) {
 			clearTimeout(this.timeoutID);
 		}
@@ -97,6 +103,8 @@ with(HSPonJS) {
 			this.fileReadXHR.abort();
 			this.fileReadXHR = null;
 		}
+		this.onQuit();
+		this.quited = true;
 	};
 	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
 		this.scanArgs(arguments, '.?');
@@ -167,6 +175,11 @@ $(function() {
 				}
 				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
 				evaluator.resultTextarea = resultTextarea;
+				evaluator.onQuit = function() {
+					resultTextarea.style.display = 'none';
+					resetButton.style.display = 'none';
+					resultTextarea.value = '';
+				};
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
 				resultTextarea.style.display = '';
@@ -176,9 +189,6 @@ $(function() {
 		});
 		$(resetButton).click(function() {
 			quitEvaluator(i);
-			resultTextarea.style.display = 'none';
-			resetButton.style.display = 'none';
-			resultTextarea.value = '';
 		});
 		$(textarea)
 			.after(resultTextarea)

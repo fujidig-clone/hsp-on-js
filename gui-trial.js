@@ -356,6 +356,7 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		return screen;
 	},
 	quit: function quit() {
+		if(this.quited) return;
 		if(this.timeoutID != undefined) {
 			clearTimeout(this.timeoutID);
 		}
@@ -368,6 +369,7 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		}
 		this.removeEvents();
 		this.removeCanvasElement();
+		this.onQuit();
 		this.quited = true;
 	},
 	addCallbackOnQuit: function addCallbackOnQuit(callback) {
@@ -394,9 +396,14 @@ with(HSPonJS) {
 			msg += "\n";
 			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
 			alert(msg);
+			this.quit();
 			return;
 		}
 		if(e instanceof StopException) {
+			return;
+		}
+		if(e instanceof EndException) {
+			this.quit();
 			return;
 		}
 		if(e instanceof WaitException) {

@@ -97,6 +97,11 @@ function HSPException() {}
 function StopException() {}
 StopException.prototype = new HSPException;
 
+function EndException(status) {
+	this.status = status;
+}
+EndException.prototype = new HSPException;
+
 function WaitException(msec) {
 	this.msec = msec;
 }
@@ -126,6 +131,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.HSPException = HSPException;
 	HSPonJS.WaitException = WaitException;
 	HSPonJS.StopException = StopException;
+	HSPonJS.EndException = EndException;
 	HSPonJS.FileReadException = FileReadException;
 	HSPonJS.VoidException = VoidException;
 	HSPonJS.HSPError = HSPError;

@@ -52,6 +52,10 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		this.scanArgs(arguments, 'av');
 		dest.variable.value = src.ref();
 	},
+	0x10: function end(status) {
+		this.scanArgs(arguments, 'N');
+		throw new EndException(status ? status.toIntValue()._value : 0);
+	},
 	0x11: function stop() {
 		this.scanArgs(arguments, '');
 		throw new StopException;
