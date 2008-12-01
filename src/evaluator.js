@@ -157,20 +157,56 @@ Evaluator.prototype = {
 				push('stack.length -= '+(argc+indicesCount)+';');
 			}
 		}
-		function pushCompoundAssignCode(calcCode, indicesCount) {
+		function pushCompoundAssignCode(calcCode, indicesCount, variableExpr) {
 			push('var arg = stack.pop();');
-			if(indicesCount == 0) {
-				push('array.assign(0, array.at(0).'+operateMethodNames[calcCode]+'(arg));');
-			} else if(indicesCount == 1) {
-				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
-				push('array.expand1D(offset);');
-				push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+			if(!(8 <= calcCode && calcCode <= 13)) {
+				// 比較演算以外は同じ型の値が返ってくることに依存して型チェックをしない
+				push('var array = '+variableExpr+'.value;');
+				if(indicesCount == 0) {
+					push('array.assign(0, array.at(0).'+operateMethodNames[calcCode]+'(arg));');
+				} else if(indicesCount == 1) {
+					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('array.expand1D(offset);');
+					push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+				} else {
+					pushGettingIndicesCode(indicesCount, 0);
+					push('stack.length -= '+indicesCount+';');
+					push('array.expand(indices);');
+					push('var offset = array.getOffset(indices);');
+					push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+				}
 			} else {
-				pushGettingIndicesCode(indicesCount, 0);
-				push('stack.length -= '+indicesCount+';');
-				push('array.expand(indices);');
-				push('var offset = array.getOffset(indices);');
-				push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+				push('var variable = '+variableExpr+';');
+				if(indicesCount == 0) {
+					push('if(variable.value.getType() != arg.getType()) variable.reset(arg.getType());');
+					push('variable.value.assign(0, variable.value.at(0).'+operateMethodNames[calcCode]+'(arg));');
+				} else if(indicesCount == 1) {
+					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('if(variable.value.getType() != arg.getType()) {');
+					push('    if(offset == 0) {');
+					push('        variable.reset(arg.getType());');
+					push('    } else {');
+					push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+					push('    }');
+					push('}');
+					push('variable.value.assign(offset, variable.value.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+				} else {
+					pushGettingIndicesCode(indicesCount, 0);
+					push('stack.length -= '+indicesCount+';');
+					push('var array = variable.value;');
+					push('array.expand(indices);');
+					push('var offset = array.getOffset(indices);');
+					push('if(array.getType() != arg.getType()) {');
+					push('    if(offset == 0) {');
+					push('        variable.reset(arg.getType());');
+					push('        array = variable.value;');
+					push('        array.expand(indices);');
+					push('    } else {');
+					push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+					push('    }');
+					push('}');
+					push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
+				}
 			}
 		}
 		function pushIncCode(indicesCount) {
@@ -378,22 +414,19 @@ Evaluator.prototype = {
 				var calcCode = insn.opts[0];
 				var varId = insn.opts[1];
 				var indicesCount = insn.opts[2];
-				push('var array = variables['+varId+'].value;');
-				pushCompoundAssignCode(calcCode, indicesCount);
+				pushCompoundAssignCode(calcCode, indicesCount, 'variables['+varId+']');
 				break;
 			case Instruction.Code.COMPOUND_ASSIGN_ARG_ARRAY:
 				var calcCode = insn.opts[0];
 				var argNum = insn.opts[1];
 				var indicesCount = insn.opts[2];
-				push('var array = self.getArg('+argNum+').value;');
-				pushCompoundAssignCode(calcCode, indicesCount);
+				pushCompoundAssignCode(calcCode, indicesCount, 'self.getArg('+argNum+')');
 				break;
 			case Instruction.Code.COMPOUND_ASSIGN_MEMBER:
 				var calcCode = insn.opts[0];
 				var memberNum = insn.opts[1];
 				var indicesCount = insn.opts[2];
-				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
-				pushCompoundAssignCode(calcCode, indicesCount);
+				pushCompoundAssignCode(calcCode, indicesCount, 'self.getThismod().toValue().members['+memberNum+']');
 				break;
 			case Instruction.Code.INC:
 				push('var agent = stack.pop();');

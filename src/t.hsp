@@ -1,13 +1,8 @@
-#define q a++
-
-st = gettime(-1)
-repeat 10000
-q:q:q:q:q:q:q:q:q:q
-q:q:q:q:q:q:q:q:q:q
-q:q:q:q:q:q:q:q:q:q
-q:q:q:q:q:q:q:q:q:q
-q:q:q:q:q:q:q:q:q:q
-loop
-ed = gettime(-1)
-mes strf("%d ms", ed - st)
-
+a = 1.0
+a.1 < = 1
+mes a.0
+mes a.1
+a0 = a.0
+a1 = a.1
+mes vartype(a0)
+mes vartype(a1)
