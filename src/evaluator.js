@@ -690,7 +690,7 @@ Evaluator.prototype = {
 				push('        self.loopStack.pop();');
 				push('        self.pc = '+pos+';');
 				push('    } else {');
-				push('        self.pc = data.pc - 1;');
+				push('        self.pc = data.pc;');
 				push('    }');
 				push('    continue;');
 				push('}');

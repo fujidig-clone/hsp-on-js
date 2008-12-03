@@ -1,8 +1,4 @@
-a = 1.0
-a.1 < = 1
-mes a.0
-mes a.1
-a0 = a.0
-a1 = a.1
-mes vartype(a0)
-mes vartype(a1)
+dimtype a,5,32
+foreach a
+	mes cnt
+loop
