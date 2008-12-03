@@ -176,19 +176,21 @@ Evaluator.prototype = {
 					push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
 				}
 			} else {
+				// 比較演算は必ず int 型の値が返ってくることに依存
 				push('var variable = '+variableExpr+';');
 				if(indicesCount == 0) {
-					push('if(variable.value.getType() != arg.getType()) variable.reset(arg.getType());');
+					push('if(variable.value.getType() != '+VarType.INT+') variable.reset('+VarType.INT+');');
 					push('variable.value.assign(0, variable.value.at(0).'+operateMethodNames[calcCode]+'(arg));');
 				} else if(indicesCount == 1) {
 					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
-					push('if(variable.value.getType() != arg.getType()) {');
+					push('if(variable.value.getType() != '+VarType.INT+') {');
 					push('    if(offset == 0) {');
-					push('        variable.reset(arg.getType());');
+					push('        variable.reset('+VarType.INT+');');
 					push('    } else {');
 					push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 					push('    }');
 					push('}');
+					push('variable.value.expand1D(offset);');
 					push('variable.value.assign(offset, variable.value.at(offset).'+operateMethodNames[calcCode]+'(arg));');
 				} else {
 					pushGettingIndicesCode(indicesCount, 0);
@@ -196,9 +198,9 @@ Evaluator.prototype = {
 					push('var array = variable.value;');
 					push('array.expand(indices);');
 					push('var offset = array.getOffset(indices);');
-					push('if(array.getType() != arg.getType()) {');
+					push('if(array.getType() != '+VarType.INT+') {');
 					push('    if(offset == 0) {');
-					push('        variable.reset(arg.getType());');
+					push('        variable.reset('+VarType.INT+');');
 					push('        array = variable.value;');
 					push('        array.expand(indices);');
 					push('    } else {');

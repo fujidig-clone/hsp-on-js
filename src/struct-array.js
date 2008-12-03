@@ -47,7 +47,7 @@ Utils.objectExtend(StructArray.prototype, {
 				break;
 			}
 		}
-		if(index == len) this.expand([len]);
+		if(index == len) ++ this.l0;
 		this.searchFrom = index + 1;
 		var members = [];
 		for(var i = 0; i < module.membersCount; i ++) {
