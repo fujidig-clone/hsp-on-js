@@ -572,7 +572,7 @@ Evaluator.prototype = {
 					push('    self.refdval.assign(0, val.toDoubleValue());');
 					push('    break;');
 					push('case '+VarType.INT+':');
-					push('    this.stat.assign(0, val.toIntValue());');
+					push('    self.stat.assign(0, val.toIntValue());');
 					push('    break;');
 					push('default:');
 					push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
