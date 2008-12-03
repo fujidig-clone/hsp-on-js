@@ -53,7 +53,7 @@ Compiler.prototype = {
 				this.compileAssignment(sequence);
 				break;
 			case Token.Type.CMPCMD:
-				this.compileCompareCommand(sequence);
+				this.compileBranchCommand(sequence);
 				break;
 			case Token.Type.PROGCMD:
 				this.compileProgramCommand(sequence);
@@ -364,7 +364,7 @@ Compiler.prototype = {
 		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
 		                 [token.type, token.code, argc], token);
 	},
-	compileCompareCommand: function compileCompareCommand(sequence) {
+	compileBranchCommand: function compileBranchCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var skipTo = token.pos + token.size + token.skip_offset;
 		var label = new Label;
@@ -373,15 +373,24 @@ Compiler.prototype = {
 		} else {
 			this.ifLabels[skipTo] = [label];
 		}
+		var condToken = this.ax.tokens[this.tokensPos];
 		var argc = this.compileParameters(sequence);
 		if(token.code == 0) { // 'if'
 			if(argc != 1) throw this.error("if の引数の数が間違っています。", token);
-			this.pushNewInsn(sequence, Instruction.Code.IFEQ,
-			                 [label], token);
+			// if の条件式がリテラルのとき最適化
+			var lastInsn = sequence[sequence.length - 1];
+			if(lastInsn.code == Instruction.Code.PUSH &&
+			   (lastInsn.opts[0].getType() == VarType.INT || lastInsn.opts[0].getType() == VarType.DOUBLE)) {
+				sequence.pop();
+				if(!lastInsn.opts[0]._value) {
+					this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
+				}
+				return;
+			}
+			this.pushNewInsn(sequence, Instruction.Code.IFEQ, [label], token);
 		} else {
 			if(argc != 0) throw this.error("else の引数の数が間違っています。", token);
-			this.pushNewInsn(sequence, Instruction.Code.GOTO,
-			                 [label], token);
+			this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
 		}
 	},
 	compileParameters: function compileParameters(sequence, cannotBeOmitted) {
