@@ -373,7 +373,6 @@ Compiler.prototype = {
 		} else {
 			this.ifLabels[skipTo] = [label];
 		}
-		var condToken = this.ax.tokens[this.tokensPos];
 		var argc = this.compileParameters(sequence);
 		if(token.code == 0) { // 'if'
 			if(argc != 1) throw this.error("if の引数の数が間違っています。", token);
