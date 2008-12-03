@@ -41,7 +41,16 @@ function XHRReadURL(url, success, error) {
 with(HSPonJS) {
 	Evaluator.prototype.disposeException = function disposeException(e) {
 		if(!(e instanceof HSPException)) {
-			alert('JavaScript Error!\n'+e.name+': '+e.message+'\n'+e.fileName+':'+e.lineNumber);
+			var insn = this.sequence[this.pc];
+			var msg = 'JavaScript Error!\n';
+			msg += e.name+': '+e.message+'\n';
+			msg += e.fileName+':'+e.lineNumber+'\n';
+			msg += 'pc = '+this.pc+'\n';
+			if(insn) {
+				msg += insn.lineNo+' ('+insn.fileName+') \n';
+				msg += insn;
+			}
+			alert(msg);
 			throw e;
 		}
 		if(e instanceof HSPError) {

@@ -591,7 +591,7 @@ Evaluator.prototype = {
 				push('if(v.getType() != VarType.STRUCT) {');
 				push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 				push('}');
-				push('agent.assign(StructValue.EMPTY);');
+				push('v.assign(StructValue.EMPTY);');
 				break;
 			case Instruction.Code.REPEAT:
 				var pos = insn.opts[0].pos;
