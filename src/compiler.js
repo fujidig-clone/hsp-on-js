@@ -62,7 +62,11 @@ Compiler.prototype = {
 				this.compileUserDefCommand(sequence);
 				break;
 			case Token.Type.INTCMD:
+				this.compileBasicCommand(sequence);
+				break;
 			case Token.Type.EXTCMD:
+				this.compileGuiCommand(sequence);
+				break;
 			case Token.Type.DLLFUNC:
 			case Token.Type.DLLCTRL:
 				this.compileCommand(sequence);
@@ -358,6 +362,38 @@ Compiler.prototype = {
 			this.compileCommand(sequence);
 		}
 	},
+	compileBasicCommand: function compileBasicCommand(sequence) {
+		var token = this.ax.tokens[this.tokensPos];
+		switch(token.code) {
+		case 0x00: // onexit
+		case 0x01: // onerror
+		case 0x02: // onkey
+		case 0x03: // onclick
+		case 0x04: // oncmd
+			this.tokensPos ++;
+			this.compileOptionalJumpType(sequence);
+			var argc = 1 + this.compileParameters(sequence);
+			this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
+			                 [token.type, token.code, argc], token);
+			break;
+		default:
+			this.compileCommand(sequence);
+		}
+	},
+	compileGuiCommand: function compileGuiCommand(sequence) {
+		var token = this.ax.tokens[this.tokensPos];
+		switch(token.code) {
+		case 0x00: // button
+			this.tokensPos ++;
+			this.compileOptionalJumpType(sequence);
+			var argc = 1 + this.compileParameters(sequence);
+			this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
+			                 [token.type, token.code, argc], token);
+			break;
+		default:
+			this.compileCommand(sequence);
+		}
+	},
 	compileCommand: function compileCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var argc = this.compileParameters(sequence);
@@ -409,12 +445,6 @@ Compiler.prototype = {
 		while(true) {
 			var token = this.ax.tokens[this.tokensPos];
 			if(!token || token.ex1) return argc;
-			if(token.type == Token.Type.PROGCMD) {
-				this.compileJumpType(sequence);
-				argc ++;
-				token = this.ax.tokens[this.tokensPos];
-				if(!token || token.ex1) return argc;
-			}
 			if(token.type == Token.Type.MARK) {
 				if(token.code == 63) { // '?'
 					if(cannotBeOmitted) {
@@ -617,17 +647,16 @@ Compiler.prototype = {
 		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_FUNC,
 		                 [token.type, token.code, 0], token);
 	},
-	compileJumpType: function compileJumpType(sequence) {
-		var token = this.ax.tokens[this.tokensPos++];
-		switch(token.val) {
-		case 0:
+	compileOptionalJumpType: function compileOptionalJumpType(sequence) {
+		var token = this.ax.tokens[this.tokensPos];
+		if(token.type == Token.Type.PROGCMD && token.val == 0) {
 			this.pushNewInsn(sequence, Instruction.Code.PUSH, [JumpType.GOTO], token);
-			break;
-		case 1:
+			this.tokensPos ++;
+		} else if(token.type == Token.Type.PROGCMD && token.val == 1) {
 			this.pushNewInsn(sequence, Instruction.Code.PUSH, [JumpType.GOSUB], token);
-			break;
-		default:
-			throw this.error();
+			this.tokensPos ++;
+		} else {
+			this.pushNewInsn(sequence, Instruction.Code.PUSH, [JumpType.GOTO], token);
 		}
 	},
 	compileUserDefFuncall: function compileUserDefFuncall(sequence) {

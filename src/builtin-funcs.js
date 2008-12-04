@@ -83,14 +83,26 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 	0x03: function stat() {
 		return this.stat.at(0);
 	},
+	0x04: function err() {
+		return new IntValue(this.err);
+	},
 	0x06: function strsize() {
-		return this.strsize;
+		return new IntValue(this.strsize);
 	},
 	0x07: function looplev() {
 		return new IntValue(this.loopStack.length);
 	},
 	0x08: function sublev() {
 		return new IntValue(this.frameStack.length);
+	},
+	0x09: function iparam() {
+		return new IntValue(this.iparam);
+	},
+	0x0a: function wparam() {
+		return new IntValue(this.wparam);
+	},
+	0x0b: function lparam() {
+		return new IntValue(this.lparam);
 	},
 	0x0c: function refstr() {
 		return this.refstr.at(0);
@@ -101,12 +113,28 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 };
 
 BuiltinFuncs[Token.Type.INTCMD] = {
+	0x01: function onerror(jumpType, val) {
+		this.scanArgs(arguments, 'j.');
+		var t = val.getType();
+		switch(t) {
+		case VarType.LABEL:
+			this.onerrorEvent.enabled = true;
+			this.onerrorEvent.pos = val.toValue().pos;
+			break;
+		case VarType.DOUBLE:
+		case VarType.INT:
+			this.onerrorEvent.enabled = val.toIntValue()._value != 0;
+			break;
+		default:
+			throw new HSPError(ErrorCode.TYPE_MISMATCH);
+		}
+	},
 	0x11: function exist(path) {
 		this.scanArgs(arguments, 's');
 		path = path.toStrValue()._value;
 		this.fileRead(path,
-		              function(data) { this.strsize = new IntValue(data.length); },
-		              function() { this.strsize = new IntValue(-1); });
+		              function(data) { this.strsize = data.length; },
+		              function() { this.strsize = -1; });
 	},
 	0x16: function bload(path, v) {
 		// FIXME 第三引数のサイズ、第四引数のオフセットに対応
@@ -132,7 +160,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 			break;
 		case VarType.STR:
 			v.setbytes(offset, val._value + "\0");
-			this.strsize = new IntValue(val._value.length);
+			this.strsize = val._value.length;
 			break;
 		default:
 			throw new HSPError(ErrorCode.TYPE_MISMATCH);
@@ -183,7 +211,7 @@ BuiltinFuncs[Token.Type.INTCMD] = {
 			}
 		}
 		v.assign(new StrValue(result));
-		this.strsize = new IntValue(i);
+		this.strsize = i;
 		this.stat.assign(0, new IntValue(c));
 	},
 	0x1f: function memexpand(v, size) {

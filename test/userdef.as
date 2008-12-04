@@ -57,10 +57,6 @@
  } \
  __a = 0 : __b = 0
 
-;  mes "got:    "+_test_inspect(__a)+" "+{"(%1)"} : \
-;  mes "expect: "+_test_inspect(__b) : \
-
-
 #define ctype ok(%1=1) \
  __a = %1 : \
  _write_sep_next_assert : \

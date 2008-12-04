@@ -7,7 +7,7 @@
 <link rev="made" href="mailto:fuji.rosen@gmail.com">
 <title>HSP on JS</title>
 <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
-<script type="text/javascript" src="hsp-on-js-core-0.0.16.js" charset="utf-8"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.17.js" charset="utf-8"></script>
 <script type="text/javascript">
 HSPonJS.emptyFunction = function(){};
 
@@ -39,8 +39,8 @@ function XHRReadURL(url, success, error) {
 }
 
 with(HSPonJS) {
-	Evaluator.prototype.disposeException = function disposeException(e) {
-		if(!(e instanceof HSPException)) {
+	HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
+		onInternalError: function onInternalError(e) {
 			var insn = this.sequence[this.pc];
 			var msg = 'JavaScript Error!\n';
 			msg += e.name+': '+e.message+'\n';
@@ -52,8 +52,8 @@ with(HSPonJS) {
 			}
 			alert(msg);
 			throw e;
-		}
-		if(e instanceof HSPError) {
+		},
+		onError: function onError(e) {
 			var insn = this.sequence[this.pc];
 			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
 			msg += this.getBuiltinFuncName(insn)||'';
@@ -61,30 +61,26 @@ with(HSPonJS) {
 			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
 			alert(msg);
 			this.quit();
-			return;
-		}
-		if(e instanceof StopException) {
+		},
+		onStop: function onStop() {
 			resizeTextarea(this.resultTextarea);
-			return;
-		}
-		if(e instanceof EndException) {
+		},
+		onEnd: function onEnd(e) {
 			this.quit();
-			return;
-		}
-		if(e instanceof WaitException) {
+		},
+		onWait: function onWait(e) {
 			var self = this;
-			this.timeoutID = setTimeout(function(){
+			this.timeoutID = setTimeout(function() {
 				self.timeoutID = undefined;
 				self.lastWaitTime = +new Date;
 				self.resume();
 			}, e.msec);
-			return;
-		}
-		if(e instanceof FileReadException) {
+		},
+		onFileRead: function onFileRead(e) {
 			var self = this;
 			self.fileReadXHR = XHRReadURL(
 				e.path,
-				function(data){
+				function(data) {
 					self.fileReadXHR = null;
 					self.resume(function(){ e.success.call(self, data); });
 				},
@@ -92,29 +88,20 @@ with(HSPonJS) {
 					self.fileReadXHR = null;
 					self.resume(function(){ e.error.call(self); });
 				});
-			return;
+		},
+		quit: function quit() {
+			if(this.quited) return;
+			if(this.timeoutID != undefined) {
+				clearTimeout(this.timeoutID);
+			}
+			if(this.fileReadXHR) {
+				this.fileReadXHR.abort();
+				this.fileReadXHR = null;
+			}
+			this.onQuit();
+			this.quited = true;
 		}
-		if(e instanceof CallbackException) {
-			this.resume(e.callback);
-			return;
-		}
-		if(e instanceof VoidException) {
-			return;
-		}
-		throw e;
-	};
-	Evaluator.prototype.quit = function quit() {
-		if(this.quited) return;
-		if(this.timeoutID != undefined) {
-			clearTimeout(this.timeoutID);
-		}
-		if(this.fileReadXHR) {
-			this.fileReadXHR.abort();
-			this.fileReadXHR = null;
-		}
-		this.onQuit();
-		this.quited = true;
-	};
+	});
 	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
 		this.scanArgs(arguments, '.?');
 		if(val) {

@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby1.9
+require 'pathname'
+
+ax_path = ARGV[0]
+dump = open(ax_path, 'rb') do |f|
+  f.each_byte.each_slice(16).map do |i|
+    "'%s'" % i.map{|j| '\x%02x'%j }.join
+  end.join(",\n")
+end
+
+basedir = Pathname($0).parent
+
+open(basedir+'_tmp.js', 'wb') do |f|
+  f.puts "var axbinary = [\n#{dump}\n].join('');"
+  f.puts "var showSequence = false;"
+end
+
+filenames = [basedir+'hsp-on-js-core.js', basedir+'_tmp.js', basedir+'src/run-in-shell.js']
+system('js', *filenames.map{|i|["-f", i.to_s]}.flatten)
+File.delete(basedir+'_tmp.js')

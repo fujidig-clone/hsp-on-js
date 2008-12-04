@@ -15,31 +15,16 @@ function Evaluator(axdata, sequence) {
 	this.stat = new IntArray();
 	this.refdval = new DoubleArray();
 	this.refstr = new StrArray();
-	this.strsize = new IntValue(0);
+	this.strsize = 0;
+	this.iparam = 0;
+	this.wparam = 0;
+	this.lparam = 0;
+	this.err = 0;
 	this.random = new VCRandom();
+	this.onerrorEvent = new Event();
 	
-	var mainLoop;
-	var literals = [];
-	var variables = this.variables;
-	var userDefFuncs = [];
-	this.evaluate = function evaluate() {
-		mainLoop = eval('Object(function mainLoop(self, stack, literals, variables, userDefFuncs) {\n' + 
-		                this.createMainLoop(literals, userDefFuncs) + '\n})');
-		try {
-			mainLoop(this, this.stack, literals, variables, userDefFuncs);
-		} catch(e) {
-			this.disposeException(e);
-		}
-	};
-	this.resume = function resume(callback) {
-		try {
-			if(callback) callback();
-			this.pc ++;
-			mainLoop(this, this.stack, literals, variables, userDefFuncs);
-		} catch(e) {
-			this.disposeException(e);
-		}
-	};
+	this.literals = [];
+	this.userDefFuncs = [];
 }
 
 function LoopData(cnt, end, pc) {
@@ -55,7 +40,76 @@ function Frame(pc, userDefFunc, args, callback) {
 	this.callback = callback;
 }
 
+function Event() {
+	this.enabled = false;
+	this.pos = null;
+	this.isGosub = false;
+}
+
 Evaluator.prototype = {
+	evaluate: function evaluate() {
+		this.mainLoop = eval('Object(function mainLoop(self, stack, literals, variables, userDefFuncs) {\n' + 
+		                this.createMainLoop(this.literals, this.userDefFuncs) + '\n})');
+		try {
+			this.mainLoop(this, this.stack, this.literals, this.variables, this.userDefFuncs);
+		} catch(e) {
+			this.disposeException(e);
+		}
+	},
+	resume: function resume(callback) {
+		try {
+			if(callback) callback();
+			this.pc ++;
+			this.mainLoop(this, this.stack, this.literals, this.variables, this.userDefFuncs);
+		} catch(e) {
+			this.disposeException(e);
+		}
+	},
+	resumeWithEvent: function resumeWithEvent(event) {
+		try {
+			if(event.isGosub) {
+				if(this.frameStack.length >= 256) {
+					throw new HSPError(ErrorCode.STACK_OVERFLOW);
+				}
+				this.frameStack.push(new Frame(this.pc + 1, null, null));
+			} else {
+				this.loopStack.length = 0;
+				this.frameStack.length = 0;
+			}
+			this.pc = event.pos;
+			this.mainLoop(this, this.stack, this.literals, this.variables, this.userDefFuncs);
+		} catch(e) {
+			this.disposeException(e);
+		}
+	},
+	disposeException: function disposeException(e) {
+		if(!(e instanceof HSPException)) {
+			this.onInternalError(e);
+		} else if(e instanceof HSPError) {
+			if(this.onerrorEvent.enabled && this.onerrorEvent.pos != null) {
+				this.wparam = this.err = e.errcode;
+				var insn = this.sequence[this.pc];
+				this.lparam = insn ? insn.lineNo : 0;
+				this.resumeWithEvent(this.onerrorEvent);
+			} else {
+				this.onError(e);
+			}
+		} else if(e instanceof StopException) {
+			this.onStop(e);
+		} else if(e instanceof EndException) {
+			this.onEnd(e);
+		} else if(e instanceof WaitException) {
+			this.onWait(e);
+		} else if(e instanceof FileReadException) {
+			this.onFileRead(e);
+		} else if(e instanceof VoidException) {
+		}
+	},
+	onInternalError: function onInternalError(e) {
+		throw e;
+	},
+	onStop: function onStop() {
+	},
 	createMainLoop: function createMainLoop(literals, userDefFuncs) {
 		function push(line) {
 			lines.push(Utils.strTimes('\t', indent) + line);
@@ -939,6 +993,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Evaluator = Evaluator;
 	HSPonJS.LoopData = LoopData;
 	HSPonJS.Frame = Frame;
+	HSPonJS.Event = Event;
 }
 
 

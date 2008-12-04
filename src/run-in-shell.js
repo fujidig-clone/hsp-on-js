@@ -48,25 +48,16 @@ BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
 	}
 };
 
-Evaluator.prototype.disposeException = function disposeException(e) {
+Evaluator.prototype.onError = function onError(e) {
 	var insn = this.sequence[this.pc];
-	if(e instanceof HSPError) {
-		print('#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ' + (this.getBuiltinFuncName(insn)||''));
-		print('--> '+(e.message||ErrorMessages[e.errcode]));
-		return;
-	}
-	if(e instanceof StopException) {
-		return;
-	}
-	if(e instanceof EndException) {
-		quit(e.status);
-		return;
-	}
-	if(e instanceof VoidException) {
-		return;
-	}
-	throw e;
+	print('#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ' + (this.getBuiltinFuncName(insn)||''));
+	print('--> '+(e.message||ErrorMessages[e.errcode]));
 };
+
+Evaluator.prototype.onEnd = function onEnd(e) {
+	quit(e.status);
+};
+
 }
 
 try {

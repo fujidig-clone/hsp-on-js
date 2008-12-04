@@ -3,9 +3,9 @@
 class HSPTestRunner
   TestResult = Struct.new(:tests_count, :assertions_count, :errors_count, :failures_count, :messages)
   
-  def initialize
+  def initialize(hsp3cl)
     @hspcmp = 'hspcmp'
-    @hsp3cl = 'hsp3cl'
+    @hsp3cl = hsp3cl
     @tmp_path = '_tmp.hsp'
     @obj_path = '_tmp.ax'
   end
@@ -129,4 +129,11 @@ class HSPTestRunner
   end
 end
 
-HSPTestRunner.new.run Dir.glob('test_*.hsp')
+if $0 == __FILE__
+  require 'optparse'
+  opt = OptionParser.new
+  hsp3cl = 'hsp3cl'
+  opt.on('--hsp3cl=COMMAND') {|v| hsp3cl = v}
+  opt.parse!(ARGV)
+  HSPTestRunner.new(hsp3cl).run Dir.glob('test_*.hsp')
+end
