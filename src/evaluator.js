@@ -48,10 +48,10 @@ function Event() {
 
 Evaluator.prototype = {
 	evaluate: function evaluate() {
-		this.mainLoop = eval('Object(function mainLoop(self, stack, literals, variables, userDefFuncs) {\n' + 
+		this.mainLoop = eval('Object(function mainLoop(stack, literals, variables, userDefFuncs) {\n' + 
 		                this.createMainLoop(this.literals, this.userDefFuncs) + '\n})');
 		try {
-			this.mainLoop(this, this.stack, this.literals, this.variables, this.userDefFuncs);
+			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
 		} catch(e) {
 			this.disposeException(e);
 		}
@@ -60,7 +60,7 @@ Evaluator.prototype = {
 		try {
 			if(callback) callback();
 			this.pc ++;
-			this.mainLoop(this, this.stack, this.literals, this.variables, this.userDefFuncs);
+			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
 		} catch(e) {
 			this.disposeException(e);
 		}
@@ -77,7 +77,7 @@ Evaluator.prototype = {
 				this.frameStack.length = 0;
 			}
 			this.pc = event.pos;
-			this.mainLoop(this, this.stack, this.literals, this.variables, this.userDefFuncs);
+			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
 		} catch(e) {
 			this.disposeException(e);
 		}
@@ -115,20 +115,20 @@ Evaluator.prototype = {
 			lines.push(Utils.strTimes('\t', indent) + line);
 		}
 		function pushJumpingSubroutineCode(posExpr) {
-			push('if(self.frameStack.length >= 256) {');
+			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
-			push('self.frameStack.push(new Frame(self.pc + 1, null, null));');
-			push('self.pc = '+posExpr+';');
+			push('this.frameStack.push(new Frame(this.pc + 1, null, null));');
+			push('this.pc = '+posExpr+';');
 		}
 		function pushGettingArrayValueCode(arrayExpr, argc) {
 			if(argc > 1) {
-				push('var indices = self.popIndices('+argc+');');
+				push('var indices = this.popIndices('+argc+');');
 				push('var offset = '+arrayExpr+'.getOffset(indices);');
 				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 				push('stack.push('+arrayExpr+'.at(offset));');
 			} else if(argc == 1) {
-				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 				push('if(!(0 <= offset && offset < '+arrayExpr+'.getL0())) {');
 				push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 				push('}');
@@ -141,7 +141,7 @@ Evaluator.prototype = {
 			push('var len = stack.length;');
 			push('var indices = [');
 			for(var i = 0; i < indicesCount; i ++) {
-				push('    self.scanArg(stack[len - '+(offset+indicesCount-i)+'], "i").toIntValue()._value'+
+				push('    this.scanArg(stack[len - '+(offset+indicesCount-i)+'], "i").toIntValue()._value'+
 				     (i == indicesCount - 1 ? '' : ','));
 			}
 			push('];');
@@ -169,7 +169,7 @@ Evaluator.prototype = {
 			} else if(indicesCount == 1) {
 				if(argc == 1) {
 					push('var arg = stack.pop();');
-					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 					push('if(variable.value.getType() != arg.getType()) {');
 					push('    if(offset == 0) {');
 					push('        variable.reset(arg.getType());');
@@ -181,7 +181,7 @@ Evaluator.prototype = {
 					push('variable.value.assign(offset, arg);');
 				} else {
 					push('var len = stack.length;');
-					push('var offset = self.scanArg(stack[len-'+(argc+1)+'], "i").toIntValue()._value;');
+					push('var offset = this.scanArg(stack[len-'+(argc+1)+'], "i").toIntValue()._value;');
 					push('if(offset < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 					push('var type = variable.value.getType();');
 					push('if(type != stack[len - '+argc+'].getType()) {');
@@ -219,7 +219,7 @@ Evaluator.prototype = {
 				if(indicesCount == 0) {
 					push('array.assign(0, array.at(0).'+operateMethodNames[calcCode]+'(arg));');
 				} else if(indicesCount == 1) {
-					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 					push('array.expand1D(offset);');
 					push('array.assign(offset, array.at(offset).'+operateMethodNames[calcCode]+'(arg));');
 				} else {
@@ -236,7 +236,7 @@ Evaluator.prototype = {
 					push('if(variable.value.getType() != '+VarType.INT+') variable.reset('+VarType.INT+');');
 					push('variable.value.assign(0, variable.value.at(0).'+operateMethodNames[calcCode]+'(arg));');
 				} else if(indicesCount == 1) {
-					push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+					push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 					push('if(variable.value.getType() != '+VarType.INT+') {');
 					push('    if(offset == 0) {');
 					push('        variable.reset('+VarType.INT+');');
@@ -269,7 +269,7 @@ Evaluator.prototype = {
 			if(indicesCount == 0) {
 				push('array.inc(0);');
 			} else if(indicesCount == 1) {
-				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 				push('array.expand1D(offset);');
 				push('array.inc(offset);');
 			} else {
@@ -284,7 +284,7 @@ Evaluator.prototype = {
 			if(indicesCount == 0) {
 				push('array.dec(0);');
 			} else if(indicesCount == 1) {
-				push('var offset = self.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 				push('array.expand1D(offset);');
 				push('array.dec(offset);');
 			} else {
@@ -316,25 +316,25 @@ Evaluator.prototype = {
 				push('var arg = stack[len - '+(argc-origArgsCount)+'];');
 				switch(mptype) {
 				case MPType.DNUM:
-					push('args['+i+'] = self.scanArg(arg, "n").toDoubleValue();');
+					push('args['+i+'] = this.scanArg(arg, "n").toDoubleValue();');
 					break;
 				case MPType.INUM:
-					push('args['+i+'] = arg ? self.scanArg(arg, "n").toIntValue() : new IntValue(0);');
+					push('args['+i+'] = arg ? this.scanArg(arg, "n").toIntValue() : new IntValue(0);');
 					break;
 				case MPType.LOCALVAR:
 					push('args['+i+'] = new Variable;');
 					continue;
 				case MPType.ARRAYVAR:
-					push('args['+i+'] = self.scanArg(arg, "v").variable;');
+					push('args['+i+'] = this.scanArg(arg, "v").variable;');
 					break;
 				case MPType.SINGLEVAR:
-					push('args['+i+'] = self.scanArg(arg, "v");');
+					push('args['+i+'] = this.scanArg(arg, "v");');
 					break;
 				case MPType.LOCALSTRING:
-					push('args['+i+'] = self.scanArg(arg, "s").toStrValue();');
+					push('args['+i+'] = this.scanArg(arg, "s").toStrValue();');
 					break;
 				case MPType.MODULEVAR:
-					push('args['+i+'] = new ModVarData(self.scanArg(arg, "v").variable, arg.indices);');
+					push('args['+i+'] = new ModVarData(this.scanArg(arg, "v").variable, arg.indices);');
 					break;
 				case MPType.IMODULEVAR:
 					push('args['+i+'] = arg;');
@@ -345,11 +345,11 @@ Evaluator.prototype = {
 				origArgsCount ++;
 			}
 			push('stack.length -= '+argc+';');
-			push('if(self.frameStack.length >= 256) {');
+			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
-			push('self.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args));');
-			push('self.pc = '+userDefFunc.label.pos+';');
+			push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args));');
+			push('this.pc = '+userDefFunc.label.pos+';');
 		}
 		var lines = [];
 		var indent = 0;
@@ -357,7 +357,7 @@ Evaluator.prototype = {
 		var operateMethodNames = 'add,sub,mul,div,mod,and,or,xor,eq,ne,gt,lt,gteq,lteq,rsh,lsh'.split(',');
 		
 		push('for(;;) {'); indent ++;
-		push('switch(self.pc) {');
+		push('switch(this.pc) {');
 		for(var pc = 0; pc < sequence.length; pc ++) {
 			var insn = sequence[pc];
 			push('case '+pc+':'); indent ++;
@@ -371,12 +371,12 @@ Evaluator.prototype = {
 			case Instruction.Code.PUSH_VAR:
 				var varId = insn.opts[0];
 				var argc = insn.opts[1];
-				push('stack.push(new VariableAgent(variables['+varId+'], self.popIndices('+argc+')));');
+				push('stack.push(new VariableAgent(variables['+varId+'], this.popIndices('+argc+')));');
 				break;
 			case Instruction.Code.GET_VAR:
 				var varId = insn.opts[0];
 				var argc = insn.opts[1];
-				push('var array = self.variables['+varId+'].value;');
+				push('var array = this.variables['+varId+'].value;');
 				pushGettingArrayValueCode('array', argc);
 				break;
 			case Instruction.Code.POP:
@@ -406,18 +406,18 @@ Evaluator.prototype = {
 					 operateMethodNames[insn.code - Instruction.Code.ADD]+'(rhs);');
 				break;
 			case Instruction.Code.GOTO:
-				push('self.pc = '+insn.opts[0].pos+';');
+				push('this.pc = '+insn.opts[0].pos+';');
 				push('continue;');
 				break;
 			case Instruction.Code.IFNE:
 				push('if(stack.pop().toIntValue()._value) {');
-				push('    self.pc = '+insn.opts[0].pos+';');
+				push('    this.pc = '+insn.opts[0].pos+';');
 				push('    continue;');
 				push('}');
 				break;
 			case Instruction.Code.IFEQ:
 				push('if(!stack.pop().toIntValue()._value) {');
-				push('    self.pc = '+insn.opts[0].pos+';');
+				push('    this.pc = '+insn.opts[0].pos+';');
 				push('    continue;');
 				push('}');
 				break;
@@ -450,14 +450,14 @@ Evaluator.prototype = {
 				var argNum = insn.opts[0];
 				var indicesCount = insn.opts[1];
 				var argc = insn.opts[2];
-				push('var variable = self.getArg('+argNum+');');
+				push('var variable = this.getArg('+argNum+');');
 				pushAssignCode(indicesCount, argc);
 				break;
 			case Instruction.Code.ASSIGN_MEMBER:
 				var memberNum = insn.opts[0];
 				var indicesCount = insn.opts[1];
 				var argc = insn.opts[2];
-				push('var variable = self.getThismod().toValue().members['+memberNum+'];');
+				push('var variable = this.getThismod().toValue().members['+memberNum+'];');
 				pushAssignCode(indicesCount, argc);
 				break;
 			case Instruction.Code.COMPOUND_ASSIGN:
@@ -476,13 +476,13 @@ Evaluator.prototype = {
 				var calcCode = insn.opts[0];
 				var argNum = insn.opts[1];
 				var indicesCount = insn.opts[2];
-				pushCompoundAssignCode(calcCode, indicesCount, 'self.getArg('+argNum+')');
+				pushCompoundAssignCode(calcCode, indicesCount, 'this.getArg('+argNum+')');
 				break;
 			case Instruction.Code.COMPOUND_ASSIGN_MEMBER:
 				var calcCode = insn.opts[0];
 				var memberNum = insn.opts[1];
 				var indicesCount = insn.opts[2];
-				pushCompoundAssignCode(calcCode, indicesCount, 'self.getThismod().toValue().members['+memberNum+']');
+				pushCompoundAssignCode(calcCode, indicesCount, 'this.getThismod().toValue().members['+memberNum+']');
 				break;
 			case Instruction.Code.INC:
 				push('var agent = stack.pop();');
@@ -498,13 +498,13 @@ Evaluator.prototype = {
 			case Instruction.Code.INC_ARG_ARRAY:
 				var argNum = insn.opts[0];
 				var indicesCount = insn.opts[1];
-				push('var array = self.getArg('+argNum+').value;');
+				push('var array = this.getArg('+argNum+').value;');
 				pushIncCode(indicesCount);
 				break;
 			case Instruction.Code.INC_MEMBER:
 				var memberNum = insn.opts[0];
 				var indicesCount = insn.opts[1];
-				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
+				push('var array = this.getThismod().toValue().members['+memberNum+'].value;');
 				pushIncCode(indicesCount);
 				break;
 			case Instruction.Code.DEC:
@@ -521,13 +521,13 @@ Evaluator.prototype = {
 			case Instruction.Code.DEC_ARG_ARRAY:
 				var argNum = insn.opts[0];
 				var indicesCount = insn.opts[1];
-				push('var array = self.getArg('+argNum+').value;');
+				push('var array = this.getArg('+argNum+').value;');
 				pushDecCode(indicesCount);
 				break;
 			case Instruction.Code.DEC_MEMBER:
 				var memberNum = insn.opts[0];
 				var indicesCount = insn.opts[1];
-				push('var array = self.getThismod().toValue().members['+memberNum+'].value;');
+				push('var array = this.getThismod().toValue().members['+memberNum+'].value;');
 				pushDecCode(indicesCount);
 				break;
 			case Instruction.Code.CALL_BUILTIN_CMD:
@@ -539,9 +539,9 @@ Evaluator.prototype = {
 				push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
 				push('var args = Utils.aryPopN(stack, '+argc+');');
 				if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
-					push('stack.push(func.apply(self, args));');
+					push('stack.push(func.apply(this, args));');
 				} else {
-					push('func.apply(self, args);');
+					push('func.apply(this, args);');
 				}
 				break;
 			case Instruction.Code.CALL_USERDEF_CMD:
@@ -553,37 +553,37 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.GETARG:
 				var argNum = insn.opts[0];
-				push('stack.push(self.getArg('+argNum+'));');
+				push('stack.push(this.getArg('+argNum+'));');
 				break;
 			case Instruction.Code.PUSH_ARG_VAR:
 				var argNum = insn.opts[0];
 				var argc = insn.opts[1];
-				push('var variable = self.getArg('+argNum+');');
-				push('var indices = self.popIndices('+argc+');');
+				push('var variable = this.getArg('+argNum+');');
+				push('var indices = this.popIndices('+argc+');');
 				push('stack.push(new VariableAgent(variable, indices));');
 				break;
 			case Instruction.Code.GET_ARG_VAR:
 				var argNum = insn.opts[0];
 				var argc = insn.opts[1];
-				push('var array = self.getArg('+argNum+').value;');
+				push('var array = this.getArg('+argNum+').value;');
 				pushGettingArrayValueCode('array', argc);
 				break;
 			case Instruction.Code.PUSH_MEMBER:
 				var memberNum = insn.opts[0];
 				var argc = insn.opts[1];
-				push('var struct = self.getThismod().toValue();');
-				push('var indices = self.popIndices('+argc+');');
+				push('var struct = this.getThismod().toValue();');
+				push('var indices = this.popIndices('+argc+');');
 				push('stack.push(new VariableAgent(struct.members['+memberNum+'], indices));');
 				break;
 			case Instruction.Code.GET_MEMBER:
 				var memberNum = insn.opts[0];
 				var argc = insn.opts[1];
-				push('var struct = self.getThismod().toValue();');
+				push('var struct = this.getThismod().toValue();');
 				push('var array = struct.members['+memberNum+'].value;');
 				pushGettingArrayValueCode('array', argc);
 				break;
 			case Instruction.Code.THISMOD:
-				push('stack.push(self.getThismod());');
+				push('stack.push(this.getThismod());');
 				break;
 			case Instruction.Code.NEWMOD:
 				var module = insn.opts[0];
@@ -593,7 +593,7 @@ Evaluator.prototype = {
 				}
 				var moduleExpr = 'userDefFuncs['+module.id+']';
 				push('var len = stack.length;');
-				push('var agent = self.scanArg(stack[len - '+argc+'], "a");');
+				push('var agent = this.scanArg(stack[len - '+argc+'], "a");');
 				push('if(agent.getType() != '+VarType.STRUCT+') {');
 				push('    agent.variable.dim('+VarType.STRUCT+', 1, 0, 0, 0);');
 				push('}');
@@ -609,10 +609,10 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.RETURN:
 				var existReturnVal = insn.opts[0];
-				push('if(self.frameStack.length == 0) {');
+				push('if(this.frameStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
 				push('}');
-				push('var frame = self.frameStack.pop();');
+				push('var frame = this.frameStack.pop();');
 				if(existReturnVal) {
 					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
 					push('    stack[stack.length - 1] = stack[stack.length - 1].toValue();');
@@ -620,13 +620,13 @@ Evaluator.prototype = {
 					push('var val = stack.pop();');
 					push('switch(val.getType()) {');
 					push('case '+VarType.STR+':');
-					push('    self.refstr.assign(0, val.toStrValue());');
+					push('    this.refstr.assign(0, val.toStrValue());');
 					push('    break;');
 					push('case '+VarType.DOUBLE+':');
-					push('    self.refdval.assign(0, val.toDoubleValue());');
+					push('    this.refdval.assign(0, val.toDoubleValue());');
 					push('    break;');
 					push('case '+VarType.INT+':');
-					push('    self.stat.assign(0, val.toIntValue());');
+					push('    this.stat.assign(0, val.toIntValue());');
 					push('    break;');
 					push('default:');
 					push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
@@ -637,11 +637,11 @@ Evaluator.prototype = {
 					push('    throw new HSPError(ErrorCode.NORETVAL);');
 					push('}');
 				}
-				push('self.pc = frame.pc;');
+				push('this.pc = frame.pc;');
 				push('continue;');
 				break;
 			case Instruction.Code.DELMOD:
-				push('var v = self.scanArg(stack.pop(), "v");');
+				push('var v = this.scanArg(stack.pop(), "v");');
 				push('if(v.getType() != VarType.STRUCT) {');
 				push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 				push('}');
@@ -650,101 +650,101 @@ Evaluator.prototype = {
 			case Instruction.Code.REPEAT:
 				var pos = insn.opts[0].pos;
 				var argc = insn.opts[1];
-				push('if(self.loopStack.length >= 31) {');
+				push('if(this.loopStack.length >= 31) {');
 				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
 				push('}');
 				if(argc == 2) {
-					push('var begin = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+					push('var begin = this.scanArg(stack.pop(), "n").toIntValue()._value;');
 				} else {
 					push('var begin = 0;');
 				}
 				if(argc >= 1) {
-					push('var end = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+					push('var end = this.scanArg(stack.pop(), "n").toIntValue()._value;');
 					push('if(end < 0) end = Infinity;');
 				} else {
 					push('var end = Infinity;');
 				}
 				push('if(end == 0) {');
-				push('    self.pc = '+pos+';');
+				push('    this.pc = '+pos+';');
 				push('    continue;');
 				push('}');
 				push('end += begin;');
-				push('self.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
+				push('this.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
 				break;
 			case Instruction.Code.LOOP:
-				push('if(self.loopStack.length == 0) {');
+				push('if(this.loopStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 				push('}');
-				push('var data = self.loopStack[self.loopStack.length - 1];');
+				push('var data = this.loopStack[this.loopStack.length - 1];');
 				push('data.cnt ++;');
 				push('if(data.cnt < data.end) {');
-				push('    self.pc = data.pc;');
+				push('    this.pc = data.pc;');
 				push('    continue;');
 				push('}');
-				push('self.loopStack.pop();');
+				push('this.loopStack.pop();');
 				break;
 			case Instruction.Code.CNT:
-				push('if(self.loopStack.length == 0) {');
+				push('if(this.loopStack.length == 0) {');
 				push('    stack.push(new IntValue(0));');
 				push('} else {');
-				push('    stack.push(new IntValue(self.loopStack[self.loopStack.length - 1].cnt));');
+				push('    stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));');
 				push('}');
 				break;
 			case Instruction.Code.CONTINUE:
 				var pos = insn.opts[0].pos;
 				var argc = insn.opts[1];
-				push('if(self.loopStack.length == 0) {');
+				push('if(this.loopStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 				push('}');
-				push('var data = self.loopStack[self.loopStack.length - 1];');
+				push('var data = this.loopStack[this.loopStack.length - 1];');
 				var newCntExpr;
 				if(argc) {
-					newCntExpr = '(data.cnt = self.scanArg(self.stack.pop(), "n").toIntValue()._value)';
+					newCntExpr = '(data.cnt = this.scanArg(this.stack.pop(), "n").toIntValue()._value)';
 				} else {
 					newCntExpr = '++data.cnt';
 				}
 				push('if('+newCntExpr+' >= data.end) {');
-				push('    self.loopStack.pop();');
-				push('    self.pc = '+pos+';');
+				push('    this.loopStack.pop();');
+				push('    this.pc = '+pos+';');
 				push('} else {');
-				push('    self.pc = data.pc;');
+				push('    this.pc = data.pc;');
 				push('}');
 				push('continue;');
 				break;
 			case Instruction.Code.BREAK:
 				var label = insn.opts[0];
-				push('if(self.loopStack.length == 0) {');
+				push('if(this.loopStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 				push('}');
-				push('self.loopStack.pop();');
-				push('self.pc = '+label.pos+';');
+				push('this.loopStack.pop();');
+				push('this.pc = '+label.pos+';');
 				push('continue;');
 				break;
 			case Instruction.Code.FOREACH:
-				push('if(self.loopStack.length >= 31) {');
+				push('if(this.loopStack.length >= 31) {');
 				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
 				push('}');
-				push('self.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
+				push('this.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
 				break;
 			case Instruction.Code.EACHCHK:
-				push('if(self.loopStack.length == 0) {');
+				push('if(this.loopStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
 				push('}')
 				var pos = insn.opts[0].pos;
-				push('var v = self.scanArg(stack.pop(), "v");');
-				push('var data = self.loopStack[self.loopStack.length - 1];');
+				push('var v = this.scanArg(stack.pop(), "v");');
+				push('var data = this.loopStack[this.loopStack.length - 1];');
 				push('if(data.cnt >= v.variable.getL0()) {')
-				push('    self.loopStack.pop();');
-				push('    self.pc = '+pos+';');
+				push('    this.loopStack.pop();');
+				push('    this.pc = '+pos+';');
 				push('    continue;');
 				push('}');
 				push('if(v.variable.at([data.cnt]).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
 				push('    data.cnt ++;');
 				push('    if(data.cnt >= data.end) {');
-				push('        self.loopStack.pop();');
-				push('        self.pc = '+pos+';');
+				push('        this.loopStack.pop();');
+				push('        this.pc = '+pos+';');
 				push('    } else {');
-				push('        self.pc = data.pc;');
+				push('        this.pc = data.pc;');
 				push('    }');
 				push('    continue;');
 				push('}');
@@ -754,55 +754,55 @@ Evaluator.prototype = {
 				push('continue;');
 				break;
 			case Instruction.Code.GOTO_EXPR:
-				push('self.pc = self.scanArg(stack.pop(), "l").toValue().pos;');
+				push('this.pc = this.scanArg(stack.pop(), "l").toValue().pos;');
 				push('continue;');
 				break;
 			case Instruction.Code.GOSUB_EXPR:
-				pushJumpingSubroutineCode('self.scanArg(stack.pop(), "l").toValue().pos');
+				pushJumpingSubroutineCode('this.scanArg(stack.pop(), "l").toValue().pos');
 				push('continue;');
 				break;
 			case Instruction.Code.EXGOTO:
-				push('var pos = self.scanArg(stack.pop(), "l").toValue().pos;');
-				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
-				push('var mode = self.scanArg(stack.pop(), "n").toIntValue()._value;');
-				push('var a = self.scanArg(self.scanArg(stack.pop(), "v"), "i").toIntValue()._value;');
+				push('var pos = this.scanArg(stack.pop(), "l").toValue().pos;');
+				push('var b = this.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var mode = this.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var a = this.scanArg(this.scanArg(stack.pop(), "v"), "i").toIntValue()._value;');
 				push('if(mode >= 0) {');
-				push('    if(a >= b) { self.pc = pos; continue; }');
+				push('    if(a >= b) { this.pc = pos; continue; }');
 				push('} else {');
-				push('    if(a <= b) { self.pc = pos; continue; }');
+				push('    if(a <= b) { this.pc = pos; continue; }');
 				push('}');
 				break;
 			case Instruction.Code.EXGOTO_OPT1:
 				var pos = insn.opts[1].pos;
-				push('var a = self.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
-				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
-				push('var mode = self.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var a = this.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
+				push('var b = this.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('var mode = this.scanArg(stack.pop(), "n").toIntValue()._value;');
 				push('if(mode >= 0) {');
-				push('    if(a >= b) { self.pc = '+pos+'; continue; }');
+				push('    if(a >= b) { this.pc = '+pos+'; continue; }');
 				push('} else {');
-				push('    if(a <= b) { self.pc = '+pos+'; continue; }');
+				push('    if(a <= b) { this.pc = '+pos+'; continue; }');
 				push('}');
 				break;
 			case Instruction.Code.EXGOTO_OPT2:
 				var pos = insn.opts[1].pos;
-				push('var a = self.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
-				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
-				push('if(a >= b) { self.pc = '+pos+'; continue; }');
+				push('var a = this.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
+				push('var b = this.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('if(a >= b) { this.pc = '+pos+'; continue; }');
 				break;
 			case Instruction.Code.EXGOTO_OPT3:
 				var pos = insn.opts[1].pos;
-				push('var a = self.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
-				push('var b = self.scanArg(stack.pop(), "n").toIntValue()._value;');
-				push('if(a <= b) { self.pc = '+pos+'; continue; }');
+				push('var a = this.scanArg(variables['+insn.opts[0]+'].at(0), "i").toIntValue()._value;');
+				push('var b = this.scanArg(stack.pop(), "n").toIntValue()._value;');
+				push('if(a <= b) { this.pc = '+pos+'; continue; }');
 				break;
 			case Instruction.Code.ON:
 				var argc = insn.opts[0];
 				var isGosub = insn.opts[1];
 				push('var len = stack.length;');
 				for(var i = 0; i < argc; i ++) {
-					push('self.scanArg(stack[len - '+(argc - i)+'], "l");');
+					push('this.scanArg(stack[len - '+(argc - i)+'], "l");');
 				}
-				push('var n = self.scanArg(stack[len - '+(argc + 1)+'], "n").toIntValue()._value;');
+				push('var n = this.scanArg(stack[len - '+(argc + 1)+'], "n").toIntValue()._value;');
 				push('if(0 <= n && n < '+argc+') {'); indent ++;
 				push('var pos = stack[len - '+argc+' + n].toValue().pos;');
 				push('stack.length -= '+(argc + 1)+';');
@@ -810,7 +810,7 @@ Evaluator.prototype = {
 					pushJumpingSubroutineCode('pos');
 					push('continue;');
 				} else {
-					push('self.pc = pos;');
+					push('this.pc = pos;');
 					push('continue;');
 				}
 				indent --; push('}');
@@ -818,7 +818,7 @@ Evaluator.prototype = {
 			default:
 				throw new Error("未対応の命令コード: "+insn.code);
 			}
-			push('self.pc ++;');
+			push('this.pc ++;');
 			indent --;
 		}
 		push('}');
