@@ -153,5 +153,6 @@ if $0 == __FILE__
   basedir = File.dirname($0) + '/'
   opt.on('--hsp3cl=COMMAND') {|v| hsp3cl = v}
   opt.parse!(ARGV)
-  HSPTestRunner.new(hsp3cl, basedir).run Dir.glob(basedir + 'test_*.hsp')
+  files = ARGV.size > 0 ? ARGV : Dir.glob(basedir + 'test_*.hsp')
+  HSPTestRunner.new(hsp3cl, basedir).run files
 end
