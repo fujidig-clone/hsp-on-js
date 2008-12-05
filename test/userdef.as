@@ -40,18 +40,18 @@
 	if t == 1 : return "<a label: "+varuse(v)+">"
 	if t == 5 : return "<a struct: "+varuse(v)+">"
 	return "<unknown value: "+t+">"
-#deffunc _write_sep_next_assert
-	mes "##NEXT ASSERT:"+_test_tag@
+#deffunc _write_sep_next_assert int lineno
+	mes "##NEXT ASSERT:"+_test_tag@+":"+lineno
 	return
 #global
 
 #define ctype is(%1,%2) \
  __a = %1 : __b = %2 : __c = vartype(__a) : __d = vartype(__b) : \
- _write_sep_next_assert : \
+ _write_sep_next_assert __LINE__: \
  if _test_eq(__a, __b) { \
   mes "pass" \
  } else { \
-  mes "fail(line:"+__LINE__+")" : \
+  mes "fail" : \
   mes _test_inspect(__b)+" expected but was "+_test_inspect(__a)+{" (%1)."} : \
   end \
  } \
@@ -59,19 +59,19 @@
 
 #define ctype ok(%1=1) \
  __a = %1 : \
- _write_sep_next_assert : \
+ _write_sep_next_assert __LINE__ : \
  if __a { \
   mes "pass" \
  } else { \
-  mes "fail(line:"+__LINE__+")" : \
+  mes "fail" : \
   mes "expression: "+{"%1"} \
   end \
  }
 
 #define ctype assert_error(%1) \
  __a = %1 : \
- _write_sep_next_assert : \
- mes "error: "+(__a)+":"+__LINE__
+ _write_sep_next_assert __LINE__ : \
+ mes "error: "+__a
 
 _test_tag = "TAG"
 repeat 8 : _test_tag += "_" + gettime(cnt) : loop

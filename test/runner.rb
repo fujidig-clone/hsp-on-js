@@ -3,15 +3,17 @@
 class HSPTestRunner
   TestResult = Struct.new(:tests_count, :assertions_count, :errors_count, :failures_count, :messages)
   
-  def initialize(hsp3cl)
+  def initialize(hsp3cl, basedir)
     @hspcmp = 'hspcmp'
     @hsp3cl = hsp3cl
-    @tmp_path = '_tmp.hsp'
-    @obj_path = '_tmp.ax'
+    @basedir = basedir
+    @tmp_fname = '_tmp.hsp'
+    @obj_fname = '_tmp.ax'
   end
   
   def delete_tmp_files
-    [@tmp_path, @obj_path].each do |path|
+    [File.join(@basedir, @tmp_fname),
+     File.join(@basedir, @obj_fname)].each do |path|
       begin
         File.delete(path)
       rescue Errno::ENOENT
@@ -20,7 +22,7 @@ class HSPTestRunner
   end
 
   def write_to_tmp_script(src_file)
-    open(@tmp_path, 'wb') do |f|
+    open(File.join(@basedir, @tmp_fname), 'wb') do |f|
       f.print "\n" * src_file.lineno
       src_file.each_line do |line|
         if line.start_with?("----")
@@ -51,13 +53,20 @@ class HSPTestRunner
     open(src_path, 'rb') do |src_file|
       until src_file.eof?
         write_to_tmp_script src_file
-        message = IO.popen([*@hspcmp, "-o#{@obj_path}", '-d', @tmp_path], 'rb:cp932') {|io| io.read }
-        succeeded_compile = $?.exitstatus == 0
-        unless succeeded_compile
-          abort message
+        message = nil
+        Dir.chdir(@basedir) do
+          message = IO.popen([*@hspcmp, "-o#{@obj_fname}", '-d', @tmp_fname], 'rb:cp932') {|io| io.read }
         end
-        IO.popen([*@hsp3cl, @obj_path], 'rb:cp932') do |io|
-          run_test(src_path, result, io)
+        succeeded_compile = $?.exitstatus == 0
+        result.tests_count += 1
+        unless succeeded_compile
+          result.messages << "#{src_path}: compile error\n"+message.gsub(/^/, '  ')
+          result.errors_count += 1
+          print 'E'
+          next
+        end
+        IO.popen([*@hsp3cl, File.join(@basedir, @obj_fname)], 'rb') do |io|
+          print run_test(src_path, result, io)
         end
       end
     end
@@ -67,20 +76,25 @@ class HSPTestRunner
   end
   
   def run_test(src_path, result, io)
-    line = (io.gets || '').chomp
     tag = nil
-    unless /\A##START TEST:(.+)/.match(line)
-      raise 'invalid output: %p' % line
-    else
+    line = (io.gets || '').chomp
+    if /\A##START TEST:(.+)/ =~ line
       tag = $1
+    else
+      message = "#{src_path}: invalid output:\n"
+      message << "#{line}\n#{io.read}".gsub(/^/, '  ')
+      result.messages << message.chomp
+      return 'E'
     end
-    result.tests_count += 1
     error_regexp = /\A##ERROR OCCURRED:#{Regexp.escape(tag)}:(\d+):(\d+)\z/
+    next_regexp = /\A##NEXT ASSERT:#{Regexp.escape(tag)}:(\d+)\z/
     status = '.'
+    lineno = nil
     loop do
       until io.eof?
         case io.gets.chomp
-        when "##NEXT ASSERT:#{tag}"
+        when next_regexp
+          lineno = $1.to_i
           break
         when error_regexp
           status = 'E'
@@ -96,7 +110,7 @@ class HSPTestRunner
       case line
       when 'pass'
         #
-      when /\Afail\(line:(\d+)\)\z/
+      when 'fail'
         lineno = $1.to_i
         message = "#{src_path}:#{lineno}: failed "
         message << io.read
@@ -104,9 +118,8 @@ class HSPTestRunner
         result.messages << message
         result.failures_count += 1
         break
-      when /\Aerror: (\d+):(\d+)\z/
+      when /\Aerror: (\d+)\z/
         expected_errno = $1.to_i
-        lineno = $2.to_i
         if error_regexp =~ (io.gets || '').chomp
           if expected_errno != $1.to_i
             status = 'E'
@@ -122,18 +135,23 @@ class HSPTestRunner
         end
         break
       else
-        raise 'invalid output: %p' % line
+        result.messages << "#{src_path}:#{lineno}: invalid output: #{line.dump}"
+        result.errors_count += 1
+        status = 'E'
+        break
       end
     end
-    print status
+    status
   end
 end
 
 if $0 == __FILE__
   require 'optparse'
+  require 'pathname'
   opt = OptionParser.new
-  hsp3cl = 'hsp3cl'
+  hsp3cl = File.join(Pathname($0).parent.parent, 'shell')
+  basedir = File.dirname($0) + '/'
   opt.on('--hsp3cl=COMMAND') {|v| hsp3cl = v}
   opt.parse!(ARGV)
-  HSPTestRunner.new(hsp3cl).run Dir.glob('test_*.hsp')
+  HSPTestRunner.new(hsp3cl, basedir).run Dir.glob(basedir + 'test_*.hsp')
 end
