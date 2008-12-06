@@ -150,7 +150,7 @@ var Formatter = {
 		var str;
 		var isNegative = val < 0;
 		val = Math.abs(val);
-		if(isNaN(val) || val == Infinity || (1e-4 <= val && val < Math.pow(10, prec) - 0.5)) {
+		if(isNaN(val) || val == Infinity || val == 0 || (1e-4 <= val && val < Math.pow(10, prec) - 0.5)) {
 			var prec2;
 			if(isNaN(val) || val == Infinity) {
 				prec2 = prec - 1;
