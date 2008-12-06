@@ -102,6 +102,9 @@ var Formatter = {
 			prefix = Formatter.signPrefix(isNegative, flags);
 		}
 		if(prec != null) {
+			if(prefix == '0' && prec > str.length) {
+				prefix = '';
+			}
 			str = Formatter.addZeros(str, prec);
 		} else if(flags['0'] && !flags['-']) {
 			str = Formatter.addZeros(str, width - prefix.length);

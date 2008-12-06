@@ -49,8 +49,9 @@ foot.js
 ]
 
 buf = ""
+basedir = File.dirname($0)
 filenames.each do |filename|
-  open(filename, 'rb:utf-8') {|f| buf << f.read }
+  open(File.join(basedir, filename), 'rb:utf-8') {|f| buf << f.read }
 end
 
 if omit_to_magic_number_p
