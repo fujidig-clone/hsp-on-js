@@ -117,7 +117,7 @@ var Formatter = {
 	},
 	convertExp: function convertExp(val, flags, width, prec) {
 		if(prec == null) prec = 6;
-		var isNegative = val < 0;
+		var isNegative = val != Math.abs(val);
 		val = Math.abs(val);
 		var mantissa, exponent;
 		if(isNaN(val)) {
@@ -148,7 +148,7 @@ var Formatter = {
 		if(prec == null) prec = 6;
 		prec = Math.max(prec, 1);
 		var str;
-		var isNegative = val < 0;
+		var isNegative = val != Math.abs(val);
 		val = Math.abs(val);
 		if(isNaN(val) || val == Infinity || val == 0 || (1e-4 <= val && val < Math.pow(10, prec) - 0.5)) {
 			var prec2;
@@ -161,12 +161,13 @@ var Formatter = {
 				prec2 = prec - exponent - 1;
 				if(prec == 1 && val * Math.pow(10, -exponent) >= 9.5) prec2 --;
 			}
-			str = Formatter.convertFloat(val, {'#': flags['#']}, 0, prec2);
+			str = Formatter.convertFloatSub(val, prec2);
+			if(flags['#'] && str.indexOf('.') == -1) str += ".";
 		} else {
 			str = Formatter.convertExp(val, {'#': flags['#']}, 0, Math.min(prec - 1, 16));
 		}
 		if(!flags['#']) {
-			str = str.replace(/\.(\d*?)0+(?!\d)/, function(s, d) { return d.length > 0 ? '.' + d : ''; });
+			str = str.replace(/\.([^e]*?)0+(?=e|$)/i, function(s, d) { return d.length > 0 ? '.' + d : ''; });
 		}
 		var prefix = Formatter.signPrefix(isNegative, flags);
 		if(flags['0'] && !flags['-']) {
@@ -177,7 +178,7 @@ var Formatter = {
 	},
 	convertFloat: function convertFloat(val, flags, width, prec) {
 		if(prec == null) prec = 6;
-		var isNegative = val < 0;
+		var isNegative = val != Math.abs(val);
 		val = Math.abs(val);
 		var str = Formatter.convertFloatSub(val, prec);
 		if(flags['#'] && str.indexOf('.') == -1) str += ".";
@@ -225,10 +226,9 @@ var Formatter = {
 		switch(prec) {
 		case 0: return '1';
 		case 1: return '1.$';
-		case 2: return '1.#R';
-		case 3: return '1.#QO';
-		case 4: return '1.#QNB';
-		default:return '1.#QNAN' + Utils.strTimes('0', prec - 5);
+		case 2: return '1.#J';
+		case 3: return '1.#IO';
+		default:return '1.#IND' + Utils.strTimes('0', prec - 4);
 		}
 	},
 	convertInf: function convertInf(prec) {
