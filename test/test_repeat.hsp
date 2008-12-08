@@ -19,7 +19,7 @@
 	is(d, 1)
 	is(e, 0)
 ----------------------------------------
-	assert_error(9)
+	assert_error 9
 *a
 	repeat 1
 		goto *a
@@ -78,7 +78,7 @@
 	is(d, 111)
 	is(e, 0)
 ----------------------------------------
-	assert_error(11)
+	assert_error 11
 	goto *a
 	repeat 1
 *a

@@ -46,7 +46,7 @@
 #global
 
 #define ctype is(%1,%2) \
- __a = %1 : __b = %2 : __c = vartype(__a) : __d = vartype(__b) : \
+ __a = %1 : __b = %2 : \
  _write_sep_next_assert __LINE__: \
  if _test_eq(__a, __b) { \
   mes "pass" \
@@ -68,7 +68,7 @@
   end \
  }
 
-#define ctype assert_error(%1) \
+#define assert_error(%1) \
  __a = %1 : \
  _write_sep_next_assert __LINE__ : \
  mes "error: "+__a

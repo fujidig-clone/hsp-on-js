@@ -118,10 +118,10 @@ class HSPTestRunner
         result.messages << message
         result.failures_count += 1
         break
-      when /\Aerror: (\d+)\z/
-        expected_errno = $1.to_i
+      when /\Aerror: (\d+(?:,\s*\d+)*)\z/
+        expected_errnos = $1.split(',').map{|i| i.to_i}
         if error_regexp =~ (io.gets || '').chomp
-          if expected_errno != $1.to_i
+          unless expected_errnos.include?($1.to_i)
             status = 'E'
             errno = $1.to_i
             lineno = $2.to_i
