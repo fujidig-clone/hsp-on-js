@@ -161,14 +161,14 @@ Compiler.prototype = {
 		}
 		if(token.val != 8) { // CALCCODE_EQ
 			// 複合代入
-			var argc = this.compileParameters(sequence, true);
+			var argc = this.compileParameters(sequence, true, true);
 			if(argc != 1) {
 				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
 			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN + insnCode, [token.val].concat(opts), token);
 			return;
 		}
-		var argc = this.compileParameters(sequence, true);
+		var argc = this.compileParameters(sequence, true, true);
 		if(argc == 0) {
 			throw this.error("代入のパラメータの数が間違っています。", token);
 		}
@@ -409,7 +409,7 @@ Compiler.prototype = {
 		} else {
 			this.ifLabels[skipTo] = [label];
 		}
-		var argc = this.compileParameters(sequence);
+		var argc = this.compileParameters(sequence, true, true);
 		if(token.code == 0) { // 'if'
 			if(argc != 1) throw this.error("if の引数の数が間違っています。", token);
 			// if の条件式がリテラルのとき最適化
@@ -428,7 +428,7 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
 		}
 	},
-	compileParameters: function compileParameters(sequence, cannotBeOmitted) {
+	compileParameters: function compileParameters(sequence, cannotBeOmitted, notReceiveVar) {
 		var argc = 0;
 		if(this.ax.tokens[this.tokensPos].ex2) {
 			if(cannotBeOmitted) {
@@ -437,10 +437,10 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.PUSH, [undefined]);
 			argc ++;
 		}
-		argc += this.compileParametersSub(sequence, cannotBeOmitted);
+		argc += this.compileParametersSub(sequence, cannotBeOmitted, notReceiveVar);
 		return argc;
 	},
-	compileParametersSub: function compileParametersSub(sequence, cannotBeOmitted) {
+	compileParametersSub: function compileParametersSub(sequence, cannotBeOmitted, notReceiveVar) {
 		var argc = 0;
 		while(true) {
 			var token = this.ax.tokens[this.tokensPos];
@@ -460,10 +460,17 @@ Compiler.prototype = {
 				}
 			}
 			argc ++;
-			this.compileParameter(sequence);
+			this.compileParameter(sequence, notReceiveVar);
 		}
 	},
-	compileParameter: function compileParameter(sequence) {
+	/*
+	notReceiveVar: パラメータが変数として受け取られうることがない (bool)
+	dim や peek などの関数はパラメータを値としてではなく変数として受け取る。
+	そのためにパラメータが単一の変数の場合は変数を表すオブジェクトをスタックに積む。
+	でも、変数として受け取ることがないパラメータの場合、それは無駄である。
+	このパラメータを true にすれば値そのものを積む命令を生成する。
+	*/
+	compileParameter: function compileParameter(sequence, notReceiveVar) {
 		var headPos = this.tokensPos;
 		while(true) {
 			var token = this.ax.tokens[this.tokensPos];
@@ -476,7 +483,7 @@ Compiler.prototype = {
 				this.compileOperator(sequence);
 				break;
 			case Token.Type.VAR:
-				this.compileStaticVariable(sequence, !this.isOnlyVar(this.tokensPos, headPos));
+				this.compileStaticVariable(sequence, notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos));
 				break;
 			case Token.Type.STRING:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -494,7 +501,7 @@ Compiler.prototype = {
 				this.tokensPos ++;
 				break;
 			case Token.Type.STRUCT:
-				this.compileStruct(sequence, !this.isOnlyVar(this.tokensPos, headPos));
+				this.compileStruct(sequence, notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos));
 				break;
 			case Token.Type.LABEL:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -787,7 +794,7 @@ Compiler.prototype = {
 		var paren_token = this.ax.tokens[this.tokensPos];
 		if(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40) {
 			this.tokensPos ++;
-			argc = this.compileParameters(sequence);
+			argc = this.compileParameters(sequence, true, true);
 			if(argc == 0) {
 				throw this.error('配列変数の添字が空です', paren_token);
 			}
