@@ -115,6 +115,9 @@ BuiltinFuncs[Token.Type.SYSVAR] = {
 BuiltinFuncs[Token.Type.INTCMD] = {
 	0x01: function onerror(jumpType, val) {
 		this.scanArgs(arguments, 'j.');
+		if(jumpType == JumpType.GOSUB) {
+			throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);
+		}
 		var t = val.getType();
 		switch(t) {
 		case VarType.LABEL:

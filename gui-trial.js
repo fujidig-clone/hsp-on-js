@@ -195,6 +195,7 @@ Screen.prototype = {
 		}
 	},
 	drawText: function drawText(text) {
+		console.log("drawText():"+text);
 		var lines = text.split(/\r\n|[\r\n]/);
 		var ctx = this.ctx;
 		ctx.textBaseline = 'top';
@@ -210,6 +211,9 @@ Screen.prototype = {
 			}
 			this.currentY += this.fontSize;
 		}
+		// Webkit Nightly Builds (r39088) で setTimeout 内で ctx.fillText しても描画されない
+		// 前か後ろで何か描画してやるとうまくいくみたいなので、しておく。
+		ctx.fillRect(0, 0, 0, 0); 
 	},
 	setFont: function setFont(name, size, style) {
 		var str = "";
