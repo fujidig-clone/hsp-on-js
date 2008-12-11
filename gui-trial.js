@@ -195,7 +195,6 @@ Screen.prototype = {
 		}
 	},
 	drawText: function drawText(text) {
-		console.log("drawText():"+text);
 		var lines = text.split(/\r\n|[\r\n]/);
 		var ctx = this.ctx;
 		ctx.textBaseline = 'top';
