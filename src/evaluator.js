@@ -121,30 +121,61 @@ Evaluator.prototype = {
 			push('this.frameStack.push(new Frame(this.pc + 1, null, null));');
 			push('this.pc = '+posExpr+';');
 		}
-		function pushGettingArrayValueCode(arrayExpr, argc) {
-			if(argc > 1) {
-				push('var indices = this.popIndices('+argc+');');
-				push('var offset = '+arrayExpr+'.getOffset(indices);');
-				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-				push('stack.push('+arrayExpr+'.at(offset));');
-			} else if(argc == 1) {
+		function pushGettingArrayValueCode(arrayExpr, indicesCount) {
+			if(indicesCount == 0) {
+				push('stack.push('+arrayExpr+'.at(0));');
+			} else if(indicesCount == 1) {
 				push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
 				push('if(!(0 <= offset && offset < '+arrayExpr+'.getL0())) {');
 				push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 				push('}');
 				push('stack.push('+arrayExpr+'.at(offset));');
 			} else {
-				push('stack.push('+arrayExpr+'.at(0));');
+				pushGettingIndicesCode(indicesCount, 0);
+				push('stack.length -= '+indicesCount+';');
+				push('var offset = '+arrayExpr+'.getOffset(indices);');
+				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+				push('stack.push('+arrayExpr+'.at(offset));');
+			}
+		}
+		function pushGettingVariableCode(variableExpr, indicesCount) {
+			if(indicesCount == 0) {
+				push('stack.push(new VariableAgent0D('+variableExpr+'));');
+			} else if(indicesCount == 1) {
+				push('var offset = this.scanArg(stack.pop(), "i").toIntValue()._value;');
+				push('stack.push(new VariableAgent1D('+variableExpr+', offset));');
+			} else {
+				pushGettingIndicesCode(indicesCount, 0);
+				push('stack.length -= '+indicesCount+';');
+				push('stack.push(new VariableAgentMD('+variableExpr+', indices));');
 			}
 		}
 		function pushGettingIndicesCode(indicesCount, offset) {
 			push('var len = stack.length;');
-			push('var indices = [');
+			push('var indices = [];');
 			for(var i = 0; i < indicesCount; i ++) {
-				push('    this.scanArg(stack[len - '+(offset+indicesCount-i)+'], "i").toIntValue()._value'+
-				     (i == indicesCount - 1 ? '' : ','));
+				push('var val = stack[len - '+(offset+indicesCount-i)+'];');
+				push('if(val.getType() != '+VarType.INT+') throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+				push('indices['+i+'] = val.toIntValue()._value;');
 			}
-			push('];');
+		}
+		function push1DMultipleAssignCode(argc) {
+			push('var type = stack[len - '+argc+'].getType();');
+			push('if(variable.value.getType() != type) {');
+			push('    if(offset == 0) {');
+			push('        variable.reset(type);');
+			push('    } else {');
+			push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+			push('    }');
+			push('}');
+			push('var array = variable.value;');
+			push('array.expand1D(offset + '+(argc-1)+');');
+			push('array.assign(offset, stack[len - '+argc+']);');
+			for(var i = 1; i < argc; i ++) {
+				push('var arg = stack[len - '+(argc-i)+'];');
+				push('if(arg.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+				push('array.assign(offset + '+i+', arg);');
+			}
 		}
 		function pushAssignCode(indicesCount, argc) {
 			if(indicesCount == 0) {
@@ -183,23 +214,7 @@ Evaluator.prototype = {
 					push('var len = stack.length;');
 					push('var offset = this.scanArg(stack[len-'+(argc+1)+'], "i").toIntValue()._value;');
 					push('if(offset < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-					push('var type = variable.value.getType();');
-					push('if(type != stack[len - '+argc+'].getType()) {');
-					push('    if(offset == 0) {');
-					push('        type = stack[len - '+argc+'].getType();');
-					push('        variable.reset(type);');
-					push('    } else {');
-					push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
-					push('    }');
-					push('}');
-					push('var array = variable.value;');
-					push('array.expand1D(offset + '+(argc-1)+');');
-					push('array.assign(offset, stack[len - '+argc+']);');
-					for(var i = 1; i < argc; i ++) {
-						push('var arg = stack[len - '+(argc-i)+'];');
-						push('if(arg.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
-						push('array.assign(offset + '+i+', arg);');
-					}
+					push1DMultipleAssignCode(argc);
 					push('stack.length -= '+(argc+1)+';');
 				}
 			} else {
@@ -334,7 +349,7 @@ Evaluator.prototype = {
 					push('args['+i+'] = this.scanArg(arg, "s").toStrValue();');
 					break;
 				case MPType.MODULEVAR:
-					push('args['+i+'] = new ModVarData(this.scanArg(arg, "v").variable, arg.indices);');
+					push('args['+i+'] = this.scanArg(arg, "v");');
 					break;
 				case MPType.IMODULEVAR:
 					push('args['+i+'] = arg;');
@@ -370,14 +385,14 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.PUSH_VAR:
 				var varId = insn.opts[0];
-				var argc = insn.opts[1];
-				push('stack.push(new VariableAgent(variables['+varId+'], this.popIndices('+argc+')));');
+				var indicesCount = insn.opts[1];
+				pushGettingVariableCode('variables['+varId+']', indicesCount);
 				break;
 			case Instruction.Code.GET_VAR:
 				var varId = insn.opts[0];
-				var argc = insn.opts[1];
+				var indicesCount = insn.opts[1];
 				push('var array = this.variables['+varId+'].value;');
-				pushGettingArrayValueCode('array', argc);
+				pushGettingArrayValueCode('array', indicesCount);
 				break;
 			case Instruction.Code.POP:
 				push('stack.pop();');
@@ -424,19 +439,24 @@ Evaluator.prototype = {
 			case Instruction.Code.ASSIGN:
 				var argc = insn.opts[0];
 				if(argc > 1) {
-					push('var args = Utils.aryPopN(stack, '+argc+');');
-					push('var agent = stack.pop();');
+					push('var len = stack.length;');
+					push('var agent = stack[len - '+(argc+1)+'];');
 					push('var variable = agent.variable;');
-					push('var indices = agent.indices.slice();');
-					push('if(indices.length == 0) indices[0] = 0;');
+					push('if(agent.indices) {');
+					push('    var indices = agent.indices.slice();');
 					for(var i = 0; i < argc; i ++) {
-						push('variable.assign(indices, args['+i+']);');
-						push('indices[0] ++;');
+						push('    variable.assign(indices, stack[len - '+(argc-i)+']);');
+						if(i != argc - 1) push('    indices[0] ++;');
 					}
+					push('} else {'); indent ++;
+					push('var offset = agent.offset;');
+					push1DMultipleAssignCode(argc);
+					indent --; push('}');
+					push('stack.length -= '+(argc+1)+';');
 				} else {
 					push('var arg = stack.pop();');
 					push('var agent = stack.pop();');
-					push('agent.variable.assign(agent.indices, arg);');
+					push('agent.assign(arg);');
 				}
 				break;
 			case Instruction.Code.ASSIGN_STATIC_VAR:
@@ -463,7 +483,7 @@ Evaluator.prototype = {
 			case Instruction.Code.COMPOUND_ASSIGN:
 				push('var arg = stack.pop();');
 				push('var agent = stack.pop();');
-				push('agent.variable.expand(agent.indices);');
+				push('agent.expand();');
 				push('agent.assign(agent.'+operateMethodNames[insn.opts[0]]+'(arg));');
 				break;
 			case Instruction.Code.COMPOUND_ASSIGN_STATIC_VAR:
@@ -486,8 +506,8 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.INC:
 				push('var agent = stack.pop();');
-				push('agent.variable.expand(agent.indices);');
-				push('agent.assign(agent.inc());');
+				push('agent.expand();');
+				push('agent.inc();');
 				break;
 			case Instruction.Code.INC_STATIC_VAR:
 				var varId = insn.opts[0];
@@ -509,8 +529,8 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.DEC:
 				push('var agent = stack.pop();');
-				push('agent.variable.expand(agent.indices);');
-				push('agent.assign(agent.dec());');
+				push('agent.expand();');
+				push('agent.dec();');
 				break;
 			case Instruction.Code.DEC_STATIC_VAR:
 				var varId = insn.opts[0];
@@ -557,30 +577,26 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.PUSH_ARG_VAR:
 				var argNum = insn.opts[0];
-				var argc = insn.opts[1];
-				push('var variable = this.getArg('+argNum+');');
-				push('var indices = this.popIndices('+argc+');');
-				push('stack.push(new VariableAgent(variable, indices));');
+				var indicesCount = insn.opts[1];
+				pushGettingVariableCode('this.getArg('+argNum+')', indicesCount);
 				break;
 			case Instruction.Code.GET_ARG_VAR:
 				var argNum = insn.opts[0];
-				var argc = insn.opts[1];
+				var indicesCount = insn.opts[1];
 				push('var array = this.getArg('+argNum+').value;');
-				pushGettingArrayValueCode('array', argc);
+				pushGettingArrayValueCode('array', indicesCount);
 				break;
 			case Instruction.Code.PUSH_MEMBER:
 				var memberNum = insn.opts[0];
-				var argc = insn.opts[1];
-				push('var struct = this.getThismod().toValue();');
-				push('var indices = this.popIndices('+argc+');');
-				push('stack.push(new VariableAgent(struct.members['+memberNum+'], indices));');
+				var indicesCount = insn.opts[1];
+				pushGettingVariableCode('this.getThismod().toValue().members['+memberNum+']', indicesCount);
 				break;
 			case Instruction.Code.GET_MEMBER:
 				var memberNum = insn.opts[0];
-				var argc = insn.opts[1];
+				var indicesCount = insn.opts[1];
 				push('var struct = this.getThismod().toValue();');
 				push('var array = struct.members['+memberNum+'].value;');
-				pushGettingArrayValueCode('array', argc);
+				pushGettingArrayValueCode('array', indicesCount);
 				break;
 			case Instruction.Code.THISMOD:
 				push('stack.push(this.getThismod());');
@@ -600,7 +616,7 @@ Evaluator.prototype = {
 				push('var array = agent.variable.value;');
 				push('var offset = array.newmod('+moduleExpr+');');
 				if(module.constructor) {
-					push('stack[len - '+argc+'] = new ModVarData(agent.variable, [offset]);');
+					push('stack[len - '+argc+'] = new VariableAgent1D(agent.variable, offset);');
 					pushCallingUserdefFuncCode(module.constructor, argc);
 					push('continue;');
 				} else if(argc > 1) {
@@ -826,16 +842,6 @@ Evaluator.prototype = {
 		//print(lines.join("\n"));
 		return lines.join("\n");
 	},
-	popIndices: function popIndices(argc) {
-		var indices = Utils.aryPopN(this.stack, argc);
-		for(var i = 0; i < argc; i ++) {
-			if(indices[i].getType() != VarType.INT) {
-				throw new HSPError(ErrorCode.TYPE_MISMATCH);
-			}
-			indices[i] = indices[i].toValue()._value;
-		}
-		return indices;
-	},
 	selectNote: function selectNote(v) {
 		if(this.note) {
 			this.oldNotes[this.oldNotesPos] = this.note;
@@ -866,7 +872,7 @@ Evaluator.prototype = {
 	},
 	getThismod: function getThismod() {
 		var thismod = this.getArg(0);
-		if(!(thismod instanceof ModVarData && thismod.getType() == VarType.STRUCT && thismod.isUsing())) {
+		if(!(thismod instanceof VariableAgent && thismod.getType() == VarType.STRUCT && thismod.isUsing())) {
 			throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
 		}
 		return thismod;
@@ -966,7 +972,7 @@ Evaluator.prototype = {
 			if(!(arg instanceof VariableAgent)) {
 				throw new HSPError(ErrorCode.VARIABLE_REQUIRED);
 			}
-			arg.variable.expand(arg.indices);
+			arg.expand();
 			break;
 		case 'j':
 			if(!(arg instanceof JumpType)) {
@@ -978,7 +984,7 @@ Evaluator.prototype = {
 				throw new HSPError(ErrorCode.VARIABLE_REQUIRED);
 			}
 			// オフィシャル HSP だと添字が 0 のときも許容している
-			if(arg.indices.length != 0) {
+			if(arg.existSubscript) {
 				throw new HSPError(ErrorCode.BAD_ARRAY_EXPRESSION);
 			}
 			break;

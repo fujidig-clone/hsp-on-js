@@ -77,6 +77,9 @@ Value.prototype = {
 	},
 	isUsing: function isUsing() {
 		return null;
+	},
+	isVariable: function isVariable() {
+		return false;
 	}
 };
 

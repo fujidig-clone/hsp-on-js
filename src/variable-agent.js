@@ -1,6 +1,5 @@
-function VariableAgent(variable, indices) {
-	this.variable = variable;
-	this.indices = indices;
+function VariableAgent() {
+	this.variable = null;
 }
 
 VariableAgent.prototype = {
@@ -53,7 +52,7 @@ VariableAgent.prototype = {
 		return this.toValue().lsh(rhs);
 	},
 	getType: function getType() {
-		return this.toValue().getType();
+		return this.variable.getType();
 	},
 	toIntValue: function toIntValue() {
 		return this.toValue().toIntValue();
@@ -63,12 +62,6 @@ VariableAgent.prototype = {
 	},
 	toStrValue: function toStrValue() {
 		return this.toValue().toStrValue();
-	},
-	assign: function assign(rhs) {
-		return this.variable.assign(this.indices, rhs);
-	},
-	toValue: function toValue() {
-		return this.variable.at(this.getOffset());
 	},
 	isUsing: function isUsing() {
 		return this.toValue().isUsing();
@@ -97,27 +90,114 @@ VariableAgent.prototype = {
 	getBuffer: function getBuffer() {
 		return this.variable.bufferAt(this.getOffset());
 	},
-	getOffset: function getOffset() {
-		var offset = this.variable.value.getOffset(this.indices);
-		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
-		return offset;
-	},
 	inc: function inc() {
 		return this.variable.inc(this.getOffset());
 	},
 	dec: function dec() {
 		return this.variable.dec(this.getOffset());
-	}
+	},
+	toValue: function toValue() {
+		return this.variable.at(this.getOffset());
+	},
+	isVariable: function isVariable() {
+		return true;
+	},
+	indices: null
 };
 
-function ModVarData() {
-	 VariableAgent.apply(this, arguments);
+function VariableAgent0D(variable) {
+	this.variable = variable;
 }
 
-ModVarData.prototype = new VariableAgent;
+VariableAgent0D.prototype = new VariableAgent;
+
+Utils.objectExtend(VariableAgent0D.prototype, {
+	getOffset: function getOffset() {
+		return 0;
+	},
+	toValue: function toValue() {
+		return this.variable.at(0);
+	},
+	assign: function assign(rhs) {
+		var type = rhs.getType();
+		var variable = this.variable;
+		if(variable.value.getType() != type) {
+			variable.reset(type);
+		}
+		variable.value.assign(0, rhs);
+	},
+	expand: function expand() {
+	},
+	offset: 0,
+	existSubscript: false
+});
+
+function VariableAgent1D(variable, offset) {
+	this.variable = variable;
+	this.offset = offset;
+}
+
+VariableAgent1D.prototype = new VariableAgent;
+
+Utils.objectExtend(VariableAgent1D.prototype, {
+	getOffset: function getOffset() {
+		var offset = this.offset;
+		if(0 <= offset && offset < this.variable.value.getL0()) {
+			return offset;
+		} else {
+			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		}
+	},
+	assign: function assign(rhs) {
+		var offset = this.offset;
+		var array = variable.value;
+		var type = rhs.getType();
+		if(array.getType() != type) {
+		    if(offset == 0) {
+		        variable.reset(type);
+		        array = variable.value;
+		    } else {
+		        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);
+		    }
+		}
+		array.expand1D(offset);
+		array.assign(offset, arg);
+	},
+	expand: function expand() {
+		this.variable.value.expand1D(this.offset);
+	},
+	existSubscript: true
+});
+
+function VariableAgentMD(variable, indices) {
+	this.variable = variable;
+	this.indices = indices;
+}
+
+VariableAgentMD.prototype = new VariableAgent;
+
+Utils.objectExtend(VariableAgentMD.prototype, {
+	getOffset: function getOffset() {
+		var offset = this.variable.value.getOffset(this.indices);
+		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
+		return offset;
+	},
+	assign: function assign(rhs) {
+		return this.variable.assign(this.indices, rhs);
+	},
+	expand: function expand() {
+		this.variable.expand(this.indices);
+	},
+	existSubscript: true
+});
+
+
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.VariableAgent = VariableAgent;
-	HSPonJS.ModVarData = ModVarData;
+	HSPonJS.VariableAgent0D = VariableAgent0D;
+	HSPonJS.VariableAgent1D = VariableAgent1D;
+	HSPonJS.VariableAgentMD = VariableAgentMD;
+	
 }
 
