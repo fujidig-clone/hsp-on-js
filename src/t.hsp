@@ -1,4 +1,12 @@
-dimtype a,5,32
-foreach a
-	mes cnt
-loop
+#module
+#defcfunc fib int n
+	if n < 2 : return 1
+	return fib(n - 2) + fib(n - 1)
+#global
+
+st = gettime(-1)
+result = fib(22)
+ed = gettime(-1)
+
+mes strf("%d ms", ed - st)
+mes strf("result = %d", result)

@@ -9,6 +9,7 @@ function Evaluator(axdata, sequence) {
 	}
 	this.loopStack = [];
 	this.frameStack = [];
+	this.args = null;
 	this.oldNotes = [];
 	this.oldNotesPos = 0;
 	this.note = null;
@@ -33,11 +34,11 @@ function LoopData(cnt, end, pc) {
 	this.pc = pc;
 }
 
-function Frame(pc, userDefFunc, args, callback) {
+function Frame(pc, userDefFunc, args, prevArgs) {
 	this.pc = pc;
 	this.userDefFunc = userDefFunc;
 	this.args = args;
-	this.callback = callback;
+	this.prevArgs = prevArgs;
 }
 
 function Event() {
@@ -71,7 +72,7 @@ Evaluator.prototype = {
 				if(this.frameStack.length >= 256) {
 					throw new HSPError(ErrorCode.STACK_OVERFLOW);
 				}
-				this.frameStack.push(new Frame(this.pc + 1, null, null));
+				this.frameStack.push(new Frame(this.pc + 1, null, this.args));
 			} else {
 				this.loopStack.length = 0;
 				this.frameStack.length = 0;
@@ -118,7 +119,7 @@ Evaluator.prototype = {
 			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
-			push('this.frameStack.push(new Frame(this.pc + 1, null, null));');
+			push('this.frameStack.push(new Frame(this.pc + 1, null, this.args));');
 			push('this.pc = '+posExpr+';');
 		}
 		function pushGettingArrayValueCode(arrayExpr, indicesCount) {
@@ -363,7 +364,8 @@ Evaluator.prototype = {
 			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
-			push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args));');
+			push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args, this.args));');
+			push('this.args = args;');
 			push('this.pc = '+userDefFunc.label.pos+';');
 		}
 		var lines = [];
@@ -629,6 +631,7 @@ Evaluator.prototype = {
 				push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
 				push('}');
 				push('var frame = this.frameStack.pop();');
+				push('this.args = frame.prevArgs;');
 				if(existReturnVal) {
 					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
 					push('    stack[stack.length - 1] = stack[stack.length - 1].toValue();');
@@ -864,11 +867,11 @@ Evaluator.prototype = {
 		throw new FileReadException(path, success, error);
 	},
 	getArg: function getArg(argNum) {
-		var frame = this.frameStack[this.frameStack.length - 1];
-		if(this.frameStack.length == 0 || !frame.args) {
+		var args = this.args;
+		if(!args) {
 			throw new HSPError(ErrorCode.INVALID_PARAMETER);
 		}
-		return frame.args[argNum];
+		return args[argNum];
 	},
 	getThismod: function getThismod() {
 		var thismod = this.getArg(0);
