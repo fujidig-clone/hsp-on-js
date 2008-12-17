@@ -1,0 +1,64 @@
+	is(rnd($8000), 41)
+	is(rnd($8000), 18467)
+	is(rnd($8000), 6334)
+	is(rnd($8000), 26500)
+	is(rnd($8000), 19169)
+	is(rnd($8000), 15724)
+	is(rnd($8000), 11478)
+	is(rnd($8000), 29358)
+	is(rnd($8000), 26962)
+	is(rnd($8000), 24464)
+----------------------------------------
+	assert_error 19
+	_ = rnd(0)
+----------------------------------------
+	_ = rnd(1)
+	randomize 1
+	is(rnd($8000), 41)
+	is(rnd($8000), 18467)
+	is(rnd($8000), 6334)
+	is(rnd($8000), 26500)
+	is(rnd($8000), 19169)
+	is(rnd($8000), 15724)
+	is(rnd($8000), 11478)
+	is(rnd($8000), 29358)
+	is(rnd($8000), 26962)
+	is(rnd($8000), 24464)
+----------------------------------------
+	repeat 100
+		a = rnd(2)
+		if a != 0 and a != 1 {
+			flunk
+		}
+	loop
+	ok()
+----------------------------------------
+; randomize のパラメータを省略したとき同じ種にならないことをテスト
+#const N 20
+	randomize
+	repeat N : a.cnt = rnd($8000) : loop
+	flag = 0
+	repeat 5
+		gosub *sleep
+		randomize
+		repeat N
+			if a.cnt != rnd($8000) {
+				flag = 1
+				break
+			}
+		loop
+		if flag : break
+	loop
+	ok(flag)
+	end
+
+*sleep
+	start = gettime(7)
+	repeat
+		now = gettime(7)
+		if start > now : start -= 1000
+		if now - start > 30 {
+			break
+		}
+	loop
+	return
