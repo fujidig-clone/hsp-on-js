@@ -64,9 +64,15 @@
   mes "pass" \
  } else { \
   mes "fail" : \
-  mes "expression: "+{"%1"} \
+  mes "expression: "+{"%1"} : \
   end \
  }
+
+#define flunk \
+ _write_sep_next_assert __LINE__ : \
+  mes "fail" : \
+  mes "flunked" : \
+  end
 
 #define assert_error(%1) \
  __a = %1 : \
@@ -75,9 +81,6 @@
 
 _test_tag = "TAG"
 repeat 8 : _test_tag += "_" + gettime(cnt) : loop
-randomize
-repeat 4 : _test_tag += strf("_%03x", rnd($1000)) : loop
-randomize 1 ; revert to first status
 mes "##START TEST:"+_test_tag
 onerror *test_onerror_
 if 0 {

@@ -1,32 +1,32 @@
-is(vartype("label"), 1)
-is(vartype("str"), 2)
-is(vartype("double"), 3)
-is(vartype("int"), 4)
-is(vartype("struct"), 5)
+	is(vartype("label"), 1)
+	is(vartype("str"), 2)
+	is(vartype("double"), 3)
+	is(vartype("int"), 4)
+	is(vartype("struct"), 5)
 ----------------------------------------
 #module mod x
 #global
 *label
-a = *label
-is(vartype(a), 1)
-a = "foo"
-is(vartype(a), 2)
-a = 1.23
-is(vartype(a), 3)
-a = 42
-is(vartype(a), 4)
-newmod a, mod
-is(vartype(a), 5)
+	a = *label
+	is(vartype(a), 1)
+	a = "foo"
+	is(vartype(a), 2)
+	a = 1.23
+	is(vartype(a), 3)
+	a = 42
+	is(vartype(a), 4)
+	newmod a, mod
+	is(vartype(a), 5)
 ----------------------------------------
-assert_error 3
-_ = vartype("foo")
+	assert_error 3
+	_ = vartype("foo")
 ----------------------------------------
-a = "int"
-is(vartype(a), 2)
+	a = "int"
+	is(vartype(a), 2)
 ----------------------------------------
-a = "int"
-is(vartype(""+a), 4)
+	a = "int"
+	is(vartype(""+a), 4)
 ----------------------------------------
 ; HSPBT#102
-dim a, 2
-is(vartype(a.1), 4)
+	dim a, 2
+	is(vartype(a.1), 4)
