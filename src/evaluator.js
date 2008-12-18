@@ -675,8 +675,6 @@ Evaluator.prototype = {
 					push('stack[len - '+argc+'] = new VariableAgent1D(agent.variable, offset);');
 					pushCallingUserdefFuncCode(constructor, paramTypes);
 					push('continue;');
-				} else {
-					push('-- stack.length;');
 				}
 				break;
 			case Instruction.Code.RETURN:
