@@ -76,6 +76,7 @@ Evaluator.prototype = {
 			} else {
 				this.loopStack.length = 0;
 				this.frameStack.length = 0;
+				this.stack.length = 0;
 			}
 			this.pc = event.pos;
 			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
@@ -311,56 +312,99 @@ Evaluator.prototype = {
 				push('array.dec(offset);');
 			}
 		}
-		function pushCallingUserdefFuncCode(userDefFunc, argc) {
+		function pushCallingUserdefFuncCode(userDefFunc, paramTypes) {
 			if(!userDefFuncs[userDefFunc.id]) {
 				userDefFuncs[userDefFunc.id] = userDefFunc;
 			}
-			push('var args = [];');
-			push('var len = stack.length;');
+			var argc = paramTypes.length; // 実引数の数
+			var stackArgsMax = argc; // 省略したものを除く実引数の数
+			var stackArgsCount = 0;
 			var origArgsCount = 0;
-			var argMax = userDefFunc.paramTypes.length;
+			var mptypes = userDefFunc.paramTypes;
+			var argMax = mptypes.length;
 			var recvArgMax = 0; // local を除いた仮引数の数
 			for(var i = 0; i < argMax; i ++) {
-				if(userDefFunc.paramTypes[i] != MPType.LOCALVAR) recvArgMax ++; 
+				var mptype = mptypes[i];
+				var paramType = paramTypes[recvArgMax] || Compiler.ParamType.OMMITED;
+				if(mptypes[i] == MPType.LOCALVAR) continue;
+				if(paramType == Compiler.ParamType.OMMITED) {
+					if(mptype != MPType.INUM) {
+						push('throw new HSPError(ErrorCode.NO_DEFAULT);');
+						return;
+					}
+					if(paramTypes.length > recvArgMax) {
+						stackArgsMax --;
+					}
+				}
+				if(paramType != Compiler.ParamType.VARIABLE &&
+				    (mptype == MPType.ARRAYVAR
+				  || mptype == MPType.SINGLEVAR
+				  || mptype == MPType.MODULEVAR)) {
+					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
+					return;
+				}
+				recvArgMax ++;
 			}
 			if(recvArgMax < argc) {
 				push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);');
 				return;
 			}
+			push('var args = [];');
+			push('var len = stack.length;');
 			for(var i = 0; i < argMax; i ++) {
-				var mptype = userDefFunc.paramTypes[i];
-				push('var arg = stack[len - '+(argc-origArgsCount)+'];');
+				var mptype = mptypes[i];
+				var paramType = paramTypes[origArgsCount] || Compiler.ParamType.OMMITED;
+				var argExpr = 'stack[len - '+(stackArgsMax-stackArgsCount)+']';
 				switch(mptype) {
 				case MPType.DNUM:
-					push('args['+i+'] = this.scanArg(arg, "n").toDoubleValue();');
+					push('args['+i+'] = this.scanArg('+argExpr+', "n").toDoubleValue();');
+					stackArgsCount ++;
 					break;
 				case MPType.INUM:
-					push('args['+i+'] = arg ? this.scanArg(arg, "n").toIntValue() : new IntValue(0);');
+					if(paramType == Compiler.ParamType.OMMITED) {
+						push('args['+i+'] = IntValue.of(0);');
+					} else {
+						push('args['+i+'] = this.scanArg('+argExpr+', "n").toIntValue();')
+						stackArgsCount ++;;
+					}
 					break;
 				case MPType.LOCALVAR:
 					push('args['+i+'] = new Variable;');
 					continue;
 				case MPType.ARRAYVAR:
-					push('args['+i+'] = this.scanArg(arg, "v").variable;');
+					push('var arg = '+argExpr+';');
+					push('arg.expand();');
+					push('args['+i+'] = arg.variable;');
+					stackArgsCount ++;;
 					break;
 				case MPType.SINGLEVAR:
-					push('args['+i+'] = this.scanArg(arg, "v");');
+					push('var arg = '+argExpr+';');
+					push('arg.expand();');
+					push('args['+i+'] = arg;');
+					stackArgsCount ++;;
 					break;
 				case MPType.LOCALSTRING:
-					push('args['+i+'] = this.scanArg(arg, "s").toStrValue();');
+					push('args['+i+'] = this.scanArg('+argExpr+', "s").toStrValue();');
+					stackArgsCount ++;;
 					break;
 				case MPType.MODULEVAR:
-					push('args['+i+'] = this.scanArg(arg, "v");');
+					push('var arg = '+argExpr+';');
+					push('arg.expand();');
+					push('args['+i+'] = arg;');
+					stackArgsCount ++;;
 					break;
 				case MPType.IMODULEVAR:
-					push('args['+i+'] = arg;');
+					push('args['+i+'] = '+argExpr+';');
+					stackArgsCount ++;;
 					break;
 				default:
 					throw new Error('未対応のパラメータタイプ: '+mptype);
 				}
 				origArgsCount ++;
 			}
-			push('stack.length -= '+argc+';');
+			if(stackArgsMax != 0) {
+				push('stack.length -= '+stackArgsMax+';');
+			}
 			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
@@ -569,8 +613,8 @@ Evaluator.prototype = {
 			case Instruction.Code.CALL_USERDEF_CMD:
 			case Instruction.Code.CALL_USERDEF_FUNC:
 				var userDefFunc = insn.opts[0];
-				var argc = insn.opts[1];
-				pushCallingUserdefFuncCode(userDefFunc, argc);
+				var paramTypes = insn.opts[1];
+				pushCallingUserdefFuncCode(userDefFunc, paramTypes);
 				push('continue;');
 				break;
 			case Instruction.Code.GETARG:
@@ -605,28 +649,39 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.NEWMOD:
 				var module = insn.opts[0];
-				var argc = insn.opts[1];
+				var paramTypes = insn.opts[1];
+				var argc = paramTypes.length;
 				if(!userDefFuncs[module.id]) {
 					userDefFuncs[module.id] = module;
 				}
 				var moduleExpr = 'userDefFuncs['+module.id+']';
-				push('var len = stack.length;');
-				push('var agent = this.scanArg(stack[len - '+argc+'], "a");');
+				var constructor = module.constructor;
+				if(!constructor && argc > 1) {
+					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
+					break;
+				}
+				if(constructor) {
+					push('var len = stack.length;');
+					push('var agent = this.scanArg(stack[len - '+argc+'], "a");');
+				} else {
+					push('var agent = this.scanArg(stack.pop(), "a");');
+				}
 				push('if(agent.getType() != '+VarType.STRUCT+') {');
 				push('    agent.variable.dim('+VarType.STRUCT+', 1, 0, 0, 0);');
 				push('}');
 				push('var array = agent.variable.value;');
 				push('var offset = array.newmod('+moduleExpr+');');
-				if(module.constructor) {
+				if(constructor) {
 					push('stack[len - '+argc+'] = new VariableAgent1D(agent.variable, offset);');
-					pushCallingUserdefFuncCode(module.constructor, argc);
+					pushCallingUserdefFuncCode(constructor, paramTypes);
 					push('continue;');
-				} else if(argc > 1) {
-					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
+				} else {
+					push('-- stack.length;');
 				}
 				break;
 			case Instruction.Code.RETURN:
 				var existReturnVal = insn.opts[0];
+				var usedPushVar = insn.opts[1];
 				push('if(this.frameStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
 				push('}');
@@ -634,7 +689,9 @@ Evaluator.prototype = {
 				push('this.args = frame.prevArgs;');
 				if(existReturnVal) {
 					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
-					push('    stack[stack.length - 1] = stack[stack.length - 1].toValue();');
+					if(usedPushVar) {
+						push('    stack[stack.length - 1] = stack[stack.length - 1].toValue();');
+					}
 					push('} else {'); indent ++
 					push('var val = stack.pop();');
 					push('switch(val.getType()) {');

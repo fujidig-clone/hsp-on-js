@@ -26,6 +26,12 @@ Compiler.ProxyVarType = {
 		ARG_LOCAL: 5
 };
 
+Compiler.ParamType = {
+	OMMITED: 0,
+	VARIABLE: 1,
+	VALUE: 2
+};
+
 Compiler.prototype = {
 	compile: function compile() {
 		var sequence = [];
@@ -205,10 +211,14 @@ Compiler.prototype = {
 			break;
 		case 0x02: // return
 			this.tokensPos ++;
-			var argc = this.compileParameters(sequence);
-			if(argc > 1) throw this.error('return の引数が多すぎます', token);
-			this.pushNewInsn(sequence, Instruction.Code.RETURN,
-			                 [argc == 1], token);
+			if(this.ax.tokens[this.tokensPos].ex2) throw this.error('パラメータは省略できません', token);
+			var existReturnValue = !this.ax.tokens[this.tokensPos].ex1;
+			var usedPushVar = null;
+			if(existReturnValue) {
+				var usedPushVar = this.compileParameter(sequence, true);
+				if(this.compileParametersSub(sequence) > 0) throw this.error('return の引数が多すぎます', token);
+			}
+			this.pushNewInsn(sequence, Instruction.Code.RETURN, [existReturnValue, usedPushVar], token);
 			break;
 		case 0x03: // break
 			this.tokensPos ++;
@@ -290,9 +300,10 @@ Compiler.prototype = {
 				throw this.error('モジュールが指定されていません', structToken);
 			}
 			var module = this.getUserDefFunc(prmInfo.subid);
-			var argc = 1 + this.compileParametersSub(sequence);
+			var paramTypes = [Compiler.ParamType.VARIABLE];
+			this.compileUserDefFuncall0(sequence, module.constructor, false, false, 1, paramTypes);
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
-				             [module, argc], token);
+				             [module, paramTypes], token);
 			break;
 		case 0x14: // delmod
 			this.tokensPos ++;
@@ -472,18 +483,21 @@ Compiler.prototype = {
 	*/
 	compileParameter: function compileParameter(sequence, notReceiveVar) {
 		var headPos = this.tokensPos;
+		var usedPushVar = false;
 		while(true) {
 			var token = this.ax.tokens[this.tokensPos];
-			if(!token || token.ex1) return;
+			if(!token || token.ex1) return usedPushVar;
 			switch(token.type) {
 			case Token.Type.MARK:
 				if(token.code == 41) { // ')'
-					return;
+					return usedPushVar;
 				}
 				this.compileOperator(sequence);
 				break;
 			case Token.Type.VAR:
-				this.compileStaticVariable(sequence, notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos));
+				var useGetVar = notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos);
+				this.compileStaticVariable(sequence, useGetVar);
+				usedPushVar = !useGetVar;
 				break;
 			case Token.Type.STRING:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -501,7 +515,7 @@ Compiler.prototype = {
 				this.tokensPos ++;
 				break;
 			case Token.Type.STRUCT:
-				this.compileStruct(sequence, notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos));
+				usedPushVar = this.compileStruct(sequence, notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos));
 				break;
 			case Token.Type.LABEL:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
@@ -526,7 +540,7 @@ Compiler.prototype = {
 				throw this.error("命令コード " + token.type + " は解釈できません。");
 			}
 			token = this.ax.tokens[this.tokensPos];
-			if(token && token.ex2) return;
+			if(token && token.ex2) return usedPushVar;
 		}
 	},
 	isOnlyVar: function isOnlyVar(pos, headPos) {
@@ -639,11 +653,13 @@ Compiler.prototype = {
 	compileStruct: function compileStruct(sequence, useGetVar) {
 		var token = this.ax.tokens[this.tokensPos];
 		var prmInfo = this.ax.prmsInfo[token.code];
-		if(!this.compileProxyVariable(sequence, useGetVar)) {
+		var usedPushVar = this.compileProxyVariable(sequence, useGetVar);
+		if(usedPushVar == null) {
 			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
 			this.pushNewInsn(sequence, Instruction.Code.GETARG,
 				             [token.code - funcInfo.prmindex], token);
 		}
+		return usedPushVar;
 	},
 	compileSysvar: function compileSysvar(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
@@ -668,15 +684,52 @@ Compiler.prototype = {
 	},
 	compileUserDefFuncall: function compileUserDefFuncall(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
-		var argc = this.compileParenAndParameters(sequence);
+		var userDefFunc = this.getUserDefFunc(token.code);
+		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, true, true, 0, []);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_FUNC,
-		                 [this.getUserDefFunc(token.code), argc], token);
+		                 [userDefFunc, paramTypes], token);
 	},
 	compileUserDefCommand: function compileUserDefCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
-		var argc = this.compileParameters(sequence);
+		var userDefFunc = this.getUserDefFunc(token.code);
+		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, false, true, 0, []);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_CMD,
-		                 [this.getUserDefFunc(token.code), argc], token);
+		                 [userDefFunc, paramTypes], token);
+	},
+	compileUserDefFuncall0: function compileUserDefFuncall0(sequence, userDefFunc, isCType, isHead, startArgNo, paramTypes) {
+		var argsCount = startArgNo;
+		function nextMPType() {
+			do {
+				var mptype = userDefFunc.paramTypes[argsCount++];
+			} while(mptype == MPType.LOCALVAR);
+			return mptype;
+		}
+		if(isHead && isCType) this.compileLeftParen(sequence);
+		if(isHead && this.ax.tokens[this.tokensPos].ex2) {
+			paramTypes.push(Compiler.ParamType.OMMITED);
+			nextMPType();
+		}
+		while(true) {
+			var token = this.ax.tokens[this.tokensPos];
+			if(!token || token.ex1) break;
+			if(token.type == Token.Type.MARK) {
+				if(token.code == 63) { // '?'
+					this.tokensPos ++;
+					paramTypes.push(Compiler.ParamType.OMMITED);
+					nextMPType();
+					continue;
+				}
+				if(token.code == 41) { // ')'
+					break;
+				}
+			}
+			var mptype = nextMPType();
+			var notReceiveVar = mptype != MPType.ARRAYVAR && mptype != MPType.SINGLEVAR;
+			var usedPushVar = this.compileParameter(sequence, notReceiveVar);
+			paramTypes.push(usedPushVar ? Compiler.ParamType.VARIABLE : Compiler.ParamType.VALUE);
+		}
+		if(isCType) this.compileRightParen(sequence);
+		return paramTypes;
 	},
 	getUserDefFunc: function getUserDefFunc(finfoId) {
 		var func = this.userDefFuncs[finfoId];
@@ -702,16 +755,22 @@ Compiler.prototype = {
 		                 [token.type, token.code, argc], token);
 	},
 	compileParenAndParameters: function compileParenAndParameters(sequence) {
+		this.compileLeftParen(sequence);
+		var argc = this.compileParameters(sequence);
+		this.compileRightParen(sequence);
+		return argc;
+	},
+	compileLeftParen: function compileLeftParen(sequence) {
 		var paren_token = this.ax.tokens[this.tokensPos++];
 		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40)) {
 			throw this.error('関数名の後ろに開き括弧がありません。', paren_token);
 		}
-		var argc = this.compileParameters(sequence);
+	},
+	compileRightParen: function compileRightParen(sequence) {
 		paren_token = this.ax.tokens[this.tokensPos++];
 		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
 			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', paren_token);
 		}
-		return argc;
 	},
 	compileVariable: function compileVariable(sequence) {
 		switch(this.ax.tokens[this.tokensPos].type) {
@@ -719,7 +778,7 @@ Compiler.prototype = {
 			this.compileStaticVariable(sequence);
 			return;
 		case Token.Type.STRUCT:
-			if(this.compileProxyVariable(sequence)) return;
+			if(this.compileProxyVariable(sequence) != null) return;
 		}
 		throw this.error('変数が指定されていません');
 	},
@@ -742,7 +801,7 @@ Compiler.prototype = {
 			var argc = this.compileVariableSubscript(sequence);
 			this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_MEMBER : Instruction.Code.PUSH_MEMBER,
 				             [token.code - funcInfo.prmindex - 1, argc], token);
-			return true;
+			return useGetVar;
 		case Compiler.ProxyVarType.ARG_VAR:
 			this.pushNewInsn(sequence, Instruction.Code.GETARG,
 				             [token.code - funcInfo.prmindex], token);
@@ -752,9 +811,9 @@ Compiler.prototype = {
 			var argc = this.compileVariableSubscript(sequence);
 			this.pushNewInsn(sequence, useGetVar ? Instruction.Code.GET_ARG_VAR : Instruction.Code.PUSH_ARG_VAR,
 				             [token.code - funcInfo.prmindex, argc], token);
-			return true;
+			return useGetVar;
 		default:
-			return false;
+			return null;
 		}
 	},
 	getProxyVarType: function getProxyVarType() {
