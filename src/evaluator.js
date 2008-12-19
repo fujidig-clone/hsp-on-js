@@ -312,7 +312,7 @@ Evaluator.prototype = {
 				push('array.dec(offset);');
 			}
 		}
-		function pushCallingUserdefFuncCode(userDefFunc, paramTypes) {
+		function pushCallingUserdefFuncCode(userDefFunc, paramTypes, constructorThismodExpr) {
 			if(!userDefFuncs[userDefFunc.id]) {
 				userDefFuncs[userDefFunc.id] = userDefFunc;
 			}
@@ -326,7 +326,7 @@ Evaluator.prototype = {
 			for(var i = 0; i < argMax; i ++) {
 				var mptype = mptypes[i];
 				var paramType = paramTypes[recvArgMax] || Compiler.ParamType.OMMITED;
-				if(mptypes[i] == MPType.LOCALVAR) continue;
+				if(mptype == MPType.LOCALVAR || mptype == MPType.IMODULEVAR) continue;
 				if(paramType == Compiler.ParamType.OMMITED) {
 					if(mptype != MPType.INUM) {
 						push('throw new HSPError(ErrorCode.NO_DEFAULT);');
@@ -365,7 +365,7 @@ Evaluator.prototype = {
 						push('args['+i+'] = IntValue.of(0);');
 					} else {
 						push('args['+i+'] = this.scanArg('+argExpr+', "n").toIntValue();')
-						stackArgsCount ++;;
+						stackArgsCount ++;
 					}
 					break;
 				case MPType.LOCALVAR:
@@ -375,28 +375,27 @@ Evaluator.prototype = {
 					push('var arg = '+argExpr+';');
 					push('arg.expand();');
 					push('args['+i+'] = arg.variable;');
-					stackArgsCount ++;;
+					stackArgsCount ++;
 					break;
 				case MPType.SINGLEVAR:
 					push('var arg = '+argExpr+';');
 					push('arg.expand();');
 					push('args['+i+'] = arg;');
-					stackArgsCount ++;;
+					stackArgsCount ++;
 					break;
 				case MPType.LOCALSTRING:
 					push('args['+i+'] = this.scanArg('+argExpr+', "s").toStrValue();');
-					stackArgsCount ++;;
+					stackArgsCount ++;
 					break;
 				case MPType.MODULEVAR:
 					push('var arg = '+argExpr+';');
 					push('arg.expand();');
 					push('args['+i+'] = arg;');
-					stackArgsCount ++;;
+					stackArgsCount ++;
 					break;
 				case MPType.IMODULEVAR:
-					push('args['+i+'] = '+argExpr+';');
-					stackArgsCount ++;;
-					break;
+					push('args['+i+'] = '+constructorThismodExpr+';');
+					continue;
 				default:
 					throw new Error('未対応のパラメータタイプ: '+mptype);
 				}
@@ -411,6 +410,25 @@ Evaluator.prototype = {
 			push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args, this.args));');
 			push('this.args = args;');
 			push('this.pc = '+userDefFunc.label.pos+';');
+		}
+		function getVariableExpr(varData) {
+			var type = varData[0];
+			var no = varData[1];
+			switch(type) {
+			case Compiler.ProxyVarType.STATIC:
+				return 'variables['+no+']';
+			case Compiler.ProxyVarType.THISMOD:
+				return 'this.getThismod().variable';
+			case Compiler.ProxyVarType.MEMBER:
+				return 'this.getThismod().toValue().members['+no+']';
+			case Compiler.ProxyVarType.ARG_VAR:
+				return 'this.getArg('+no+').variable';
+			case Compiler.ProxyVarType.ARG_ARRAY:
+			case Compiler.ProxyVarType.ARG_LOCAL:
+				return 'this.getArg('+no+')';
+			default:
+				throw new Error('must not happen');
+			}
 		}
 		var lines = [];
 		var indent = 0;
@@ -648,8 +666,9 @@ Evaluator.prototype = {
 				push('stack.push(this.getThismod());');
 				break;
 			case Instruction.Code.NEWMOD:
-				var module = insn.opts[0];
-				var paramTypes = insn.opts[1];
+				var varData = insn.opts[0];
+				var module = insn.opts[1];
+				var paramTypes = insn.opts[2];
 				var argc = paramTypes.length;
 				if(!userDefFuncs[module.id]) {
 					userDefFuncs[module.id] = module;
@@ -660,20 +679,14 @@ Evaluator.prototype = {
 					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
 					break;
 				}
-				if(constructor) {
-					push('var len = stack.length;');
-					push('var agent = this.scanArg(stack[len - '+argc+'], "a");');
-				} else {
-					push('var agent = this.scanArg(stack.pop(), "a");');
-				}
-				push('if(agent.getType() != '+VarType.STRUCT+') {');
-				push('    agent.variable.dim('+VarType.STRUCT+', 1, 0, 0, 0);');
+				push('var variable = '+getVariableExpr(varData)+';');
+				push('if(variable.getType() != '+VarType.STRUCT+') {');
+				push('    variable.value = new StructArray();');
 				push('}');
-				push('var array = agent.variable.value;');
+				push('var array = variable.value;');
 				push('var offset = array.newmod('+moduleExpr+');');
 				if(constructor) {
-					push('stack[len - '+argc+'] = new VariableAgent1D(agent.variable, offset);');
-					pushCallingUserdefFuncCode(constructor, paramTypes);
+					pushCallingUserdefFuncCode(constructor, paramTypes, 'new VariableAgent1D(variable, offset)');
 					push('continue;');
 				}
 				break;

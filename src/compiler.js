@@ -19,6 +19,7 @@ CompileError.prototype.name = 'CompileError';
 
 
 Compiler.ProxyVarType = {
+		STATIC: 0,
 		THISMOD: 1,
 		MEMBER: 2,
 		ARG_VAR: 3,
@@ -293,17 +294,16 @@ Compiler.prototype = {
 			if(this.ax.tokens[this.tokensPos].ex2) {
 				throw this.error('パラメータは省略できません');
 			}
-			this.compileVariable(sequence);
+			var varData = this.compileVariableNoSubscript();
 			var structToken = this.ax.tokens[this.tokensPos++];
 			var prmInfo = this.ax.prmsInfo[structToken.code];
 			if(structToken.type != Token.Type.STRUCT || prmInfo.mptype != MPType.STRUCTTAG) {
 				throw this.error('モジュールが指定されていません', structToken);
 			}
 			var module = this.getUserDefFunc(prmInfo.subid);
-			var paramTypes = [Compiler.ParamType.VARIABLE];
-			this.compileUserDefFuncall0(sequence, module.constructor, false, false, 1, paramTypes);
+			var paramTypes = this.compileUserDefFuncall0(sequence, module.constructor, false, false, 0, []);
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
-				             [module, paramTypes], token);
+				             [varData, module, paramTypes], token);
 			break;
 		case 0x14: // delmod
 			this.tokensPos ++;
@@ -815,6 +815,27 @@ Compiler.prototype = {
 		default:
 			return null;
 		}
+	},
+	compileVariableNoSubscript: function compileVariableNoSubscript() {
+		var token = this.ax.tokens[this.tokensPos];
+		var result;
+		if(token.type == Token.Type.VAR) {
+			result = [Compiler.ProxyVarType.STATIC, token.code];
+		} else if(token.type == Token.Type.STRUCT) {
+			var type = this.getProxyVarType();
+			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+			if(type == Compiler.ProxyVarType.MEMBER) {
+				result = [type, token.code - funcInfo.prmindex - 1];
+			} else {
+				result = [type, token.code - funcInfo.prmindex];
+			}
+		} else {
+			throw new Error('must not happen');
+		}
+		if(this.isLeftParenToken(this.ax.tokens[++this.tokensPos])) {
+			throw this.error('変数の添字は指定できません');
+		}
+		return result;
 	},
 	getProxyVarType: function getProxyVarType() {
 		var token = this.ax.tokens[this.tokensPos];
