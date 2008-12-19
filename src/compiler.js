@@ -772,15 +772,15 @@ Compiler.prototype = {
 		return argc;
 	},
 	compileLeftParen: function compileLeftParen(sequence) {
-		var paren_token = this.ax.tokens[this.tokensPos++];
-		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40)) {
-			throw this.error('関数名の後ろに開き括弧がありません。', paren_token);
+		var parenToken = this.ax.tokens[this.tokensPos++];
+		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 40)) {
+			throw this.error('関数名の後ろに開き括弧がありません。', parenToken);
 		}
 	},
 	compileRightParen: function compileRightParen(sequence) {
-		paren_token = this.ax.tokens[this.tokensPos++];
-		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
-			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', paren_token);
+		var parenToken = this.ax.tokens[this.tokensPos++];
+		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 41)) {
+			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', parenToken);
 		}
 	},
 	compileVariable: function compileVariable(sequence) {
