@@ -12,9 +12,11 @@ Instruction.prototype.toString = function toString() {
 Instruction.CodeNames = [
 	'NOP',
 	'PUSH',
+	'PUSH_DEFAULT',
 	'PUSH_VAR',
 	'GET_VAR',
 	'POP',
+	'POP_N',
 	'DUP',
 	'ADD',
 	'SUB',

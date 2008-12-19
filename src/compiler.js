@@ -301,7 +301,7 @@ Compiler.prototype = {
 				throw this.error('モジュールが指定されていません', structToken);
 			}
 			var module = this.getUserDefFunc(prmInfo.subid);
-			var paramTypes = this.compileUserDefFuncall0(sequence, module.constructor, false, false, 0, []);
+			var paramTypes = this.compileUserDefFuncall0(sequence, module.constructor, false, false);
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
 				             [varData, module, paramTypes], token);
 			break;
@@ -445,7 +445,7 @@ Compiler.prototype = {
 			if(cannotBeOmitted) {
 				throw this.error('パラメータの省略はできません');
 			}
-			this.pushNewInsn(sequence, Instruction.Code.PUSH, [undefined]);
+			this.pushNewInsn(sequence, Instruction.Code.PUSH_DEFAULT, []);
 			argc ++;
 		}
 		argc += this.compileParametersSub(sequence, cannotBeOmitted, notReceiveVar);
@@ -461,7 +461,7 @@ Compiler.prototype = {
 					if(cannotBeOmitted) {
 						throw this.error('パラメータの省略はできません');
 					}
-					this.pushNewInsn(sequence, Instruction.Code.PUSH, [undefined]);
+					this.pushNewInsn(sequence, Instruction.Code.PUSH_DEFAULT, []);
 					this.tokensPos ++;
 					argc ++;
 					continue;
@@ -685,19 +685,20 @@ Compiler.prototype = {
 	compileUserDefFuncall: function compileUserDefFuncall(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
-		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, true, true, 0, []);
+		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, true, true);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_FUNC,
 		                 [userDefFunc, paramTypes], token);
 	},
 	compileUserDefCommand: function compileUserDefCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
-		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, false, true, 0, []);
+		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, false, true);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_CMD,
 		                 [userDefFunc, paramTypes], token);
 	},
-	compileUserDefFuncall0: function compileUserDefFuncall0(sequence, userDefFunc, isCType, isHead, startArgNo, paramTypes) {
-		var argsCount = startArgNo;
+	compileUserDefFuncall0: function compileUserDefFuncall0(sequence, userDefFunc, isCType, isHead) {
+		var argsCount = 0;
+		var paramTypes = [];
 		function nextMPType() {
 			do {
 				var mptype = userDefFunc.paramTypes[argsCount++];

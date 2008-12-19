@@ -447,6 +447,9 @@ Evaluator.prototype = {
 				literals.push(insn.opts[0]);
 				push('stack.push(literals['+(literals.length - 1)+']);');
 				break;
+			case Instruction.Code.PUSH_DEFAULT:
+				push('stack.push(void 0);');
+				break;
 			case Instruction.Code.PUSH_VAR:
 				var varId = insn.opts[0];
 				var indicesCount = insn.opts[1];
@@ -460,6 +463,9 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.POP:
 				push('stack.pop();');
+				break;
+			case Instruction.Code.POP_N:
+				push('stack.length -= '+insn.opts[0]+';');
 				break;
 			case Instruction.Code.DUP:
 				push('stack.push(stack[stack.length-1]);');
