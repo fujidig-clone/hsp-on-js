@@ -835,7 +835,7 @@ Evaluator.prototype = {
 				push('    this.pc = '+pos+';');
 				push('    continue;');
 				push('}');
-				push('if(v.variable.at([data.cnt]).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
+				push('if(v.variable.at(data.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
 				push('    data.cnt ++;');
 				push('    if(data.cnt >= data.end) {');
 				push('        this.loopStack.pop();');

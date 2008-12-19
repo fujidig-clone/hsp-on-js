@@ -735,7 +735,7 @@ Compiler.prototype = {
 				}
 				continue;
 			}
-			var notReceiveVar = mptype != MPType.SINGLEVAR;
+			var notReceiveVar = mptype != MPType.SINGLEVAR && mptype != MPType.MODULEVAR;
 			var usedPushVar = this.compileParameter(sequence, notReceiveVar);
 			paramTypes.push(usedPushVar ? Compiler.ParamType.VARIABLE : Compiler.ParamType.VALUE);
 		}

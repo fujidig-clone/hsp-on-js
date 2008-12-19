@@ -150,6 +150,7 @@ Utils.objectExtend(VariableAgent1D.prototype, {
 	},
 	assign: function assign(rhs) {
 		var offset = this.offset;
+		var variable = this.variable;
 		var array = variable.value;
 		var type = rhs.getType();
 		if(array.getType() != type) {
@@ -161,7 +162,7 @@ Utils.objectExtend(VariableAgent1D.prototype, {
 		    }
 		}
 		array.expand1D(offset);
-		array.assign(offset, arg);
+		array.assign(offset, rhs);
 	},
 	expand: function expand() {
 		this.variable.value.expand1D(this.offset);

@@ -1,12 +1,18 @@
-#module
-#defcfunc fib int n
-	if n < 2 : return 1
-	return fib(n - 2) + fib(n - 1)
+#module mod m_name
+#modinit str name
+	m_name = name
+	return
+#modfunc getname
+	return m_name
 #global
 
-st = gettime(-1)
-result = fib(22)
-ed = gettime(-1)
+names = "foo", "bar", "", "baz"
+repeat 4
+	newmod a, mod, names.cnt
+loop
+delmod a.2
 
-mes strf("%d ms", ed - st)
-mes strf("result = %d", result)
+foreach a
+	getname a.cnt
+	mes ""+cnt+":"+refstr
+loop
