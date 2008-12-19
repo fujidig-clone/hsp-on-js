@@ -327,19 +327,26 @@ Evaluator.prototype = {
 				var mptype = mptypes[i];
 				var paramType = paramTypes[recvArgMax] || Compiler.ParamType.OMMITED;
 				if(mptype == MPType.LOCALVAR || mptype == MPType.IMODULEVAR) continue;
+				if(mptype == MPType.ARRAYVAR) {
+					if(recvArgMax < paramTypes.length) {
+						if(!paramType) {
+							push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
+							return;
+						}
+						stackArgsMax --;
+					}
+				}
 				if(paramType == Compiler.ParamType.OMMITED) {
 					if(mptype != MPType.INUM) {
 						push('throw new HSPError(ErrorCode.NO_DEFAULT);');
 						return;
 					}
-					if(paramTypes.length > recvArgMax) {
+					if(recvArgMax < paramTypes.length) {
 						stackArgsMax --;
 					}
 				}
-				if(paramType != Compiler.ParamType.VARIABLE &&
-				    (mptype == MPType.ARRAYVAR
-				  || mptype == MPType.SINGLEVAR
-				  || mptype == MPType.MODULEVAR)) {
+				if((mptype == MPType.SINGLEVAR || mptype == MPType.MODULEVAR) &&
+				   paramType != Compiler.ParamType.VARIABLE) {
 					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
 					return;
 				}
@@ -372,10 +379,7 @@ Evaluator.prototype = {
 					push('args['+i+'] = new Variable;');
 					continue;
 				case MPType.ARRAYVAR:
-					push('var arg = '+argExpr+';');
-					push('arg.expand();');
-					push('args['+i+'] = arg.variable;');
-					stackArgsCount ++;
+					push('args['+i+'] = '+getVariableExpr(paramType)+';');
 					break;
 				case MPType.SINGLEVAR:
 					push('var arg = '+argExpr+';');

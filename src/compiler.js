@@ -294,7 +294,7 @@ Compiler.prototype = {
 			if(this.ax.tokens[this.tokensPos].ex2) {
 				throw this.error('パラメータは省略できません');
 			}
-			var varData = this.compileVariableNoSubscript();
+			var varData = this.getVariableDataNoSubscript();
 			var structToken = this.ax.tokens[this.tokensPos++];
 			var prmInfo = this.ax.prmsInfo[structToken.code];
 			if(structToken.type != Token.Type.STRUCT || prmInfo.mptype != MPType.STRUCTTAG) {
@@ -725,7 +725,17 @@ Compiler.prototype = {
 				}
 			}
 			var mptype = nextMPType();
-			var notReceiveVar = mptype != MPType.ARRAYVAR && mptype != MPType.SINGLEVAR;
+			if(mptype == MPType.ARRAYVAR) {
+				if((token.type == Token.Type.VAR || token.type == Token.Type.STRUCT) &&
+			       this.isOnlyVar(this.tokensPos, this.tokensPos)) {
+					paramTypes.push(this.getVariableData(sequence));
+				} else {
+					this.compileParameter(sequence, false);
+					paramTypes.push(null);
+				}
+				continue;
+			}
+			var notReceiveVar = mptype != MPType.SINGLEVAR;
 			var usedPushVar = this.compileParameter(sequence, notReceiveVar);
 			paramTypes.push(usedPushVar ? Compiler.ParamType.VARIABLE : Compiler.ParamType.VALUE);
 		}
@@ -817,26 +827,39 @@ Compiler.prototype = {
 			return null;
 		}
 	},
-	compileVariableNoSubscript: function compileVariableNoSubscript() {
+	getVariableData: function getVariableData(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
-		var result;
-		if(token.type == Token.Type.VAR) {
-			result = [Compiler.ProxyVarType.STATIC, token.code];
-		} else if(token.type == Token.Type.STRUCT) {
-			var type = this.getProxyVarType();
-			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
-			if(type == Compiler.ProxyVarType.MEMBER) {
-				result = [type, token.code - funcInfo.prmindex - 1];
-			} else {
-				result = [type, token.code - funcInfo.prmindex];
-			}
-		} else {
-			throw new Error('must not happen');
+		var result = this.getVariableData0();
+		this.tokensPos ++;
+		var argc = this.compileVariableSubscript(sequence);
+		if(argc) {
+			this.pushNewInsn(sequence, Instruction.Code.POP_N, [argc], token);
 		}
+		return result;
+	},
+	getVariableDataNoSubscript: function getVariableDataNoSubscript() {
+		var result = this.getVariableData0();
 		if(this.isLeftParenToken(this.ax.tokens[++this.tokensPos])) {
 			throw this.error('変数の添字は指定できません');
 		}
 		return result;
+	},
+	getVariableData0: function getVariableData0() {
+		var token = this.ax.tokens[this.tokensPos];
+		var result;
+		if(token.type == Token.Type.VAR) {
+			return [Compiler.ProxyVarType.STATIC, token.code];
+		} else if(token.type == Token.Type.STRUCT) {
+			var type = this.getProxyVarType();
+			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+			if(type == Compiler.ProxyVarType.MEMBER) {
+				return [type, token.code - funcInfo.prmindex - 1];
+			} else {
+				return [type, token.code - funcInfo.prmindex];
+			}
+		} else {
+			throw new Error('must not happen');
+		}
 	},
 	getProxyVarType: function getProxyVarType() {
 		var token = this.ax.tokens[this.tokensPos];
