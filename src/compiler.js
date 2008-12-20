@@ -301,7 +301,13 @@ Compiler.prototype = {
 				throw this.error('モジュールが指定されていません', structToken);
 			}
 			var module = this.getUserDefFunc(prmInfo.subid);
-			var paramTypes = this.compileUserDefFuncall0(sequence, module.constructor, false, false);
+			var paramTypes;
+			if(module.constructor) {
+				paramTypes = this.compileUserDefFuncall0(sequence, module.constructor, false, false);
+			} else {
+				var argc = this.compileParametersSub(sequence);
+				paramTypes = new Array(argc);
+			}
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
 				             [varData, module, paramTypes], token);
 			break;

@@ -685,7 +685,7 @@ Evaluator.prototype = {
 				}
 				var moduleExpr = 'userDefFuncs['+module.id+']';
 				var constructor = module.constructor;
-				if(!constructor && argc > 1) {
+				if(!constructor && argc > 0) {
 					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
 					break;
 				}

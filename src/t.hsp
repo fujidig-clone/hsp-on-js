@@ -1,18 +1,3 @@
-#module mod m_name
-#modinit str name
-	m_name = name
-	return
-#modfunc getname
-	return m_name
+#module mod x
 #global
-
-names = "foo", "bar", "", "baz"
-repeat 4
-	newmod a, mod, names.cnt
-loop
-delmod a.2
-
-foreach a
-	getname a.cnt
-	mes ""+cnt+":"+refstr
-loop
+	newmod a, mod, 1
