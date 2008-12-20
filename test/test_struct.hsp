@@ -1,0 +1,128 @@
+	dimtype a, 5
+	is(vartype(a), 5)
+	is(varuse(a.0), 0)
+----------------------------------------
+#module mod x
+#global
+	newmod a, mod
+	is(vartype(a), 5)
+	is(varuse(a.0), 1)
+	is(length(a), 1)
+	delmod a.0
+	is(varuse(a.0), 0)
+	is(length(a), 1)
+----------------------------------------
+#module mod x
+#global
+	assert_error 16
+	newmod a, mod, 1
+----------------------------------------
+#module mod x
+#modinit
+	ok()
+	return
+#global
+	newmod a, mod
+----------------------------------------
+#module mod x
+#modinit
+	return
+#global
+	assert_error 16
+	newmod a, mod, 1
+----------------------------------------
+#module mod x
+#modinit int p1
+	is(p1, 42)
+	is(vartype(thismod), 5)
+	return
+#global
+	newmod a, mod, 42
+----------------------------------------
+#module mod m_name
+#modinit str name
+	m_name = name
+	return
+#defcfunc get_name modvar mod@
+	return m_name
+#global
+	newmod a, mod, "foo"
+	newmod b, mod, "bar"
+	c = a
+	is(get_name(a), "foo")
+	is(get_name(b), "bar")
+	is(get_name(c), "foo")
+	a = b
+	b = c
+	is(get_name(a), "bar")
+	is(get_name(b), "foo")
+----------------------------------------
+#module mod m_name
+#modinit str name
+	m_name = name
+	return
+#defcfunc get_name modvar mod@
+	return m_name
+#global
+	dimtype nullmod, 5
+	newmod a, mod, "aaa"
+	newmod a, mod, "bbb"
+	newmod a, mod, "ccc"
+	newmod a, mod, "ddd"
+	newmod a, mod, "eee"
+	is(length(a), 5)
+	is(get_name(a.0), "aaa")
+	is(get_name(a.1), "bbb")
+	is(get_name(a.2), "ccc")
+	is(get_name(a.3), "ddd")
+	is(get_name(a.4), "eee")
+	delmod a.1
+	a.3 = nullmod
+	is(varuse(a.1), 0)
+	is(varuse(a.3), 0)
+	newmod a, mod, "fff"
+	newmod a, mod, "ggg"
+	is(get_name(a.1), "fff")
+	is(get_name(a.3), "ggg")
+	delmod a.2
+	a.2 = a.0
+	newmod a, mod, "hhh"
+	is(get_name(a.2), "aaa")
+	is(length(a), 6)
+	is(get_name(a.5), "hhh")
+----------------------------------------
+#module mod x
+#global
+	newmod a, mod
+	newmod a, mod
+	newmod a, mod
+	newmod a, mod
+	newmod a, mod
+	b = ""
+	foreach a
+		b += "["+cnt+"]"
+	loop
+	is(b, "[0][1][2][3][4]")
+	delmod a.0
+	b = ""
+	foreach a
+		b += "["+cnt+"]"
+	loop
+	is(b, "[1][2][3][4]")
+----------------------------------------
+#module mod_element m_next
+#modfunc set_next var src
+	m_next = src
+	return
+#defcfunc get_next modvar mod_element@
+	return m_next
+#defcfunc new_element local instance
+	newmod instance, mod_element
+	return instance
+#global
+	a = new_element()
+	b = new_element()
+	set_next a, b
+	set_next b, a
+	is(get_next(a), b)
+	is(get_next(b), a)

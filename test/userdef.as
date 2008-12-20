@@ -45,7 +45,7 @@
 	return
 #global
 
-#define ctype is(%1,%2) \
+#define global ctype is(%1,%2) \
  __a = %1 : __b = %2 : \
  _write_sep_next_assert __LINE__: \
  if _test_eq(__a, __b) { \
@@ -57,7 +57,7 @@
  } \
  __a = 0 : __b = 0
 
-#define ctype ok(%1=1) \
+#define global ctype ok(%1=1) \
  __a = %1 : \
  _write_sep_next_assert __LINE__ : \
  if __a { \
@@ -68,13 +68,13 @@
   end \
  }
 
-#define flunk \
+#define global flunk \
  _write_sep_next_assert __LINE__ : \
   mes "fail" : \
   mes "flunked" : \
   end
 
-#define assert_error(%1) \
+#define global assert_error(%1) \
  __a = %1 : \
  _write_sep_next_assert __LINE__ : \
  mes "error: "+__a

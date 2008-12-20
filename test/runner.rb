@@ -129,7 +129,7 @@ class HSPTestRunner
             result.errors_count += 1
           end
         else
-          message = "#{src_path}:#{lineno}: failed assert_error\n"
+          result.messages << "#{src_path}:#{lineno}: failed assert_error\n"
           status = 'F'
           result.failures_count += 1
         end
