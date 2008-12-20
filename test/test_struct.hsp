@@ -98,17 +98,28 @@
 	newmod a, mod
 	newmod a, mod
 	newmod a, mod
-	b = ""
-	foreach a
-		b += "["+cnt+"]"
-	loop
+	gosub *do_each
 	is(b, "[0][1][2][3][4]")
 	delmod a.0
+	gosub *do_each
+	is(b, "[1][2][3][4]")
+	delmod a.4
+	gosub *do_each
+	is(b, "[1][2][3]")
+	delmod a.2
+	gosub *do_each
+	is(b, "[1][3]")
+	newmod a, mod
+	newmod a, mod
+	gosub *do_each
+	is(b, "[0][1][2][3]")
+	end
+*do_each
 	b = ""
 	foreach a
 		b += "["+cnt+"]"
 	loop
-	is(b, "[1][2][3][4]")
+	return
 ----------------------------------------
 #module mod_element m_next
 #modfunc set_next var src
