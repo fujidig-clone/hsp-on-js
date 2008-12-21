@@ -14,29 +14,89 @@ function BinaryParser(data, index, length) {
 	this.offset = 0;
 }
 
-with({p: BinaryParser}) {
+(function() {
+	var p = BinaryParser;
 	p.CheckBufferError = function CheckBufferError(message) { this.message = message; };
 	p.CheckBufferError.prototype = new Error;
 	p.CheckBufferError.prototype.name = 'BinaryParser.CheckBufferError';
 	
 	p.prototype = {
-		readChar: function readChar(){return this.decodeInt(8, true);},
-		readUChar: function readUChar(){return this.decodeInt(8, false);},
-		readShort: function readShort(){return this.decodeInt(16, true);},
-		readUShort: function readUShort(){return this.decodeInt(16, false);},
-		readInt24: function readInt24(){return this.decodeInt(24, true);},
-		readUInt24: function readUInt24(){return this.decodeInt(24, false);},
-		readInt: function readInt(){return this.decodeInt(32, true);},
-		readUInt: function readUInt(){return this.decodeInt(32, false);},
-		readDouble: function readDouble(){return this.decodeFloat(52, 11);},
+		readChar: function readChar() {
+			this.checkBuffer(this.offset + 8);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			if(result & 0x80) result -= 0x100;
+			this.offset += 8;
+			return result;
+		},
+		readUChar: function readUChar() {
+			this.checkBuffer(this.offset + 8);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			this.offset += 8;
+			return result;
+		},
+		readShort: function readShort() {
+			this.checkBuffer(this.offset + 16);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			if(result & 0x8000) result -= 0x10000;
+			this.offset += 16;
+			return result;
+		},
+		readUShort: function readUShort() {
+			this.checkBuffer(this.offset + 16);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			this.offset += 16;
+			return result;
+		},
+		readInt24: function readInt24() {
+			this.checkBuffer(this.offset + 24);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
+			if(result & 0x800000) result -= 0x1000000;
+			this.offset += 24;
+			return result;
+		},
+		readUInt24: function readUInt24() {
+			this.checkBuffer(this.offset + 24);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
+			this.offset += 24;
+			return result;
+		},
+		readInt: function readInt() {
+			this.checkBuffer(this.offset + 32);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 4] << 24;
+			this.offset += 32;
+			return result;
+		},
+		readUInt: function readUInt() {
+			this.checkBuffer(this.offset + 32);
+			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
+			result += this.buffer[this.buffer.length - (this.offset >> 3) - 4] * 0x1000000;
+			this.offset += 32;
+			return result;
+		},
+		readDouble: function readDouble() {
+			return this.decodeFloat(52, 11);
+		},
 
-		isEOS: function isEOS(){return this.buffer.length <= this.offset / 8;},
-		decodeInt: function decodeInt(bits, signed){
+		isEOS: function isEOS() {
+			return this.buffer.length <= this.offset / 8;
+		},
+		decodeInt: function decodeInt(bits, signed) {
 			var x = this.readBits(this.offset, bits), max = Math.pow(2, bits);
 			this.offset += bits;
 			return signed && x >= max / 2 ? x - max : x;
 		},
-		decodeFloat: function decodeFloat(precisionBits, exponentBits){
+		decodeFloat: function decodeFloat(precisionBits, exponentBits) {
 			this.checkBuffer(this.offset + precisionBits + exponentBits + 1);
 			var bias = Math.pow(2, exponentBits - 1) - 1, signal = this.readBits(this.offset + precisionBits + exponentBits, 1),
 				exponent = this.readBits(this.offset + precisionBits, exponentBits), significand = 0,
@@ -51,9 +111,9 @@ with({p: BinaryParser}) {
 				: (1 + signal * -2) * (exponent || significand ? !exponent ? Math.pow(2, -bias + 1) * significand
 				: Math.pow(2, exponent - bias) * (1 + significand) : 0);
 		},
-		readBits: function readBits(start, length){
+		readBits: function readBits(start, length) {
 			//shl fix: Henri Torgemane ~1996 (compressed by Jonas Raoni)
-			function shl(a, b){
+			function shl(a, b) {
 				while(b--)a = ((a %= 0x7fffffff + 1) & 0x40000000) == 0x40000000 ? a * 2 : (a - 0x40000000) * 2 + 0x7fffffff + 1;
 				return a;
 			}
@@ -68,25 +128,43 @@ with({p: BinaryParser}) {
 			);
 			return sum;
 		},
-		hasNeededBits: function hasNeededBits(neededBits){
+		hasNeededBits: function hasNeededBits(neededBits) {
 			return this.buffer.length >= -(-neededBits >> 3);
 		},
-		checkBuffer: function checkBuffer(neededBits){
+		checkBuffer: function checkBuffer(neededBits) {
 			if(!this.hasNeededBits(neededBits))
 				throw new p.CheckBufferError("checkBuffer::missing bytes");
 		}
 	};
 	
-	p.readChar = function readChar(data, index){return new p(data, index, 1).readChar();};
-	p.readUChar = function readUChar(data, index){return new p(data, index, 1).readUChar();};
-	p.readShort = function readShort(data, index){return new p(data, index, 2).readShort();};
-	p.readUShort = function readUShort(data, index){return new p(data, index, 2).readUShort();};
-	p.readInt24 = function readInt24(data, index){return new p(data, index, 3).readInt24();};
-	p.readUInt24 = function readUInt24(data, index){return new p(data, index, 3).readUInt24();};
-	p.readInt = function readInt(data, index){return new p(data, index, 4).readInt();};
-	p.readUInt = function readUInt(data, index){return new p(data, index, 4).readUInt();};
-	p.readDouble = function readDouble(data, index){return new p(data, index, 8).readDouble();};
-}
+	p.readChar = function readChar(data, index) {
+		return new p(data, index, 1).readChar();
+	};
+	p.readUChar = function readUChar(data, index) {
+		return new p(data, index, 1).readUChar();
+	};
+	p.readShort = function readShort(data, index) {
+		return new p(data, index, 2).readShort();
+	};
+	p.readUShort = function readUShort(data, index) {
+		return new p(data, index, 2).readUShort();
+	};
+	p.readInt24 = function readInt24(data, index) {
+		return new p(data, index, 3).readInt24();
+	};
+	p.readUInt24 = function readUInt24(data, index) {
+		return new p(data, index, 3).readUInt24();
+	};
+	p.readInt = function readInt(data, index) {
+		return new p(data, index, 4).readInt();
+	};
+	p.readUInt = function readUInt(data, index) {
+		return new p(data, index, 4).readUInt();
+	};
+	p.readDouble = function readDouble(data, index) {
+		return new p(data, index, 8).readDouble();
+	};
+})();
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.BinaryParser = BinaryParser;
