@@ -27,7 +27,7 @@ Utils.objectExtend(DoubleArray.prototype, {
 			}
 		}
 		return isExpanded;
-	}, 
+	},
 	getType: function getType() {
 		return VarType.DOUBLE;
 	},

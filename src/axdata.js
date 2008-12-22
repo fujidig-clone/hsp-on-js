@@ -83,9 +83,9 @@ AXData.prototype = {
 			} else {
 				code = cs.readUShort();
 			}
-			var skip_offset = undefined;
+			var skipOffset = undefined;
 			if(type == Token.Type.CMPCMD) {
-				skip_offset = cs.readUShort();
+				skipOffset = cs.readUShort();
 			}
 			var size = cs.offset / 2 - pos;
 			while(true) {
@@ -96,9 +96,9 @@ AXData.prototype = {
 					break;
 				}
 				if(ofs == 254) {
-					var ds_offset = dinfo.readUInt24();
-					if(ds_offset != 0 || fileName == undefined) {
-						fileName = this.getDSStr(ds_offset);
+					var dsOffset = dinfo.readUInt24();
+					if(dsOffset != 0 || fileName == undefined) {
+						fileName = this.getDSStr(dsOffset);
 					}
 					lineNo = dinfo.readUShort();
 					continue;
@@ -120,7 +120,7 @@ AXData.prototype = {
 			}
 			lineSize += size;
 			tokens.push(new Token(this, type, ex1, ex2, code,
-			                      fileName, lineNo, pos, size, skip_offset));
+			                      fileName, lineNo, pos, size, skipOffset));
 			pos += size;
 		}
 		return tokens;
@@ -192,8 +192,8 @@ AXData.prototype = {
 	}
 };
 
-function Token(object_data, type, ex1, ex2, code,
-                           fileName, lineNo, pos, size, skip_offset) {
+function Token(objectData, type, ex1, ex2, code,
+                           fileName, lineNo, pos, size, skipOffset) {
 	this.type = type;
 	this.ex1 = ex1;
 	this.ex2 = ex2;
@@ -202,11 +202,11 @@ function Token(object_data, type, ex1, ex2, code,
 	this.lineNo = lineNo;
 	this.pos = pos;
 	this.size = size;
-	this.skip_offset = skip_offset;
+	this.skipOffset = skipOffset;
 	if(type == Token.Type.STRING) {
-		this.val = object_data.getDSStr(code);
+		this.val = objectData.getDSStr(code);
 	} else if(type == Token.Type.DNUM) {
-		this.val = object_data.getDSDouble(code);
+		this.val = objectData.getDSDouble(code);
 	}
 }
 

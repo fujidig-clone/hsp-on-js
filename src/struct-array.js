@@ -34,7 +34,7 @@ Utils.objectExtend(StructArray.prototype, {
 			}
 		}
 		return isExpanded;
-	}, 
+	},
 	getType: function getType() {
 		return VarType.STRUCT;
 	},

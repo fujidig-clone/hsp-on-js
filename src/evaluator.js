@@ -49,7 +49,7 @@ function Event() {
 
 Evaluator.prototype = {
 	evaluate: function evaluate() {
-		this.mainLoop = eval('Object(function mainLoop(stack, literals, variables, userDefFuncs) {\n' + 
+		this.mainLoop = eval('Object(function mainLoop(stack, literals, variables, userDefFuncs) {\n' +
 		                this.createMainLoop(this.literals, this.userDefFuncs) + '\n})');
 		try {
 			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);

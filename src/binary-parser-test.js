@@ -154,12 +154,12 @@
 		alert(msg);
 	}
 	
-	function catchError(error_constructor, callback) {
+	function catchError(errorConstructor, callback) {
 		var catched = false;
 		try {
 			callback();
 		} catch(e) {
-			if(!(e instanceof error_constructor)) throw e;
+			if(!(e instanceof errorConstructor)) throw e;
 			catched = true;
 		}
 		return catched;

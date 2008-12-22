@@ -27,7 +27,7 @@ Utils.objectExtend(IntArray.prototype, {
 			}
 		}
 		return isExpanded;
-	}, 
+	},
 	getType: function getType() {
 		return VarType.INT;
 	},

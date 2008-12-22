@@ -27,7 +27,7 @@ Utils.objectExtend(LabelArray.prototype, {
 			}
 		}
 		return isExpanded;
-	}, 
+	},
 	getType: function getType() {
 		return VarType.LABEL;
 	}

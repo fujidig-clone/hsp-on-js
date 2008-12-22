@@ -30,11 +30,11 @@ Utils.objectExtend(IntValue.prototype, {
 		return new IntValue(this._value * rhs.toIntValue()._value);
 	},
 	div: function div(rhs) {
-		var rhs_value = rhs.toIntValue()._value;
-		if(rhs_value == 0) {
+		var rhsValue = rhs.toIntValue()._value;
+		if(rhsValue == 0) {
 			throw new HSPError(ErrorCode.DIVIDED_BY_ZERO);
 		}
-		return new IntValue(this._value / rhs_value);
+		return new IntValue(this._value / rhsValue);
 	},
 	mod: function mod(rhs) {
 		return new IntValue(this._value % rhs.toIntValue()._value);

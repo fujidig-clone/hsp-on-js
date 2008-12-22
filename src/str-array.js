@@ -28,7 +28,7 @@ Utils.objectExtend(StrArray.prototype, {
 			}
 		}
 		return isExpanded;
-	}, 
+	},
 	at: function at(offset) {
 		return this.values[offset].getValue();
 	},

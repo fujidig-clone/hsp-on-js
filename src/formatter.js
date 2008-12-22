@@ -39,7 +39,7 @@ var Formatter = {
 			var arg = args[argsIndex++];
 			evaluator.scanArg(arg, '.', false);
 			var convert = Formatter.ConvertTable[specifier];
-			if(!convert) return specifier; 
+			if(!convert) return specifier;
 			return convert(arg, flags, width, prec);
 		});
 		if(argsIndex < args.length) {

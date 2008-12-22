@@ -419,7 +419,7 @@ Compiler.prototype = {
 	},
 	compileBranchCommand: function compileBranchCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
-		var skipTo = token.pos + token.size + token.skip_offset;
+		var skipTo = token.pos + token.size + token.skipOffset;
 		var label = new Label;
 		if(skipTo in this.ifLabels) {
 			this.ifLabels[skipTo].push(label);
@@ -592,15 +592,15 @@ Compiler.prototype = {
 		return size;
 	},
 	skipParenAndParameters: function skipParenAndParameters(pos) {
-		var paren_token = this.ax.tokens[pos];
-		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40)) {
+		var parenToken = this.ax.tokens[pos];
+		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 40)) {
 			return 0;
 		}
 		var size = 1;
 		size += this.skipParameters(pos + size);
-		paren_token = this.ax.tokens[pos + size];
-		if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
-			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', paren_token);
+		parenToken = this.ax.tokens[pos + size];
+		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 41)) {
+			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', parenToken);
 		}
 		return size + 1;
 	},
@@ -901,16 +901,16 @@ Compiler.prototype = {
 	},
 	compileVariableSubscript: function compileVariableSubscript(sequence) {
 		var argc = 0;
-		var paren_token = this.ax.tokens[this.tokensPos];
-		if(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 40) {
+		var parenToken = this.ax.tokens[this.tokensPos];
+		if(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 40) {
 			this.tokensPos ++;
 			argc = this.compileParameters(sequence, true, true);
 			if(argc == 0) {
-				throw this.error('配列変数の添字が空です', paren_token);
+				throw this.error('配列変数の添字が空です', parenToken);
 			}
-			paren_token = this.ax.tokens[this.tokensPos++];
-			if(!(paren_token && paren_token.type == Token.Type.MARK && paren_token.code == 41)) {
-				throw this.error('配列変数の添字の後ろに閉じ括弧がありません。', paren_token);
+			parenToken = this.ax.tokens[this.tokensPos++];
+			if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 41)) {
+				throw this.error('配列変数の添字の後ろに閉じ括弧がありません。', parenToken);
 			}
 		}
 		return argc;
