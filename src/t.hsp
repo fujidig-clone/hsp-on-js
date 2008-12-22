@@ -1,3 +1,12 @@
-#module mod x
+#module mod_human m_name
+#modinit str name
+	m_name = name
+	return
+#defcfunc new_human str name, local instance
+	newmod instance, mod_human, name
+	return instance
+#defcfunc human_get_name modvar mod_human@
+	return m_name
 #global
-	newmod a, mod, 1
+
+mes human_get_name(new_human("Taro"))

@@ -345,8 +345,7 @@ Evaluator.prototype = {
 						stackArgsMax --;
 					}
 				}
-				if((mptype == MPType.SINGLEVAR || mptype == MPType.MODULEVAR) &&
-				   paramType != Compiler.ParamType.VARIABLE) {
+				if(mptype == MPType.SINGLEVAR && paramType != Compiler.ParamType.VARIABLE) {
 					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
 					return;
 				}
@@ -392,9 +391,15 @@ Evaluator.prototype = {
 					stackArgsCount ++;
 					break;
 				case MPType.MODULEVAR:
-					push('var arg = '+argExpr+';');
-					push('arg.expand();');
-					push('args['+i+'] = arg;');
+					if(paramType == Compiler.ParamType.VARIABLE) {
+						push('var arg = '+argExpr+';');
+						push('arg.expand();');
+						push('args['+i+'] = arg;');
+					} else {
+						push('var arg = new VariableAgent0D(new Variable);');
+						push('arg.assign('+argExpr+')');
+						push('args['+i+'] = arg;');
+					}
 					stackArgsCount ++;
 					break;
 				case MPType.IMODULEVAR:
