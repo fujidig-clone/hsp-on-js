@@ -22,87 +22,82 @@ function BinaryParser(data, index, length) {
 	
 	p.prototype = {
 		readChar: function readChar() {
-			this.checkBuffer(this.offset + 8);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
+			this.checkBuffer(this.offset + 1);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
 			if(result & 0x80) result -= 0x100;
-			this.offset += 8;
+			++ this.offset;
 			return result;
 		},
 		readUChar: function readUChar() {
-			this.checkBuffer(this.offset + 8);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			this.offset += 8;
+			this.checkBuffer(this.offset + 1);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			++ this.offset;
 			return result;
 		},
 		readShort: function readShort() {
-			this.checkBuffer(this.offset + 16);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
+			this.checkBuffer(this.offset + 2);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
 			if(result & 0x8000) result -= 0x10000;
-			this.offset += 16;
+			this.offset += 2;
 			return result;
 		},
 		readUShort: function readUShort() {
-			this.checkBuffer(this.offset + 16);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
-			this.offset += 16;
+			this.checkBuffer(this.offset + 2);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
+			this.offset += 2;
 			return result;
 		},
 		readInt24: function readInt24() {
-			this.checkBuffer(this.offset + 24);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
+			this.checkBuffer(this.offset + 3);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
+			result |= this.buffer[this.buffer.length - this.offset - 3] << 16;
 			if(result & 0x800000) result -= 0x1000000;
-			this.offset += 24;
+			this.offset += 3;
 			return result;
 		},
 		readUInt24: function readUInt24() {
-			this.checkBuffer(this.offset + 24);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
-			this.offset += 24;
+			this.checkBuffer(this.offset + 3);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
+			result |= this.buffer[this.buffer.length - this.offset - 3] << 16;
+			this.offset += 3;
 			return result;
 		},
 		readInt: function readInt() {
-			this.checkBuffer(this.offset + 32);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 4] << 24;
-			this.offset += 32;
+			this.checkBuffer(this.offset + 4);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
+			result |= this.buffer[this.buffer.length - this.offset - 3] << 16;
+			result |= this.buffer[this.buffer.length - this.offset - 4] << 24;
+			this.offset += 4;
 			return result;
 		},
 		readUInt: function readUInt() {
-			this.checkBuffer(this.offset + 32);
-			var result = this.buffer[this.buffer.length - (this.offset >> 3) - 1];
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 2] << 8;
-			result |= this.buffer[this.buffer.length - (this.offset >> 3) - 3] << 16;
-			result += this.buffer[this.buffer.length - (this.offset >> 3) - 4] * 0x1000000;
-			this.offset += 32;
+			this.checkBuffer(this.offset + 4);
+			var result = this.buffer[this.buffer.length - this.offset - 1];
+			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
+			result |= this.buffer[this.buffer.length - this.offset - 3] << 16;
+			result += this.buffer[this.buffer.length - this.offset - 4] * 0x1000000;
+			this.offset += 4;
 			return result;
 		},
 		readDouble: function readDouble() {
-			return this.decodeFloat(52, 11);
+			return this.decodeFloat(52, 11, 8);
 		},
 
 		isEOS: function isEOS() {
-			return this.buffer.length <= this.offset / 8;
+			return this.buffer.length <= this.offset;
 		},
-		decodeInt: function decodeInt(bits, signed) {
-			var x = this.readBits(this.offset, bits), max = Math.pow(2, bits);
-			this.offset += bits;
-			return signed && x >= max / 2 ? x - max : x;
-		},
-		decodeFloat: function decodeFloat(precisionBits, exponentBits) {
-			this.checkBuffer(this.offset + precisionBits + exponentBits + 1);
-			var bias = Math.pow(2, exponentBits - 1) - 1, signal = this.readBits(this.offset + precisionBits + exponentBits, 1),
-				exponent = this.readBits(this.offset + precisionBits, exponentBits), significand = 0,
-				divisor = 2, curByte = this.buffer.length + (-precisionBits-this.offset >> 3) - 1,
+		decodeFloat: function decodeFloat(precisionBits, exponentBits, bytes) {
+			this.checkBuffer(this.offset + bytes);
+			var bias = Math.pow(2, exponentBits - 1) - 1, signal = this.readBits(this.offset * 8 + precisionBits + exponentBits, 1),
+				exponent = this.readBits(this.offset * 8 + precisionBits, exponentBits), significand = 0,
+				divisor = 2, curByte = this.buffer.length + (-precisionBits>>3) - this.offset - 1,
 				byteValue, startBit, mask;
-			this.offset += precisionBits + exponentBits + 1;
+			this.offset += bytes;
 			do
 				for(byteValue = this.buffer[ ++curByte ], startBit = precisionBits % 8 || 8, mask = 1 << startBit;
 					mask >>= 1; (byteValue & mask) && (significand += 1 / divisor), divisor *= 2);
@@ -119,7 +114,7 @@ function BinaryParser(data, index, length) {
 			}
 			if(start < 0 || length <= 0)
 				return 0;
-			this.checkBuffer(start + length);
+			this.checkBuffer(-(-(start + length) >> 3));
 			for(var offsetLeft, offsetRight = start % 8, curByte = this.buffer.length - (start >> 3) - 1,
 				lastByte = this.buffer.length + (-(start + length) >> 3), diff = curByte - lastByte,
 				sum = ((this.buffer[ curByte ] >> offsetRight) & ((1 << (diff ? 8 - offsetRight : length)) - 1))
@@ -128,11 +123,11 @@ function BinaryParser(data, index, length) {
 			);
 			return sum;
 		},
-		hasNeededBits: function hasNeededBits(neededBits) {
-			return this.buffer.length >= -(-neededBits >> 3);
+		hasNeededBytes: function hasNeededBytes(neededBytes) {
+			return this.buffer.length >= neededBytes;
 		},
-		checkBuffer: function checkBuffer(neededBits) {
-			if(!this.hasNeededBits(neededBits))
+		checkBuffer: function checkBuffer(neededBytes) {
+			if(!this.hasNeededBytes(neededBytes))
 				throw new p.CheckBufferError("checkBuffer::missing bytes");
 		}
 	};

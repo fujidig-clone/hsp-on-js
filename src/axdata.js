@@ -87,7 +87,7 @@ AXData.prototype = {
 			if(type == Token.Type.CMPCMD) {
 				skip_offset = cs.readUShort();
 			}
-			var size = cs.offset / 16 - pos;
+			var size = cs.offset / 2 - pos;
 			while(true) {
 				var dinfoPos = dinfo.offset;
 				var ofs = dinfo.readUChar();
