@@ -1,12 +1,57 @@
-#module mod_human m_name
-#modinit str name
-	m_name = name
+#module mod_elem m_val, m_next
+#modinit int val
+	m_val = val
+	dimtype m_next, 5
 	return
-#defcfunc new_human str name, local instance
-	newmod instance, mod_human, name
+#defcfunc new_elem int val, local instance
+	newmod instance, mod_elem, val
 	return instance
-#defcfunc human_get_name modvar mod_human@
-	return m_name
+#defcfunc elem_get_val modvar mod_elem@
+	return m_val
+#defcfunc elem_get_next modvar mod_elem@
+	return m_next
+#modfunc elem_set_next var next_
+	m_next = next_
+	return
 #global
 
-mes human_get_name(new_human("Taro"))
+#module mod_list m_first, m_last
+#modinit
+	m_first = new_elem(0)
+	m_last = m_first
+	return
+#defcfunc new_list local instance
+	newmod instance, mod_list
+	return instance
+#defcfunc list_get_first modvar mod_list@
+	return m_first
+#defcfunc list_get_last modvar mod_list@
+	return m_last
+#modfunc list_push var elem
+	elem_set_next m_last, elem
+	m_last = elem
+	return
+#modfunc list_concat var other
+	elem_set_next m_last, elem_get_next(list_get_first(other))
+	m_last = list_get_last(other)
+	return
+#global
+
+l1 = new_list()
+l2 = new_list()
+
+list_push l1, new_elem(1)
+list_push l1, new_elem(2)
+list_push l1, new_elem(3)
+
+list_push l2, new_elem(5)
+list_push l2, new_elem(6)
+
+list_concat l1, l2
+
+e = elem_get_next(list_get_first(l1))
+while varuse(e)
+	mes elem_get_val(e)
+	e = elem_get_next(e)
+wend
+
