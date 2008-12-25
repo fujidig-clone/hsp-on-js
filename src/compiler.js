@@ -486,6 +486,9 @@ Compiler.prototype = {
 	そのためにパラメータが単一の変数の場合は変数を表すオブジェクトをスタックに積む。
 	でも、変数として受け取ることがないパラメータの場合、それは無駄である。
 	このパラメータを true にすれば値そのものを積む命令を生成する。
+	
+	戻り値: パラメータが単一の変数であり、
+	        変数を積む命令を生成したとき true 、そうでないとき false
 	*/
 	compileParameter: function compileParameter(sequence, notReceiveVar) {
 		var headPos = this.tokensPos;
@@ -521,7 +524,9 @@ Compiler.prototype = {
 				this.tokensPos ++;
 				break;
 			case Token.Type.STRUCT:
-				usedPushVar = this.compileStruct(sequence, notReceiveVar || !this.isOnlyVar(this.tokensPos, headPos));
+				var onlyVar = this.isOnlyVar(this.tokensPos, headPos);
+				var result = this.compileStruct(sequence, notReceiveVar || !onlyVar);
+				if(onlyVar) usedPushVar = result;
 				break;
 			case Token.Type.LABEL:
 				this.pushNewInsn(sequence, Instruction.Code.PUSH,
