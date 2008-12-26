@@ -37,7 +37,11 @@ Utils.objectExtend(IntValue.prototype, {
 		return new IntValue(this._value / rhsValue);
 	},
 	mod: function mod(rhs) {
-		return new IntValue(this._value % rhs.toIntValue()._value);
+		var rhsValue = rhs.toIntValue()._value;
+		if(rhsValue == 0) {
+			throw new HSPError(ErrorCode.DIVIDED_BY_ZERO);
+		}
+		return new IntValue(this._value % rhsValue);
 	},
 	and: function and(rhs) {
 		return new IntValue(this._value & rhs.toIntValue()._value);
