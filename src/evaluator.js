@@ -1,12 +1,10 @@
-function Evaluator(axdata, sequence) {
+function Evaluator(axdata, sequence, options) {
+	this.options = Utils.objectMerge(options, Evaluator.defaultOptions);
 	this.stack = [];
 	this.pc = 0;
 	this.sequence = sequence;
 	this.axdata = axdata;
-	this.variables = new Array(axdata.max_val);
-	for(var i = 0; i < axdata.max_val; i ++) {
-		this.variables[i] = new Variable;
-	}
+	this.variables = this.buildVariables();
 	this.loopStack = [];
 	this.frameStack = [];
 	this.args = null;
@@ -27,6 +25,10 @@ function Evaluator(axdata, sequence) {
 	this.literals = [];
 	this.userDefFuncs = [];
 }
+
+Evaluator.defaultOptions = {
+	errorAtUseOfUninitalizedVariable: false
+};
 
 function LoopData(cnt, end, pc) {
 	this.cnt = cnt;
@@ -83,6 +85,21 @@ Evaluator.prototype = {
 		} catch(e) {
 			this.disposeException(e);
 		}
+	},
+	buildVariables: function buildVariables() {
+		var axdata = this.axdata;
+		var varCount = axdata.max_val;
+		var variables = new Array(varCount);
+		for(var i = 0; i < varCount; i ++) {
+			variables[i] = new Variable;
+		}
+		if(this.options.errorAtUseOfUninitalizedVariable) {
+			var variableNames = axdata.variableNames;
+			for(var i = 0; i < varCount; i ++) {
+				variables[i].value = new UninitializedArray(variableNames[i]);
+			}
+		}
+		return variables;
 	},
 	disposeException: function disposeException(e) {
 		if(!(e instanceof HSPException)) {

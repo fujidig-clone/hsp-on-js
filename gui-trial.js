@@ -406,7 +406,7 @@ with(HSPonJS) {
 			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
 			msg += this.getBuiltinFuncName(insn)||'';
 			msg += "\n";
-			msg += '--\x3e '+(e.message||ErrorMessages[e.errcode]);
+			msg += '--\x3e '+e.getErrorMessage();
 			alert(msg);
 			this.quit();
 		},

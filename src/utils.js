@@ -10,6 +10,9 @@ var Utils = {
 		}
 		return dest;
 	},
+	objectMerge: function objectMerge(a, b) {
+		return Utils.objectExtend(Utils.objectExtend({}, a), b);
+	},
 	aryPopN: function aryPopN(ary, n) {
 		var result = ary.slice(ary.length - n);
 		ary.length -= n;

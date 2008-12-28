@@ -43,7 +43,11 @@ var ErrorCode = {
 	FUNCTION_SYNTAX:           41,
 	INTJUMP:                   42,
 	EXITRUN:                   43,
-	MAX:                       44
+	MAX:                       44,
+	
+	// 拡張エラー
+	EXERROR_START:           1024,
+	UNINITIALIZED_VARIABLE:  1025
 };
 
 var ErrorMessages = [
@@ -92,6 +96,21 @@ var ErrorMessages = [
 	"*"
 ];
 
+var ExErrorMessages = [
+	"",											// 1024
+	"未初期化の変数を参照しました"				// 1025
+];
+
+function getErrorMessage(errorCode) {
+	if(0 <= errorCode && errorCode < ErrorMessages.length) {
+		return ErrorMessages[errorCode];
+	}
+	if(ErrorCode.EXERROR_START <= errorCode && errorCode < ErrorCode.EXERROR_START + ExErrorMessages.length) {
+		return ExErrorMessages[errorCode - ErrorCode.EXERROR_START];
+	}
+	return undefined;
+}
+
 function HSPException() {}
 
 function StopException() {}
@@ -123,6 +142,10 @@ function HSPError(errcode, message) {
 	this.message = message;
 }
 HSPError.prototype = new HSPException;
+HSPError.prototype.getErrorMessage = function /*getErrorMessage*/() {
+	if(e.message != undefined) return this.message;
+	return getErrorMessage(this.errcode);
+};
 
 
 if(typeof HSPonJS != 'undefined') {
@@ -135,5 +158,6 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.FileReadException = FileReadException;
 	HSPonJS.VoidException = VoidException;
 	HSPonJS.HSPError = HSPError;
+	HSPonJS.getErrorMessage = getErrorMessage;
 }
 
