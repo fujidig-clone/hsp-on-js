@@ -93,7 +93,7 @@ Evaluator.prototype = {
 		for(var i = 0; i < varCount; i ++) {
 			variables[i] = new Variable;
 		}
-		if(this.options.errorAtUseOfUninitalizedVariable) {
+		if(this.options.errorAtUseOfUninitializedVariable) {
 			var variableNames = axdata.variableNames;
 			for(var i = 0; i < varCount; i ++) {
 				variables[i].value = new UninitializedArray(variableNames[i]);
