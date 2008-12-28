@@ -49,9 +49,7 @@ BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
 };
 
 Evaluator.prototype.onError = function onError(e) {
-	var insn = this.sequence[this.pc];
-	print('#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ' + (this.getBuiltinFuncName(insn)||''));
-	print('--> '+e.getErrorMessage());
+	print(this.getErrorOutput(e));
 };
 
 Evaluator.prototype.onEnd = function onEnd(e) {

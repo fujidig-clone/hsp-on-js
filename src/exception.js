@@ -143,7 +143,7 @@ function HSPError(errcode, message) {
 }
 HSPError.prototype = new HSPException;
 HSPError.prototype.getErrorMessage = function /*getErrorMessage*/() {
-	if(e.message != undefined) return this.message;
+	if(this.message != undefined) return this.message;
 	return getErrorMessage(this.errcode);
 };
 

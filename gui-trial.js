@@ -402,12 +402,7 @@ with(HSPonJS) {
 			throw e;
 		},
 		onError: function onError(e) {
-			var insn = this.sequence[this.pc];
-			var msg = '#Error '+e.errcode+' in line '+insn.lineNo+' ('+insn.fileName+') ';
-			msg += this.getBuiltinFuncName(insn)||'';
-			msg += "\n";
-			msg += '--\x3e '+e.getErrorMessage();
-			alert(msg);
+			alert(this.getErrorOutput(e));
 			this.quit();
 		},
 		onEnd: function onEnd(e) {

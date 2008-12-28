@@ -19,7 +19,7 @@ var Utils = {
 		return result;
 	},
 	strTimes: function strTimes(str, n) {
-		var result = ''
+		var result = '';
 		for(var i = 0; i < n; i ++) {
 			result += str;
 		}

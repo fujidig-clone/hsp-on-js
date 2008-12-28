@@ -982,6 +982,68 @@ Evaluator.prototype = {
 		}
 		return thismod;
 	},
+	getErrorOutput: function getErrorOutput(e) {
+		var insn = this.sequence[this.pc];
+		var lines = [];
+		lines.push('#Error '+e.errcode+': '+e.getErrorMessage());
+		var backTrace = this.getBackTrace();
+		var needToOmit = e.errcode == ErrorCode.STACK_OVERFLOW && backTrace.length >= 50;
+		for(var i = 0; i < backTrace.length; i ++) {
+			var fileName = backTrace[i][0];
+			var lineNo   = backTrace[i][1];
+			var funcName = backTrace[i][2];
+			var frame    = backTrace[i][3];
+			var location;
+			if(fileName != null && lineNo != null) {
+				location = fileName+':'+lineNo;
+			} else {
+				location = '(unknown location)';
+			}
+			if(funcName != null) {
+				funcName = "`" + funcName + "'";
+			} else if(!frame) {
+				funcName = '(top level)';
+			} else if(!frame.userDefFunc) {
+				funcName = '(a sub routine)';
+			}
+			lines.push((i==0?'     ':'from ')+location+': in '+funcName);
+			if(needToOmit && i == 7) {
+				var nextIndex = backTrace.length - 4;
+				lines.push(' ... '+(nextIndex - i - 1)+' levels...');
+				i = nextIndex - 1;
+			}
+		}
+		return lines.join("\n");
+	},
+	getBackTrace: function getBackTrace() {
+		var result = [];
+		var sequence = this.sequence;
+		var frameStack = this.frameStack;
+		var frameStackPos = frameStack.length;
+		var pc = this.pc;
+		var builtinFuncName = this.getBuiltinFuncName(sequence[pc]);
+		if(builtinFuncName != undefined) {
+			result.push([null, null, builtinFuncName+'@hsp', null]);
+		}
+		for(;;) {
+			var insn = sequence[pc];
+			var frame = frameStack[--frameStackPos];
+			var fileName = null;
+			var lineNo = null;
+			var funcName = null;
+			if(insn) {
+				fileName = insn.fileName;
+				lineNo = insn.lineNo;
+			}
+			if(frame && frame.userDefFunc) {
+				funcName = frame.userDefFunc.name;
+			}
+			result.push([fileName, lineNo, funcName, frame]);
+			if(!frame) break;
+			pc = frame.pc - 1;
+		}
+		return result;
+	},
 	getBuiltinFuncName: function getBuiltinFuncName(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
 		   insn.code != Instruction.Code.CALL_BUILTIN_FUNC) {
