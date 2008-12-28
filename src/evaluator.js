@@ -27,7 +27,7 @@ function Evaluator(axdata, sequence, options) {
 }
 
 Evaluator.defaultOptions = {
-	errorAtUseOfUninitalizedVariable: false
+	errorAtUseOfUninitializedVariable: false
 };
 
 function LoopData(cnt, end, pc) {
