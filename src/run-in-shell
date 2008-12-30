@@ -39,6 +39,7 @@ if package_path
   filenames = [package_path]
 else
   filenames = %w[
+    head-for-run-in-shell.js
     binary-parser.js
     cp932.js
     utils.js

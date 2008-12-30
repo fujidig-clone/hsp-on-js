@@ -51,8 +51,7 @@ function Event() {
 
 Evaluator.prototype = {
 	evaluate: function evaluate() {
-		this.mainLoop = eval('Object(function mainLoop(stack, literals, variables, userDefFuncs) {\n' +
-		                this.createMainLoop(this.literals, this.userDefFuncs) + '\n})');
+		this.mainLoop = this.createMainLoop();
 		try {
 			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
 		} catch(e) {
@@ -129,7 +128,16 @@ Evaluator.prototype = {
 	},
 	onStop: function onStop() {
 	},
-	createMainLoop: function createMainLoop(literals, userDefFuncs) {
+	createMainLoop: function createMainLoop() {
+		var src = '';
+		for(var prop in HSPonJS) {
+			src += 'var '+prop+' = HSPonJS.'+prop+';\n';
+		}
+		src += 'return function mainLoop(stack, literals, variables, userDefFuncs) {\n';
+		src += this.createMainLoopSrc(this.literals, this.userDefFuncs) + '\n};';
+		return Function(src)();
+	},
+	createMainLoopSrc: function createMainLoopSrc(literals, userDefFuncs) {
 		function push(line) {
 			lines.push(Utils.strTimes('\t', indent) + line);
 		}
