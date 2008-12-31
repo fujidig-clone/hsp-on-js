@@ -301,15 +301,16 @@ Compiler.prototype = {
 				throw this.error('モジュールが指定されていません', structToken);
 			}
 			var module = this.getUserDefFunc(prmInfo.subid);
-			var paramTypes;
+			var paramsInfo = null;
+			var argc;
 			if(module.constructor) {
-				paramTypes = this.compileUserDefFuncall0(sequence, module.constructor, false, false);
+				paramsInfo = this.compileUserDefFuncall0(sequence, module.constructor, false, false);
+				argc = paramsInfo[0].length;
 			} else {
-				var argc = this.compileParametersSub(sequence);
-				paramTypes = new Array(argc);
+				argc = this.compileParametersSub(sequence);
 			}
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
-				             [varData, module, paramTypes], token);
+				             [varData, module, paramsInfo, argc], token);
 			break;
 		case 0x14: // delmod
 			this.tokensPos ++;
@@ -696,29 +697,34 @@ Compiler.prototype = {
 	compileUserDefFuncall: function compileUserDefFuncall(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
-		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, true, true);
+		var paramsInfo = this.compileUserDefFuncall0(sequence, userDefFunc, true, true);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_FUNC,
-		                 [userDefFunc, paramTypes], token);
+		                 [userDefFunc, paramsInfo], token);
 	},
 	compileUserDefCommand: function compileUserDefCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
-		var paramTypes = this.compileUserDefFuncall0(sequence, userDefFunc, false, true);
+		var paramsInfo = this.compileUserDefFuncall0(sequence, userDefFunc, false, true);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_CMD,
-		                 [userDefFunc, paramTypes], token);
+		                 [userDefFunc, paramsInfo], token);
 	},
 	compileUserDefFuncall0: function compileUserDefFuncall0(sequence, userDefFunc, isCType, isHead) {
 		var argsCount = 0;
 		var paramTypes = [];
+		var paramVals = [];
 		function nextMPType() {
 			do {
 				var mptype = userDefFunc.paramTypes[argsCount++];
 			} while(mptype == MPType.LOCALVAR);
 			return mptype;
 		}
+		function push(type, val) {
+			paramTypes.push(type);
+			paramVals.push(val);
+		}
 		if(isHead && isCType) this.compileLeftParen(sequence);
 		if(isHead && this.ax.tokens[this.tokensPos].ex2) {
-			paramTypes.push(Compiler.ParamType.OMMITED);
+			push(Compiler.ParamType.OMMITED, null);
 			nextMPType();
 		}
 		while(true) {
@@ -727,7 +733,7 @@ Compiler.prototype = {
 			if(token.type == Token.Type.MARK) {
 				if(token.code == 63) { // '?'
 					this.tokensPos ++;
-					paramTypes.push(Compiler.ParamType.OMMITED);
+					push(Compiler.ParamType.OMMITED, null);
 					nextMPType();
 					continue;
 				}
@@ -739,19 +745,25 @@ Compiler.prototype = {
 			if(mptype == MPType.ARRAYVAR) {
 				if((token.type == Token.Type.VAR || token.type == Token.Type.STRUCT) &&
 			       this.isOnlyVar(this.tokensPos, this.tokensPos)) {
-					paramTypes.push(this.getVariableData(sequence));
+					push(Compiler.ParamType.VARIABLE, this.getVariableData(sequence));
 				} else {
 					this.compileParameter(sequence, false);
-					paramTypes.push(null);
+					push(Compiler.ParamType.VALUE, null);
 				}
 				continue;
 			}
 			var notReceiveVar = mptype != MPType.SINGLEVAR && mptype != MPType.MODULEVAR;
 			var usedPushVar = this.compileParameter(sequence, notReceiveVar);
-			paramTypes.push(usedPushVar ? Compiler.ParamType.VARIABLE : Compiler.ParamType.VALUE);
+			var literal = null;
+			var insn = sequence[sequence.length - 1];
+			if(insn.code == Instruction.Code.PUSH) {
+				literal = insn.opts[0];
+				-- sequence.length;
+			}
+			push(usedPushVar ? Compiler.ParamType.VARIABLE : Compiler.ParamType.VALUE, literal);
 		}
 		if(isCType) this.compileRightParen(sequence);
-		return paramTypes;
+		return [paramTypes, paramVals];
 	},
 	getUserDefFunc: function getUserDefFunc(finfoId) {
 		var func = this.userDefFuncs[finfoId];

@@ -337,12 +337,14 @@ Evaluator.prototype = {
 				push('array.dec(offset);');
 			}
 		}
-		function pushCallingUserdefFuncCode(userDefFunc, paramTypes, constructorThismodExpr) {
+		function pushCallingUserdefFuncCode(userDefFunc, paramsInfo, constructorThismodExpr) {
 			if(!userDefFuncs[userDefFunc.id]) {
 				userDefFuncs[userDefFunc.id] = userDefFunc;
 			}
+			var paramTypes = paramsInfo[0];
+			var paramVals = paramsInfo[1];
 			var argc = paramTypes.length; // 実引数の数
-			var stackArgsMax = argc; // 省略したものを除く実引数の数
+			var stackArgsMax = argc; // スタックに存在する実引数の数 (省略された引数やリテラルのみの引数はスタックを使わない）
 			var stackArgsCount = 0;
 			var origArgsCount = 0;
 			var mptypes = userDefFunc.paramTypes;
@@ -351,17 +353,17 @@ Evaluator.prototype = {
 			for(var i = 0; i < argMax; i ++) {
 				var mptype = mptypes[i];
 				var paramType = paramTypes[recvArgMax] || Compiler.ParamType.OMMITED;
+				var paramVal = paramVals[recvArgMax];
 				if(mptype == MPType.LOCALVAR || mptype == MPType.IMODULEVAR) continue;
 				if(mptype == MPType.ARRAYVAR) {
 					if(recvArgMax < paramTypes.length) {
-						if(!paramType) {
+						if(paramType != Compiler.ParamType.VARIABLE) {
 							push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
 							return;
 						}
 						stackArgsMax --;
 					}
-				}
-				if(paramType == Compiler.ParamType.OMMITED) {
+				} else if(paramType == Compiler.ParamType.OMMITED) {
 					if(mptype != MPType.INUM) {
 						push('throw new HSPError(ErrorCode.NO_DEFAULT);');
 						return;
@@ -369,6 +371,8 @@ Evaluator.prototype = {
 					if(recvArgMax < paramTypes.length) {
 						stackArgsMax --;
 					}
+				} else if(paramVal) {
+					stackArgsMax --;
 				}
 				recvArgMax ++;
 			}
@@ -381,14 +385,32 @@ Evaluator.prototype = {
 			for(var i = 0; i < argMax; i ++) {
 				var mptype = mptypes[i];
 				var paramType = paramTypes[origArgsCount] || Compiler.ParamType.OMMITED;
+				var paramVal = paramVals[origArgsCount];
 				var argExpr = 'stack[len - '+(stackArgsMax-stackArgsCount)+']';
+				if(paramVal && mptype != MPType.ARRAYVAR) {
+					argExpr = getLiteralExpr(paramVal);
+				}
 				switch(mptype) {
 				case MPType.DNUM:
-					push('args['+i+'] = this.scanArg('+argExpr+', "n").toDoubleValue();');
-					stackArgsCount ++;
+					if(paramVal) {
+						if(paramVal.getType() == VarType.INT || paramVal.getType() == VarType.DOUBLE) {
+							push('args['+i+'] = '+getLiteralExpr(paramVal.toDoubleValue())+';');
+						} else {
+							push('throw this.typeMismatchErrorIntOrDouble('+paramVal.getType()+');');
+						}
+					} else {
+						push('args['+i+'] = this.scanArg('+argExpr+', "n").toDoubleValue();');
+						stackArgsCount ++;
+					}
 					break;
 				case MPType.INUM:
-					if(paramType == Compiler.ParamType.OMMITED) {
+					if(paramVal) {
+						if(paramVal.getType() == VarType.INT || paramVal.getType() == VarType.DOUBLE) {
+							push('args['+i+'] = '+getLiteralExpr(paramVal.toIntValue())+';');
+						} else {
+							push('throw this.typeMismatchErrorIntOrDouble('+paramVal.getType()+');');
+						}
+					} else if(paramType == Compiler.ParamType.OMMITED) {
 						push('args['+i+'] = IntValue.of(0);');
 					} else {
 						push('args['+i+'] = this.scanArg('+argExpr+', "n").toIntValue();')
@@ -399,24 +421,9 @@ Evaluator.prototype = {
 					push('args['+i+'] = new Variable;');
 					continue;
 				case MPType.ARRAYVAR:
-					push('args['+i+'] = '+getVariableExpr(paramType)+';');
+					push('args['+i+'] = '+getVariableExpr(paramVal)+';');
 					break;
 				case MPType.SINGLEVAR:
-					if(paramType == Compiler.ParamType.VARIABLE) {
-						push('var arg = '+argExpr+';');
-						push('arg.expand();');
-						push('args['+i+'] = arg;');
-					} else {
-						push('var arg = new VariableAgent0D(new Variable);');
-						push('arg.assign('+argExpr+')');
-						push('args['+i+'] = arg;');
-					}
-					stackArgsCount ++;
-					break;
-				case MPType.LOCALSTRING:
-					push('args['+i+'] = this.scanArg('+argExpr+', "s").toStrValue();');
-					stackArgsCount ++;
-					break;
 				case MPType.MODULEVAR:
 					if(paramType == Compiler.ParamType.VARIABLE) {
 						push('var arg = '+argExpr+';');
@@ -424,10 +431,26 @@ Evaluator.prototype = {
 						push('args['+i+'] = arg;');
 					} else {
 						push('var arg = new VariableAgent0D(new Variable);');
-						push('arg.assign('+argExpr+')');
+						if(paramVal) {
+							push('arg.assign('+getLiteralExpr(paramVal)+')');
+						} else {
+							push('arg.assign('+argExpr+')');
+						}
 						push('args['+i+'] = arg;');
 					}
-					stackArgsCount ++;
+					if(!paramVal) stackArgsCount ++;
+					break;
+				case MPType.LOCALSTRING:
+					if(paramVal) {
+						if(paramVal.getType() == VarType.STR) {
+							push('args['+i+'] = '+getLiteralExpr(paramVal.toStrValue())+';');
+						} else {
+							push('throw this.typeMismatchError('+paramVal.getType()+','+VarType.STR+');');
+						}
+					} else {
+						push('args['+i+'] = this.scanArg('+argExpr+', "s").toStrValue();');
+						stackArgsCount ++;
+					}
 					break;
 				case MPType.IMODULEVAR:
 					push('args['+i+'] = '+constructorThismodExpr+';');
@@ -466,6 +489,10 @@ Evaluator.prototype = {
 				throw new Error('must not happen');
 			}
 		}
+		function getLiteralExpr(literal) {
+			literals.push(literal);
+			return 'literals['+(literals.length - 1)+']';
+		}
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
@@ -480,8 +507,7 @@ Evaluator.prototype = {
 			case Instruction.Code.NOP:
 				break;
 			case Instruction.Code.PUSH:
-				literals.push(insn.opts[0]);
-				push('stack.push(literals['+(literals.length - 1)+']);');
+				push('stack.push('+getLiteralExpr(insn.opts[0])+');');
 				break;
 			case Instruction.Code.PUSH_DEFAULT:
 				push('stack.push(void 0);');
@@ -673,8 +699,8 @@ Evaluator.prototype = {
 			case Instruction.Code.CALL_USERDEF_CMD:
 			case Instruction.Code.CALL_USERDEF_FUNC:
 				var userDefFunc = insn.opts[0];
-				var paramTypes = insn.opts[1];
-				pushCallingUserdefFuncCode(userDefFunc, paramTypes);
+				var paramsInfo = insn.opts[1];
+				pushCallingUserdefFuncCode(userDefFunc, paramsInfo);
 				push('continue;');
 				break;
 			case Instruction.Code.GETARG:
@@ -710,8 +736,8 @@ Evaluator.prototype = {
 			case Instruction.Code.NEWMOD:
 				var varData = insn.opts[0];
 				var module = insn.opts[1];
-				var paramTypes = insn.opts[2];
-				var argc = paramTypes.length;
+				var paramsInfo = insn.opts[2];
+				var argc = insn.opts[3];
 				if(!userDefFuncs[module.id]) {
 					userDefFuncs[module.id] = module;
 				}
@@ -728,7 +754,7 @@ Evaluator.prototype = {
 				push('var array = variable.value;');
 				push('var offset = array.newmod('+moduleExpr+');');
 				if(constructor) {
-					pushCallingUserdefFuncCode(constructor, paramTypes, 'new VariableAgent1D(variable, offset)');
+					pushCallingUserdefFuncCode(constructor, paramsInfo, 'new VariableAgent1D(variable, offset)');
 					push('continue;');
 				}
 				break;
@@ -1120,22 +1146,22 @@ Evaluator.prototype = {
 		switch(c) {
 		case 'i':
 			if(arg.getType() != VarType.INT) {
-				throw new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[arg.getType()]+' 型ではなく、int 型の値を指定しなければいけません');
+				throw this.typeMismatchError(arg, VarType.INT);
 			}
 			break;
 		case 'd':
 			if(arg.getType() != VarType.DOUBLE) {
-				throw new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[arg.getType()]+' 型ではなく、double 型の値を指定しなければいけません');
+				throw this.typeMismatchError(arg, VarType.DOUBLE);
 			}
 			break;
 		case 'n':
 			if(arg.getType() != VarType.INT && arg.getType() != VarType.DOUBLE) {
-				throw new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[arg.getType()]+' 型ではなく、int 型か double 型の値を指定しなければいけません');
+				throw this.typeMismatchErrorIntOrDouble(arg);
 			}
 			break;
 		case 's':
 			if(arg.getType() != VarType.STR) {
-				throw new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[arg.getType()]+' 型ではなく、str 型の値を指定しなければいけません');
+				throw this.typeMismatchError(arg, VarType.STR);
 			}
 			break;
 		case 'l':
@@ -1167,6 +1193,15 @@ Evaluator.prototype = {
 			break;
 		}
 		return arg;
+	},
+	typeMismatchError: function typeMismatchError(actualType, expectedType) {
+		return this.typeMismatchError0(actualType, VarTypeNames[expectedType]+' 型');
+	},
+	typeMismatchErrorIntOrDouble: function typeMismatchErrorIntOrDouble(actualType) {
+		return this.typeMismatchError0(actualType, 'int 型か double 型');
+	},
+	typeMismatchError0: function typeMismatchError0(actualType, expected) {
+		return new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[actualType]+' 型ではなく、'+expected+'の値を指定しなければいけません');
 	}
 };
 
