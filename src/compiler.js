@@ -19,12 +19,12 @@ CompileError.prototype.name = 'CompileError';
 
 
 Compiler.ProxyVarType = {
-		STATIC: 0,
-		THISMOD: 1,
-		MEMBER: 2,
-		ARG_VAR: 3,
-		ARG_ARRAY: 4,
-		ARG_LOCAL: 5
+	STATIC: 0,
+	THISMOD: 1,
+	MEMBER: 2,
+	ARG_VAR: 3,
+	ARG_ARRAY: 4,
+	ARG_LOCAL: 5
 };
 
 Compiler.ParamType = {
@@ -228,7 +228,7 @@ Compiler.prototype = {
 				throw this.error();
 			}
 			var argc = this.compileParameters(sequence);
-			if(argc > 0) throw new this.error('break の引数が多すぎます', token);
+			if(argc > 0) throw this.error('break の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.BREAK,
 			                 [this.labels[labelToken.code]], token);
 			break;
@@ -246,14 +246,14 @@ Compiler.prototype = {
 			} else {
 				argc = this.compileParameters(sequence);
 			}
-			if(argc > 2) throw new this.error('repeat の引数が多すぎます', token);
+			if(argc > 2) throw this.error('repeat の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.REPEAT,
 			                 [this.labels[labelToken.code], argc], token);
 			break;
 		case 0x05: // loop
 			this.tokensPos ++;
 			var argc = this.compileParameters(sequence);
-			if(argc > 0) throw new this.error('loop の引数が多すぎます', token);
+			if(argc > 0) throw this.error('loop の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.LOOP, [], token);
 			break;
 		case 0x06: // continue
@@ -263,7 +263,7 @@ Compiler.prototype = {
 				throw this.error();
 			}
 			var argc = this.compileParameters(sequence);
-			if(argc > 1) throw new this.error('continue の引数が多すぎます', token);
+			if(argc > 1) throw this.error('continue の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.CONTINUE,
 			                 [this.labels[labelToken.code], argc], token);
 			break;
@@ -274,7 +274,7 @@ Compiler.prototype = {
 				throw this.error();
 			}
 			var argc = this.compileParameters(sequence);
-			if(argc > 0) throw new this.error();
+			if(argc > 0) throw this.error();
 			this.pushNewInsn(sequence, Instruction.Code.FOREACH,
 			                 [this.labels[labelToken.code]], token);
 			break;
@@ -285,7 +285,7 @@ Compiler.prototype = {
 				throw this.error();
 			}
 			var argc = this.compileParameters(sequence);
-			if(argc != 1) throw new this.error('foreach の引数の数が違います', token);
+			if(argc != 1) throw this.error('foreach の引数の数が違います', token);
 			this.pushNewInsn(sequence, Instruction.Code.EACHCHK,
 			                 [this.labels[labelToken.code]], token);
 			break;

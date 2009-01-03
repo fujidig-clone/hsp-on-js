@@ -520,7 +520,7 @@ Evaluator.prototype = {
 			case Instruction.Code.GET_VAR:
 				var varId = insn.opts[0];
 				var indicesCount = insn.opts[1];
-				push('var array = this.variables['+varId+'].value;');
+				push('var array = variables['+varId+'].value;');
 				pushGettingArrayValueCode('array', indicesCount);
 				break;
 			case Instruction.Code.POP:
