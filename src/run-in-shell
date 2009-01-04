@@ -70,6 +70,7 @@ else
     struct-array.js
     variable.js
     variable-agent.js
+    param-info.js
     compiler.js
     evaluator.js
   ]
