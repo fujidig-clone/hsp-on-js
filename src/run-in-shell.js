@@ -1,8 +1,16 @@
+var main;
+(function() {
 var nameSpace = {};
 with(nameSpace) {
 
-var main = function main() {
-	var axdata = new AXData(axbinary);
+main = function main() {
+	var options = runInShellOptions;
+	var axBinary = options.axBinary;
+	var showSequence = options.showSequence;
+	var showMainLoop = options.showMainLoop;
+	var compileOnly = options.compileOnly;
+	
+	var axdata = new AXData(axBinary);
 	var compiler = new Compiler(axdata);
 	try {
 		var sequence = compiler.compile();
@@ -31,6 +39,10 @@ var main = function main() {
 	}
 
 	var evaluator = new Evaluator(axdata, sequence);
+	if(showMainLoop) {
+		print(evaluator.createMainLoopSrc());
+	}
+	if(compileOnly) return null;
 	evaluator.evaluate();
 	return evaluator;
 };
@@ -57,6 +69,7 @@ Evaluator.prototype.onEnd = function onEnd(e) {
 };
 
 }
+})();
 
 try {
 	main();

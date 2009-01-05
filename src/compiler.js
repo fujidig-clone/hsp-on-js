@@ -284,13 +284,13 @@ Compiler.prototype = {
 			var paramInfos = null;
 			var argc;
 			if(module.constructor) {
-				paramInfos = this.compileNodes(sequence, this.getUserDefFuncallParamNodes(sequence, module.constructor, false, false));
-				argc = paramsInfos.length;
+				paramInfos = this.compileNodes(sequence, this.getUserDefFuncallParamNodes(module.constructor, false, false));
+				argc = paramInfos.length;
 			} else {
 				argc = this.getParametersNodesSub().length;
 			}
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
-				             [varData, module, paramsInfo, argc], token);
+				             [varParamInfo, module, paramInfos, argc], token);
 			break;
 		case 0x14: // delmod
 			this.tokensPos ++;

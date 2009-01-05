@@ -134,10 +134,10 @@ Evaluator.prototype = {
 			src += 'var '+prop+' = HSPonJS.'+prop+';\n';
 		}
 		src += 'return function mainLoop(stack, literals, variables, userDefFuncs) {\n';
-		src += this.createMainLoopSrc(this.literals, this.userDefFuncs) + '\n};';
+		src += this.createMainLoopSrc() + '\n};';
 		return Function(src)();
 	},
-	createMainLoopSrc: function createMainLoopSrc(literals, userDefFuncs) {
+	createMainLoopSrc: function createMainLoopSrc() {
 		function push(line) {
 			lines.push(Utils.strTimes('\t', indent) + line);
 		}
@@ -493,6 +493,8 @@ Evaluator.prototype = {
 			literals.push(literal);
 			return 'literals['+(literals.length - 1)+']';
 		}
+		var literals = this.literals;
+		var userDefFuncs = this.userDefFuncs;
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
