@@ -461,7 +461,7 @@ Compiler.prototype = {
 			}
 		}
 		traverse(rootWrapper, 0);
-		return new ParamInfo(root, stackSize);
+		return new ParamInfo(rootWrapper[0], stackSize);
 	},
 	getParametersNodes: function getParametersNodes(cannotBeOmitted, notReceiveVar, nodes) {
 		return this.getParametersNodes0(cannotBeOmitted, notReceiveVar, nodes, true);
