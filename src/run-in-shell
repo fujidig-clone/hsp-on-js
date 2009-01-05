@@ -4,6 +4,8 @@ require 'optparse'
 use_repl = false
 package_path = nil
 show_sequence = false
+show_main_loop = false
+compile_only = false
 js_type = 'spider-monkey'
 js = nil
 
@@ -11,6 +13,8 @@ opt = OptionParser.new
 opt.on('--repl') {|v| use_repl = v}
 opt.on('--package=PATH') {|v| package_path = v }
 opt.on('--[no-]show-sequence') {|v| show_sequence = v }
+opt.on('--[no-]show-main-loop') {|v| show_main_loop = v }
+opt.on('--[no-]compile-only') {|v| compile_only = v }
 opt.on('--js=COMMAND') {|v| js = v }
 opt.on('--v8') {|v| js ||= js_type = 'v8' }
 opt.on('--rhino') {|v| js ||= js_type = 'rhino' }
@@ -31,8 +35,12 @@ dump = open('t.ax','rb') do |f|
 end
 
 open('t.ax.js', 'wb') do |f|
-  f.puts "var axbinary = [\n#{dump}\n].join('');"
-  f.puts "var showSequence = #{show_sequence};"
+  f.puts "var runInShellOptions = {"
+  f.puts "axBinary: [\n#{dump}\n].join(''),"
+  f.puts "showSequence: #{show_sequence},"
+  f.puts "showMainLoop: #{show_main_loop},"
+  f.puts "compileOnly: #{compile_only}"
+  f.puts "};"
 end
 
 if package_path
