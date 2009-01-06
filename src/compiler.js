@@ -135,35 +135,37 @@ Compiler.prototype = {
 	},
 	compileAssignment: function compileAssignment(sequence) {
 		var varToken = this.ax.tokens[this.tokensPos];
-		var varParamInfo = this.compileNode(sequence, this.getVarNode(true, false));
+		var varData = this.getVariableData(true);
+		++ this.tokensPos;
+		var indexParamInfos = this.compileNodes(sequence, this.getVariableSubscriptNodes());
 		var token = this.ax.tokens[this.tokensPos++];
 		if(!(token && token.type == Token.Type.MARK)) {
 			throw this.error();
 		}
 		if(this.ax.tokens[this.tokensPos].ex1) {
 			if(token.val == 0) { // インクリメント
-				this.pushNewInsn(sequence, Instruction.Code.INC, [varParamInfo], token);
+				this.pushNewInsn(sequence, Instruction.Code.INC, [varData, indexParamInfos], token);
 				return;
 			}
 			if(token.val == 1) { // デクリメント
-				this.pushNewInsn(sequence, Instruction.Code.DEC, [varParamInfo], token);
+				this.pushNewInsn(sequence, Instruction.Code.DEC, [varData, indexParamInfos], token);
 				return;
 			}
 		}
 		if(token.val != 8) { // CALCCODE_EQ
 			// 複合代入
-			var paramInfos = this.compileParameters(sequence, true, true);
-			if(paramInfos.length != 1) {
+			var rhsParamInfos = this.compileParameters(sequence, true, true);
+			if(rhsParamInfos.length != 1) {
 				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
-			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN, [token.val, varParamInfo, paramInfos[0]], token);
+			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN, [token.val, varData, indexParamInfos, rhsParamInfos[0]], token);
 			return;
 		}
-		var paramInfos = this.compileParameters(sequence, true, true);
-		if(paramInfos.length == 0) {
+		var rhsParamInfos = this.compileParameters(sequence, true, true);
+		if(rhsParamInfos.length == 0) {
 			throw this.error("代入のパラメータの数が間違っています。", token);
 		}
-		this.pushNewInsn(sequence, Instruction.Code.ASSIGN, [varParamInfo, paramInfos], token);
+		this.pushNewInsn(sequence, Instruction.Code.ASSIGN, [varData, indexParamInfos, rhsParamInfos], token);
 	},
 	compileProgramCommand: function compileProgramCommand(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
@@ -221,13 +223,7 @@ Compiler.prototype = {
 			if(labelToken.type != Token.Type.LABEL) {
 				throw this.error();
 			}
-			var paramInfos = [];
-			if(this.ax.tokens[this.tokensPos].ex2) {
-				paramInfos.push(new ParamInfo(new LiteralNode(new IntValue(-1))));
-				this.compileParametersSub(sequence, false, false, paramInfos);
-			} else {
-				this.compileParameters(sequence, false, false, paramInfos);
-			}
+			var paramInfos = this.compileParameters(sequence, false, false, paramInfos);
 			if(paramInfos.length > 2) throw this.error('repeat の引数が多すぎます', token);
 			this.pushNewInsn(sequence, Instruction.Code.REPEAT,
 			                 [this.labels[labelToken.code], paramInfos], token);
@@ -291,12 +287,6 @@ Compiler.prototype = {
 			}
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
 				             [varParamInfo, module, paramInfos, argc], token);
-			break;
-		case 0x14: // delmod
-			this.tokensPos ++;
-			var paramInfos = this.compileParameters(sequence);
-			if(paramInfos.length != 1) throw this.error('delmod の引数の数が違います', token);
-			this.pushNewInsn(sequence, Instruction.Code.DELMOD, [paramInfos[0]], token);
 			break;
 		case 0x18: // exgoto
 			this.tokensPos ++;
@@ -432,6 +422,8 @@ Compiler.prototype = {
 					                 node.token);
 				}
 				break;
+			case NodeType.ARG:
+				break;
 			case NodeType.LITERAL:
 				break;
 			case NodeType.DEFAULT:
@@ -451,6 +443,10 @@ Compiler.prototype = {
 			case NodeType.BUILTIN_FUNCALL:
 				parent[propname] = new GetStackNode(stackSize++, node);
 				var paramInfos = self.compileNodes(sequence, node.paramNodes);
+				if(node.groupId == Token.Type.SYSVAR && node.subId == 0x04) {
+					self.pushNewInsn(sequence, Instruction.Code.CNT, [], node.token);
+					break;
+				}
 				self.pushNewInsn(sequence,
 				                 Instruction.Code.CALL_BUILTIN_FUNC,
 				                 [node.groupId, node.subId, paramInfos],
@@ -660,6 +656,9 @@ Compiler.prototype = {
 		var token = this.ax.tokens[this.tokensPos];
 		var varData = this.getVariableData(mustBeVar);
 		++ this.tokensPos;
+		if(varData.proxyVarType == ProxyVarType.ARG_NOTVAR) {
+			return new ArgNode(varData.id);
+		}
 		var indexNodes = this.getVariableSubscriptNodes();
 		return new VarNode(varData, indexNodes, onlyValue, token);
 	},
@@ -670,17 +669,6 @@ Compiler.prototype = {
 		} else {
 			return this.compileSysvar();
 		}
-	},
-	compileStruct: function compileStruct(sequence, useGetVar) {
-		var token = this.ax.tokens[this.tokensPos];
-		var prmInfo = this.ax.prmsInfo[token.code];
-		var usedPushVar = this.compileProxyVariable(sequence, useGetVar);
-		if(usedPushVar == null) {
-			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
-			this.pushNewInsn(sequence, Instruction.Code.GETARG,
-				             [token.code - funcInfo.prmindex], token);
-		}
-		return usedPushVar;
 	},
 	getSysvarCallNode: function getSysvarCallNode() {
 		var token = this.ax.tokens[this.tokensPos++];
@@ -834,6 +822,9 @@ Compiler.prototype = {
 			}
 			return ProxyVarType.ARG_VAR;
 		default:
+			if(this.isLeftParenToken(this.ax.tokens[this.tokensPos + 1])) {
+				throw this.error('変数でないエイリアスに添字を指定しています');
+			}
 			return ProxyVarType.ARG_NOTVAR;
 		}
 	},

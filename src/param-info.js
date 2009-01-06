@@ -15,6 +15,7 @@ Utils.objectExtend(ParamInfo.prototype, {
 function Node() {}
 Utils.objectExtend(Node.prototype, {
 	isVarNode:     function () { return false; },
+	isArgNode:     function () { return false; },
 	isLiteralNode: function () { return false; },
 	isDefaultNode: function () { return false; },
 	isOperateNode: function () { return false; },
@@ -26,12 +27,13 @@ Utils.objectExtend(Node.prototype, {
 
 var NodeType = {
 	VAR:     1,
-	LITERAL: 2,
-	DEFAULT: 3,
-	OPERATE: 4,
-	USERDEF_FUNCALL: 5,
-	BUILTIN_FUNCALL: 6,
-	GET_STACK: 7
+	ARG:     2,
+	LITERAL: 3,
+	DEFAULT: 4,
+	OPERATE: 5,
+	USERDEF_FUNCALL: 6,
+	BUILTIN_FUNCALL: 7,
+	GET_STACK: 8
 };
 
 function VarNode(varData, indexNodes, onlyValue, token) {
@@ -48,6 +50,21 @@ Utils.objectExtend(VarNode.prototype, {
 		return '<VarNode:'+this.varData+',['+this.indexNodes+']'+
 		       (!this.onlyValue?',var':'')+
 		       (this.ignoreIndices?'ignore idicies':'')+'>';
+	},
+	getValueType: function getValueType() {
+		return 0;
+	}
+});
+
+function ArgNode(id) {
+	this.id = id;
+}
+ArgNode.prototype = new Node;
+Utils.objectExtend(ArgNode.prototype, {
+	nodeType: NodeType.ARG,
+	isArgNode: function () { return true; },
+	toString: function toString() {
+		return '<ArgNode:'+this.id+'>';
 	},
 	getValueType: function getValueType() {
 		return 0;
@@ -96,10 +113,10 @@ Utils.objectExtend(OperateNode.prototype, {
 		return '<OperateNode:'+this.calcCode+' '+this.lhsNode+' '+this.rhsNode+'>';
 	},
 	getValueType: function getValueType() {
-		if(8 <= this.calcCode && this.calcCode <= 13) {
+		if(isCompareCalcCode(this.calcCode)) {
 			return VarType.INT;
 		}
-		return lhsNode.getValueType();
+		return this.lhsNode.getValueType();
 	}
 });
 
@@ -168,6 +185,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Node = Node;
 	HSPonJS.NodeType = NodeType;
 	HSPonJS.VarNode = VarNode;
+	HSPonJS.ArgNode = ArgNode;
 	HSPonJS.LiteralNode = LiteralNode;
 	HSPonJS.DefaultNode = DefaultNode;
 	HSPonJS.OperateNode = OperateNode;

@@ -60,6 +60,13 @@ BuiltinFuncs[Token.Type.PROGCMD] = {
 		this.scanArgs(arguments, '');
 		throw new StopException;
 	},
+	0x14: function delmod(v) {
+		this.scanArgs(arguments, 'v');
+		if(v.getType() != VarType.STRUCT) {
+		    throw new HSPError(ErrorCode.TYPE_MISMATCH);
+		}
+		v.assign(StructValue.EMPTY);
+	},
 	0x16: function mref(v, id) {
 		this.scanArgs(arguments, 'aN');
 		id = id ? id.toIntValue()._value : 0;
