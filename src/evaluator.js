@@ -451,7 +451,7 @@ Evaluator.prototype = {
 			if(node.isLiteralNode() && node.val.getType() == VarType.LABEL) {
 				return '' + node.val.pos;
 			}
-			return 'this.scanArg('+getParamExpr(paramInfo)+', "l").toValue()._value';
+			return 'this.scanArg('+getParamExpr(paramInfo)+', "l").toValue().pos';
 		}
 		function pushStackPopCode(size) {
 			if(size == 0) {
