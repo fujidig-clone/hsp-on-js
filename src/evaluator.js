@@ -152,7 +152,9 @@ Evaluator.prototype = {
 			push('this.frameStack.push(new Frame(this.pc + 1, null, this.args));');
 		}
 		function pushGettingArrayValueCode(varData, indexParamInfos) {
-			var result = getArrayAndOffsetExpr(varData, indexParamInfos);
+			var result = paramInfoGetExprBlock(indexParamInfos, function() {
+				getArrayAndOffsetExpr(varData, indexParamInfos);
+			});
 			var arrayExpr = result[0];
 			var offsetExpr = result[1];
 			push('stack.push('+arrayExpr+'.at('+offsetExpr+'));');
@@ -248,6 +250,7 @@ Evaluator.prototype = {
 				push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 				push('    }');
 				push('}');
+				push('variable.value.expand1D(offset);');
 				push('variable.value.assign(offset, rhs);');
 			} else {
 				push1DMultipleAssignCode(rhsParamInfos);
@@ -282,14 +285,90 @@ Evaluator.prototype = {
 				push('array.assign(offset + '+i+', rhs);');
 			}
 		}
+		function pushCompoundAssignCode0(calcCode, varData, indexParamInfos, rhsParamInfo) {
+			if(isVariableAgentVarData(varData)) {
+				push('var agent = '+getVariableAgentExpr(varData)+';');
+				push('agent.assign(agent.'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+				return;
+			}
+			if(!isCompareCalcCode(calcCode)) {
+				push('var array = '+getVariableExpr(varData)+'.value;');
+				if(indexParamInfos.length == 0) {
+					push('array.assign(0, array.at(0).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+				} else if(indexParamInfos.length == 1) {
+					push('var offset = '+getStrictIntParamExpr(indexParamInfos[0])+';');
+					push('array.expand1D(offset);');
+					push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+				} else {
+					pushGettingIndicesCode(indexParamInfos);
+					push('array.expand(indices);');
+					push('var offset = array.getOffset(indices);');
+					push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+				}
+				return;
+			} 
+			push('var variable = '+getVariableExpr(varData)+';');
+			push('var array = variable.value;');
+			if(indexParamInfos.length == 0) {
+				push('if(array.getType() != '+VarType.INT+') {');
+				push('    variable.reset('+VarType.INT+');');
+				push('}');
+				push('array.assign(0, array.at(0).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+			} else if(indexParamInfos.length == 1) {
+				push('var offset = '+getStrictIntParamExpr(indexParamInfos[0])+';');
+				push('if(array.getType() != '+VarType.INT+') {');
+				push('    if(offset == 0) {');
+				push('        variable.reset('+VarType.INT+');');
+				push('        array = variable.value;');
+				push('    } else {');
+				push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+				push('    }');
+				push('}');
+				push('array.expand1D(offset);');
+				push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+			} else {
+				pushGettingIndicesCode(indexParamInfos);
+				push('array.expand(indices);');
+				push('var offset = array.getOffset(indices);');
+				push('if(array.getType() != '+VarType.INT+') {');
+				push('    if(offset == 0) {');
+				push('        variable.reset('+VarType.INT+');');
+				push('        array = variable.value;');
+				push('        array.expand(indices);');
+				push('    } else {');
+				push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+				push('    }');
+				push('}');
+				push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
+			}
+		}
 		function pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo) {
-			// TODO
+			paramInfoGetExprBlock(indexParamInfos, function() {
+				pushCompoundAssignCode0(calcCode, varData, indexParamInfos, rhsParamInfo);
+			});
 		}
 		function pushIncDecCode(methodName, varData, indexParamInfos) {
-			var result = getArrayAndOffsetExpr(varData, indexParamInfos);
-			var arrayExpr = result[0];
-			var offsetExpr = result[1];
-			push(arrayExpr+'.'+methodName+'('+offsetExpr+')');
+			if(isVariableAgentVarData(varData)) {
+				push('var agent = '+getVariableAgentExpr(varData)+';');
+				push('agent.expand();');
+				push('agent.'+methodName+'();');
+				return;
+			}
+			paramInfoGetExprBlock(indexParamInfos, function() {
+				push('var array = '+getVariableExpr(varData)+'.value;');
+				if(indexParamInfos.length == 0) {
+					push('array.'+methodName+'(0);');
+				} else if(indexParamInfos.length == 1) {
+					push('var offset = '+getStrictIntParamExpr(indexParamInfos[0])+';');
+					push('array.expand1D(offset);');
+					push('array.'+methodName+'(offset);');
+				} else {
+					pushGettingIndicesCode(indexParamInfos);
+					push('array.expand(indices);');
+					push('var offset = array.getOffset(indices);');
+					push('array.'+methodName+'(offset);');
+				}
+			});
 		}
 		function pushIncCode(varData, indexParamInfos) {
 			pushIncDecCode('inc', varData, indexParamInfos);
@@ -345,25 +424,23 @@ Evaluator.prototype = {
 			}
 			var arrayExpr = getVariableExpr(varData)+'.value';
 			var offsetExpr = 'offset';
-			paramInfoGetExprBlock(indexParamInfos, function() {
-				if(indexParamInfos.length == 0) {
-					offsetExpr = '0';
-				} else if(indexParamInfos.length == 1) {
-					var paramInfo = indexParamInfos[0];
-					push('var array = '+arrayExpr+';');
-					arrayExpr = 'array';
-					push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
-					push('if(!(0 <= offset && offset < array.getL0())) {');
-					push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-					push('}');
-				} else {
-					push('var array = '+arrayExpr+';');
-					arrayExpr = 'array';
-					pushGettingIndicesCode(indexNodes);
-					push('var offset = array.getOffset(indices);');
-					push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-				}
-			});
+			if(indexParamInfos.length == 0) {
+				offsetExpr = '0';
+			} else if(indexParamInfos.length == 1) {
+				var paramInfo = indexParamInfos[0];
+				push('var array = '+arrayExpr+';');
+				arrayExpr = 'array';
+				push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
+				push('if(!(0 <= offset && offset < array.getL0())) {');
+				push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+				push('}');
+			} else {
+				push('var array = '+arrayExpr+';');
+				arrayExpr = 'array';
+				pushGettingIndicesCode(indexNodes);
+				push('var offset = array.getOffset(indices);');
+				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+			}
 			return [arrayExpr, offsetExpr];
 		}
 		function getLiteralExpr(literal) {
@@ -470,9 +547,10 @@ Evaluator.prototype = {
 				sum = 0;
 			}
 			stackPos = sum;
-			callback();
+			var result = callback();
 			useStackPop = null;
 			pushStackPopCode(sum);
+			return result;
 		}
 		function pushStackPopCode(size) {
 			if(size == 0) {
@@ -482,6 +560,14 @@ Evaluator.prototype = {
 			} else {
 				push('stack.length -= '+size+';');
 			}
+		}
+		function toSimpleExpr(expr, defaultVarName) {
+			if(/^(?:[$A-Za-z][$0-9A-Za-z]*|-?[0-9]+)$/.test(expr)) {
+				// 単一の変数か整数リテラルならそのまま
+				return expr;
+			}
+			push('var '+defaultVarName+' = '+expr+';');
+			return defaultVarName;
 		}
 		var stackPos = 0;
 		var literals = this.literals;
