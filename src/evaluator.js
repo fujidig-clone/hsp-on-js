@@ -1148,22 +1148,22 @@ Evaluator.prototype = {
 		switch(c) {
 		case 'i':
 			if(arg.getType() != VarType.INT) {
-				throw this.typeMismatchError(arg, VarType.INT);
+				throw this.typeMismatchError(arg.getType(), VarType.INT);
 			}
 			break;
 		case 'd':
 			if(arg.getType() != VarType.DOUBLE) {
-				throw this.typeMismatchError(arg, VarType.DOUBLE);
+				throw this.typeMismatchError(arg.getType(), VarType.DOUBLE);
 			}
 			break;
 		case 'n':
 			if(arg.getType() != VarType.INT && arg.getType() != VarType.DOUBLE) {
-				throw this.typeMismatchErrorIntOrDouble(arg);
+				throw this.typeMismatchErrorIntOrDouble(arg.getType());
 			}
 			break;
 		case 's':
 			if(arg.getType() != VarType.STR) {
-				throw this.typeMismatchError(arg, VarType.STR);
+				throw this.typeMismatchError(arg.getType(), VarType.STR);
 			}
 			break;
 		case 'l':
