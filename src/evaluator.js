@@ -152,49 +152,47 @@ Evaluator.prototype = {
 			push('this.frameStack.push(new Frame(this.pc + 1, null, this.args));');
 		}
 		function pushGettingArrayValueCode(varData, indexParamInfos) {
-			var sum = stackPos = stackSizeSum(indexParamInfos);
 			var result = getArrayAndOffsetExpr(varData, indexParamInfos);
 			var arrayExpr = result[0];
 			var offsetExpr = result[1];
-			pushStackPopCode(sum);
 			push('stack.push('+arrayExpr+'.at('+offsetExpr+'));');
 		}
 		function pushGettingVariableCode(varData, indexParamInfos) {
 			var result;
-			var sum = stackPos = stackSizeSum(indexParamInfos);
-			if(isVariableAgentVarData(varData)) {
-				result = getVariableAgentExpr(varData);
-			} else {
-				var variableExpr = getVariableExpr(varData);
-				if(indexParamInfos.length == 0) {
-					result = 'new VariableAgent0D('+variableExpr+')';
-				} else if(indexParamInfos.length == 1) {
-					var paramInfo = indexParamInfos[0];
-					push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
-					result = 'new VariableAgent1D('+variableExpr+', offset)';
+			paramInfoGetExprBlock(indexParamInfos, function() {
+				if(isVariableAgentVarData(varData)) {
+					result = getVariableAgentExpr(varData);
 				} else {
-					pushGettingIndicesCode(indexParamInfos);
-					result = 'new VariableAgentMD('+variableExpr+', indices)';
+					var variableExpr = getVariableExpr(varData);
+					if(indexParamInfos.length == 0) {
+						result = 'new VariableAgent0D('+variableExpr+')';
+					} else if(indexParamInfos.length == 1) {
+						var paramInfo = indexParamInfos[0];
+						push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
+						result = 'new VariableAgent1D('+variableExpr+', offset)';
+					} else {
+						pushGettingIndicesCode(indexParamInfos);
+						result = 'new VariableAgentMD('+variableExpr+', indices)';
+					}
 				}
-			}
-			pushStackPopCode(sum);
+			});
 			push('stack.push('+result+');');
 		}
 		function pushAssignCode(varData, indexParamInfos, rhsParamInfos) {
-			var sum = stackPos = stackSizeSum(indexParamInfos) + stackSizeSum(rhsParamInfos);
-			if(isVariableAgentVarData(varData)) {
-				pushVariableAgentAssignCode(varData, rhsParamInfos);
-			} else {
-				push('var variable = '+getVariableExpr(varData)+';');
-				if(indexParamInfos.length == 0) {
-					push0DAssignCode(rhsParamInfos);
-				} else if(indexParamInfos.length == 1) {
-					push1DAssignCode(indexParamInfos[0], rhsParamInfos);
+			paramInfoGetExprBlock(indexParamInfos, rhsParamInfos, function() {
+				if(isVariableAgentVarData(varData)) {
+					pushVariableAgentAssignCode(varData, rhsParamInfos);
 				} else {
-					pushMDAssignCode(indexParamInfos, rhsParamInfos);
+					push('var variable = '+getVariableExpr(varData)+';');
+					if(indexParamInfos.length == 0) {
+						push0DAssignCode(rhsParamInfos);
+					} else if(indexParamInfos.length == 1) {
+						push1DAssignCode(indexParamInfos[0], rhsParamInfos);
+					} else {
+						pushMDAssignCode(indexParamInfos, rhsParamInfos);
+					}
 				}
-			}
-			pushStackPopCode(sum);
+			});
 		}
 		function pushVariableAgentAssignCode(varData, paramInfos) {
 			if(paramInfos.length == 1) {
@@ -288,11 +286,9 @@ Evaluator.prototype = {
 			// TODO
 		}
 		function pushIncDecCode(methodName, varData, indexParamInfos) {
-			var sum = stackPos = stackSizeSum(indexParamInfos);
 			var result = getArrayAndOffsetExpr(varData, indexParamInfos);
 			var arrayExpr = result[0];
 			var offsetExpr = result[1];
-			pushStackPopCode(sum);
 			push(arrayExpr+'.'+methodName+'('+offsetExpr+')');
 		}
 		function pushIncCode(varData, indexParamInfos) {
@@ -349,23 +345,25 @@ Evaluator.prototype = {
 			}
 			var arrayExpr = getVariableExpr(varData)+'.value';
 			var offsetExpr = 'offset';
-			if(indexParamInfos.length == 0) {
-				offsetExpr = '0';
-			} else if(indexParamInfos.length == 1) {
-				var paramInfo = indexParamInfos[0];
-				push('var array = '+arrayExpr+';');
-				arrayExpr = 'array';
-				push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
-				push('if(!(0 <= offset && offset < array.getL0())) {');
-				push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-				push('}');
-			} else {
-				push('var array = '+arrayExpr+';');
-				arrayExpr = 'array';
-				pushGettingIndicesCode(indexNodes);
-				push('var offset = array.getOffset(indices);');
-				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
-			}
+			paramInfoGetExprBlock(indexParamInfos, function() {
+				if(indexParamInfos.length == 0) {
+					offsetExpr = '0';
+				} else if(indexParamInfos.length == 1) {
+					var paramInfo = indexParamInfos[0];
+					push('var array = '+arrayExpr+';');
+					arrayExpr = 'array';
+					push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
+					push('if(!(0 <= offset && offset < array.getL0())) {');
+					push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+					push('}');
+				} else {
+					push('var array = '+arrayExpr+';');
+					arrayExpr = 'array';
+					pushGettingIndicesCode(indexNodes);
+					push('var offset = array.getOffset(indices);');
+					push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
+				}
+			});
 			return [arrayExpr, offsetExpr];
 		}
 		function getLiteralExpr(literal) {
@@ -380,6 +378,9 @@ Evaluator.prototype = {
 			return sum;
 		}
 		function getParamExpr(paramInfo) {
+			if(useStackPop == null) {
+				throw new Error('getParamExpr without paramInfoGetExprBlock');
+			}
 			return getParamExpr0(paramInfo.node);
 		}
 		function getParamExpr0(node) {
@@ -398,6 +399,9 @@ Evaluator.prototype = {
 			case NodeType.OPERATE:
 				return '('+getParamExpr0(node.lhsNode)+').'+getCalcCodeName(node.calcCode)+'('+getParamExpr0(node.rhsNode)+')';
 			case NodeType.GET_STACK:
+				if(useStackPop) {
+					return 'stack.pop()';
+				}
 				return 'stack[stack.length - '+(stackPos-node.offset)+']';
 			default:
 				throw new Error('must not happen');
@@ -453,6 +457,23 @@ Evaluator.prototype = {
 			}
 			return 'this.scanArg('+getParamExpr(paramInfo)+', "l").toValue().pos';
 		}
+		function paramInfoGetExprBlock(/*paramInfo0, paramInfo1, ... paramInfoN, callback*/) {
+			var callback = arguments[arguments.length - 1];
+			var paramInfos = Array.prototype.slice.call(arguments, 0, -1);
+			paramInfos = Array.prototype.concat.apply([], paramInfos); // flatten
+			if(useStackPop != null) {
+				throw new Error('paramInfoGetExprBlock nesting');
+			}
+			var sum = stackSizeSum(paramInfos);
+			useStackPop = sum == 1;
+			if(useStackPop) {
+				sum = 0;
+			}
+			stackPos = sum;
+			callback();
+			useStackPop = null;
+			pushStackPopCode(sum);
+		}
 		function pushStackPopCode(size) {
 			if(size == 0) {
 				// nothing
@@ -468,6 +489,7 @@ Evaluator.prototype = {
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
+		var useStackPop = null;
 		
 		push('for(;;) {'); indent ++;
 		push('switch(this.pc) {');
@@ -504,13 +526,15 @@ Evaluator.prototype = {
 			case Instruction.Code.IFEQ:
 				var label = insn.opts[0];
 				var paramInfo = insn.opts[1];
-				stackPos = paramInfo.stackSize;
-				var expr = getParamExpr(paramInfo)+'.toIntValue()._value';
-				if(paramInfo.stackSize) {
-					push('var val = '+expr+';');
-					expr = 'val';
-					pushStackPopCode(paramInfo.stackSize);
-				}
+				var expr;
+				paramInfoGetExprBlock(paramInfo, function() {
+					var stackSize = stackPos;
+					expr = getParamExpr(paramInfo)+'.toIntValue()._value';
+					if(stackSize > 0) {
+						push('var val = '+expr+';');
+						expr = 'val';
+					}
+				});
 				if(insn.code == Instruction.Code.IFEQ) {
 					expr = '!' + expr;
 				}
@@ -550,19 +574,19 @@ Evaluator.prototype = {
 				push('var func = BuiltinFuncs['+type+']['+subid+'];');
 				push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
 				push('var args = [];');
-				var sum = stackPos = stackSizeSum(paramInfos);
-				for(var i = 0; i < paramInfos.length; i ++) {
-					var paramInfo = paramInfos[i];
-					var node = paramInfo.node;
-					if(node.isDefaultNode()) {
-						push('args['+i+'] = void 0;');
-					} else if(node.isVarNode() && !node.onlyValue) {
-						push('args['+i+'] = new VariableAgent0D('+getVariableExpr(node.varData)+');');
-					} else {
-						push('args['+i+'] = '+getParamExpr(paramInfo)+';');
+				paramInfoGetExprBlock(paramInfos, function() {
+					for(var i = 0; i < paramInfos.length; i ++) {
+						var paramInfo = paramInfos[i];
+						var node = paramInfo.node;
+						if(node.isDefaultNode()) {
+							push('args['+i+'] = void 0;');
+						} else if(node.isVarNode() && !node.onlyValue) {
+							push('args['+i+'] = new VariableAgent0D('+getVariableExpr(node.varData)+');');
+						} else {
+							push('args['+i+'] = '+getParamExpr(paramInfo)+';');
+						}
 					}
-				}
-				pushStackPopCode(sum);
+				});
 				if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
 					push('stack.push(func.apply(this, args));');
 				} else {
@@ -611,9 +635,9 @@ Evaluator.prototype = {
 				push('var frame = this.frameStack.pop();');
 				push('this.args = frame.prevArgs;');
 				if(paramInfo) {
-					stackPos = paramInfo.stackSize;
-					push('var val = '+getParamExpr(paramInfo)+';');
-					pushStackPopCode(paramInfo.stackSize);
+					paramInfoGetExprBlock(paramInfo, function() {
+						push('var val = '+getParamExpr(paramInfo)+';');
+					});
 					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
 					push('stack.push(val);');
 					push('} else {'); indent ++;
@@ -645,18 +669,19 @@ Evaluator.prototype = {
 				push('if(this.loopStack.length >= 31) {');
 				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
 				push('}');
-				var sum = stackPos = stackSizeSum(paramInfos);
-				if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
-					push('var end = '+getIntParamExpr(paramInfos[0])+';');
-					push('if(end < 0) end = Infinity;');
-				} else {
-					push('var end = Infinity;');
-				}
-				if(paramInfos.length == 2) {
-					push('var begin = '+getIntParamExpr(paramInfos[1])+';');
-				} else {
-					push('var begin = 0;');
-				}
+				paramInfoGetExprBlock(paramInfos, function() {
+					if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
+						push('var end = '+getIntParamExpr(paramInfos[0])+';');
+						push('if(end < 0) end = Infinity;');
+					} else {
+						push('var end = Infinity;');
+					}
+					if(paramInfos.length == 2) {
+						push('var begin = '+getIntParamExpr(paramInfos[1])+';');
+					} else {
+						push('var begin = 0;');
+					}
+				});
 				push('if(end == 0) {');
 				push('    this.pc = '+pos+';');
 				push('    continue;');
@@ -690,21 +715,20 @@ Evaluator.prototype = {
 				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 				push('}');
 				push('var data = this.loopStack[this.loopStack.length - 1];');
-				var newCntExpr;
-				if(paramInfo) {
-					stackPos = paramInfo.stackSize;
-					newCntExpr = '(data.cnt = '+getIntParamExpr(paramInfo)+')';
-				} else {
-					newCntExpr = '++data.cnt';
+				function pushContinueCode(newCntExpr) {
+					push('if('+newCntExpr+' >= data.end) {');
+					push('    this.loopStack.pop();');
+					push('    this.pc = '+pos+';');
+					push('} else {');
+					push('    this.pc = data.pc;');
+					push('}');
 				}
-				push('if('+newCntExpr+' >= data.end) {');
-				push('    this.loopStack.pop();');
-				push('    this.pc = '+pos+';');
-				push('} else {');
-				push('    this.pc = data.pc;');
-				push('}');
 				if(paramInfo) {
-					pushStackPopCode(paramInfo.stackSize);
+					paramInfoGetExprBlock(paramInfo, function() {
+						pushContinueCode('(data.cnt = '+getIntParamExpr(paramInfo)+')');
+					});
+				} else {
+					pushContinueCode('++data.cnt');
 				}
 				push('continue;');
 				break;
@@ -758,9 +782,9 @@ Evaluator.prototype = {
 				if(insn.code == Instruction.Code.GOSUB_EXPR) {
 					pushJumpingSubroutineCode();
 				}
-				stackPos = paramInfo.stackSize;
-				push('this.pc = '+getLabelParamExpr(paramInfo)+';');
-				pushStackPopCode(paramInfo.stackSize);
+				paramInfoGetExprBlock(paramInfo, function() {
+					push('this.pc = '+getLabelParamExpr(paramInfo)+';');
+				});
 				push('continue;');
 				break;
 			case Instruction.Code.EXGOTO:
