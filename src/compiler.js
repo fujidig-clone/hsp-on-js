@@ -787,11 +787,13 @@ Compiler.prototype = {
 			if(mustBeVar && type == ProxyVarType.ARG_NOTVAR) {
 				throw this.error('変数が指定されていません');
 			}
-			var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
-			if(type == ProxyVarType.MEMBER) {
-				id = token.code - funcInfo.prmindex - 1;
-			} else {
-				id = token.code - funcInfo.prmindex;
+			if(type != ProxyVarType.THISMOD) {
+				var funcInfo = this.ax.funcsInfo[this.getFinfoIdByMinfoId(token.code)];
+				if(type == ProxyVarType.MEMBER) {
+					id = token.code - funcInfo.prmindex - 1;
+				} else {
+					id = token.code - funcInfo.prmindex;
+				}
 			}
 		} else {
 			if(!mustBeVar) throw new Error('must not happen');

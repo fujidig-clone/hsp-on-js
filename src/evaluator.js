@@ -153,7 +153,7 @@ Evaluator.prototype = {
 		}
 		function pushGettingArrayValueCode(varData, indexParamInfos) {
 			var result = paramInfoGetExprBlock(indexParamInfos, function() {
-				getArrayAndOffsetExpr(varData, indexParamInfos);
+				return getArrayAndOffsetExpr(varData, indexParamInfos);
 			});
 			var arrayExpr = result[0];
 			var offsetExpr = result[1];
@@ -170,7 +170,7 @@ Evaluator.prototype = {
 						result = 'new VariableAgent0D('+variableExpr+')';
 					} else if(indexParamInfos.length == 1) {
 						var paramInfo = indexParamInfos[0];
-						push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
+						push('var offset = '+getStrictIntParamNativeValueExpr(paramInfo)+';');
 						result = 'new VariableAgent1D('+variableExpr+', offset)';
 					} else {
 						pushGettingIndicesCode(indexParamInfos);
@@ -240,7 +240,7 @@ Evaluator.prototype = {
 			}
 		}
 		function push1DAssignCode(indexParamInfo, rhsParamInfos) {
-			push('var offset = '+getStrictIntParamExpr(indexParamInfo)+';');
+			push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfo)+';');
 			if(rhsParamInfos.length == 1) {
 				push('var rhs = '+getParamExpr(rhsParamInfos[0])+';');
 				push('if(variable.value.getType() != rhs.getType()) {');
@@ -296,7 +296,7 @@ Evaluator.prototype = {
 				if(indexParamInfos.length == 0) {
 					push('array.assign(0, array.at(0).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
 				} else if(indexParamInfos.length == 1) {
-					push('var offset = '+getStrictIntParamExpr(indexParamInfos[0])+';');
+					push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
 					push('array.expand1D(offset);');
 					push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
 				} else {
@@ -315,7 +315,7 @@ Evaluator.prototype = {
 				push('}');
 				push('array.assign(0, array.at(0).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
 			} else if(indexParamInfos.length == 1) {
-				push('var offset = '+getStrictIntParamExpr(indexParamInfos[0])+';');
+				push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
 				push('if(array.getType() != '+VarType.INT+') {');
 				push('    if(offset == 0) {');
 				push('        variable.reset('+VarType.INT+');');
@@ -343,7 +343,7 @@ Evaluator.prototype = {
 			}
 		}
 		function pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo) {
-			paramInfoGetExprBlock(indexParamInfos, function() {
+			paramInfoGetExprBlock(indexParamInfos, rhsParamInfo, function() {
 				pushCompoundAssignCode0(calcCode, varData, indexParamInfos, rhsParamInfo);
 			});
 		}
@@ -359,7 +359,7 @@ Evaluator.prototype = {
 				if(indexParamInfos.length == 0) {
 					push('array.'+methodName+'(0);');
 				} else if(indexParamInfos.length == 1) {
-					push('var offset = '+getStrictIntParamExpr(indexParamInfos[0])+';');
+					push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
 					push('array.expand1D(offset);');
 					push('array.'+methodName+'(offset);');
 				} else {
@@ -376,13 +376,104 @@ Evaluator.prototype = {
 		function pushDecCode(varData, indexParamInfos) {
 			pushIncDecCode('dec', varData, indexParamInfos);
 		}
-		function pushCallingUserdefFuncCode(userDefFunc, paramInfos) {
-			// TODO
+		function pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc, constructorThismodExpr) {
+			if(!userDefFuncs[userDefFunc.id]) {
+				userDefFuncs[userDefFunc.id] = userDefFunc;
+			}
+			var paramMax = paramInfos.length;
+			var mptypes = userDefFunc.paramTypes;
+			var argMax = mptypes.length;
+			var recvArgMax = 0; // local を除いた仮引数の数
+			for(var i = 0; i < argMax; i ++) {
+				var mptype = mptypes[i];
+				var paramInfo = paramInfos[recvArgMax];
+				if(mptype == MPType.LOCALVAR || mptype == MPType.IMODULEVAR) continue;
+				if(mptype == MPType.ARRAYVAR && paramInfo &&
+				   !paramInfo.node.toPureNode().isVarNode()) {
+					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
+					return;
+				} else if((!paramInfo || paramInfo.node.isDefaultNode()) && mptype != MPType.INUM) {
+					push('throw new HSPError(ErrorCode.NO_DEFAULT);');
+					return;
+				}
+				recvArgMax ++;
+			}
+			if(recvArgMax < paramMax) {
+				push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);');
+				return;
+			}
+			push('var args = [];');
+			paramInfoGetExprBlock(paramInfos, function() {
+				pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr);
+			});
+			push('if(this.frameStack.length >= 256) {');
+			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
+			push('}');
+			push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args, this.args));');
+			push('this.args = args;');
+			push('this.pc = '+userDefFunc.label.pos+';');
+		}
+		function pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr) {
+			var argMax = mptypes.length;
+			var origArgsCount = 0;
+			for(var i = 0; i < argMax; i ++) {
+				var mptype = mptypes[i];
+				var paramInfo = paramInfos[origArgsCount];
+				switch(mptype) {
+				case MPType.DNUM:
+					push('args['+i+'] = '+getDoubleParamExpr(paramInfo)+';');
+					break;
+				case MPType.INUM:
+					if(!paramInfo || paramInfo.node.isDefaultNode()) {
+						push('args['+i+'] = IntValue.of(0);');
+					} else {
+						push('args['+i+'] = '+getIntParamExpr(paramInfo)+';');
+					}
+					break;
+				case MPType.LOCALVAR:
+					push('args['+i+'] = new Variable;');
+					continue;
+				case MPType.ARRAYVAR:
+					var node = paramInfo.node;
+					if(node.isVarNode()) {
+						push('args['+i+'] = '+getVariableExpr(node.varData)+';');
+					} else {
+						push('var arg = '+getParamExpr(paramInfo)+';');
+						push('arg.expand();');
+						push('args['+i+'] = arg.variable;');
+					}
+					break;
+				case MPType.SINGLEVAR:
+				case MPType.MODULEVAR:
+					var node = paramInfo.node;
+					if(node.isVarNode()) {
+						push('args['+i+'] = '+getNewVariableAgentExpr(node.varData)+';');
+					} else if(node.isGetStackNode() && node.originalNode.isVarNode()) {
+						push('var arg = '+getParamExpr(paramInfo)+';');
+						push('arg.expand();');
+						push('args['+i+'] = arg;');
+					} else {
+						push('var arg = new VariableAgent0D(new Variable);');
+						push('arg.assign('+getParamExpr(paramInfo)+');');
+						push('args['+i+'] = arg;');
+					}
+					break;
+				case MPType.LOCALSTRING:
+					push('args['+i+'] = '+getStrParamExpr(paramInfo)+';');
+					break;
+				case MPType.IMODULEVAR:
+					push('args['+i+'] = '+constructorThismodExpr+';');
+					continue;
+				default:
+					throw new Error('未対応のパラメータタイプ: '+mptype);
+				}
+				origArgsCount ++;
+			}
 		}
 		function pushGettingIndicesCode(indexParamInfos) {
 			push('var indices = [];');
 			for(var i = 0; i < indexParamInfos.length; i ++) {
-				push('indices['+i+'] = '+getStrictIntParamExpr(indexParamInfos[i])+';');
+				push('indices['+i+'] = '+getStrictIntParamNativeValueExpr(indexParamInfos[i])+';');
 			}
 		}
 		function getVariableExpr(varData) {
@@ -407,12 +498,18 @@ Evaluator.prototype = {
 			var type = varData.proxyVarType;
 			return type == ProxyVarType.THISMOD || type == ProxyVarType.ARG_VAR;
 		}
+		function getNewVariableAgentExpr(varData) {
+			if(isVariableAgentVarData(varData)) {
+				return getVariableAgentExpr(varData);
+			}
+			return 'new VariableAgent0D('+getVariableExpr(varData)+')';
+		}
 		function getVariableAgentExpr(varData) {
 			switch(varData.proxyVarType) {
 			case ProxyVarType.THISMOD:
 				return 'this.getThismod()';
 			case ProxyVarType.ARG_VAR:
-				return 'this.getArg('+id+')';
+				return 'this.getArg('+varData.id+')';
 			default:
 				throw new Error('must not happen');
 			}
@@ -430,7 +527,7 @@ Evaluator.prototype = {
 				var paramInfo = indexParamInfos[0];
 				push('var array = '+arrayExpr+';');
 				arrayExpr = 'array';
-				push('var offset = '+getStrictIntParamExpr(paramInfo)+';');
+				push('var offset = '+getStrictIntParamNativeValueExpr(paramInfo)+';');
 				push('if(!(0 <= offset && offset < array.getL0())) {');
 				push('    throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 				push('}');
@@ -509,26 +606,62 @@ Evaluator.prototype = {
 		}
 		function getIntParamExpr(paramInfo) {
 			var node = paramInfo.node;
+			if(node.getValueType() == VarType.INT) {
+				return getParamExpr(paramInfo);
+			}
+			if(node.isLiteralNode() && node.val.getType() == VarType.DOUBLE) {
+				return getParamExpr(new ParamInfo(new LiteralNode(node.val.toIntValue())));
+			}
+			if(node.getValueType() == VarType.DOUBLE) {
+				return getParamExpr(paramInfo)+'.toIntValue()';
+			}
+			return 'this.scanArg('+getParamExpr(paramInfo)+', "n").toIntValue()';
+		}
+		function getDoubleParamExpr(paramInfo) {
+			var node = paramInfo.node;
+			if(node.getValueType() == VarType.DOUBLE) {
+				return getParamExpr(paramInfo);
+			}
+			if(node.isLiteralNode() && node.val.getType() == VarType.INT) {
+				return getParamExpr(new ParamInfo(new LiteralNode(node.val.toDoubleValue())));
+			}
+			if(node.getValueType() == VarType.INT) {
+				return getParamExpr(paramInfo)+'.toDoubleValue()';
+			}
+			return 'this.scanArg('+getParamExpr(paramInfo)+', "n").toDoubleValue()';
+		}
+		function getStrParamExpr(paramInfo) {
+			var node = paramInfo.node;
+			if(node.getValueType() == VarType.STR) {
+				return getParamExpr(paramInfo);
+			}
+			return 'this.scanArg('+getParamExpr(paramInfo)+', "s").toStrValue()';
+		}
+		function getIntParamNativeValueExpr(paramInfo) {
+			var node = paramInfo.node;
 			if(node.isLiteralNode() && 
 			   (node.val.getType() == VarType.INT || node.val.getType() == VarType.DOUBLE)) {
 				return '' + node.val.toIntValue()._value;
 			}
-			if(node.getValueType() == VarType.INT || node.getValueType() == VarType.DOUBLE) {
-				return getParamExpr(paramInfo)+'.toIntValue()._value';
+			if(node.getValueType() == VarType.INT) {
+				return getParamExpr(paramInfo)+'._value';
+			}
+			if(node.getValueType() == VarType.DOUBLE) {
+				return '('+getParamExpr(paramInfo)+'._value|0)';
 			}
 			return 'this.scanArg('+getParamExpr(paramInfo)+', "n").toIntValue()._value';
 		}
-		function getStrictIntParamExpr(paramInfo) {
+		function getStrictIntParamNativeValueExpr(paramInfo) {
 			var node = paramInfo.node;
 			if(node.isLiteralNode() && node.val.getType() == VarType.INT) {
 				return '' + node.val._value;
 			}
 			if(node.getValueType() == VarType.INT) {
-				return getParamExpr(paramInfo)+'.toIntValue()._value';
+				return getParamExpr(paramInfo)+'._value';
 			}
 			return 'this.scanArg('+getParamExpr(paramInfo)+', "i").toIntValue()._value';
 		}
-		function getLabelParamExpr(paramInfo) {
+		function getLabelParamNativeValueExpr(paramInfo) {
 			if(node.isLiteralNode() && node.val.getType() == VarType.LABEL) {
 				return '' + node.val.pos;
 			}
@@ -547,6 +680,7 @@ Evaluator.prototype = {
 				sum = 0;
 			}
 			stackPos = sum;
+			
 			var result = callback();
 			useStackPop = null;
 			pushStackPopCode(sum);
@@ -667,7 +801,7 @@ Evaluator.prototype = {
 						if(node.isDefaultNode()) {
 							push('args['+i+'] = void 0;');
 						} else if(node.isVarNode() && !node.onlyValue) {
-							push('args['+i+'] = new VariableAgent0D('+getVariableExpr(node.varData)+');');
+							push('args['+i+'] = '+getNewVariableAgentExpr(node.varData)+';');
 						} else {
 							push('args['+i+'] = '+getParamExpr(paramInfo)+';');
 						}
@@ -683,7 +817,7 @@ Evaluator.prototype = {
 			case Instruction.Code.CALL_USERDEF_FUNC:
 				var userDefFunc = insn.opts[0];
 				var paramInfos = insn.opts[1];
-				pushCallingUserdefFuncCode(userDefFunc, paramInfos);
+				pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
 				push('continue;');
 				break;
 			case Instruction.Code.NEWMOD:
@@ -709,7 +843,7 @@ Evaluator.prototype = {
 				push('var array = variable.value;');
 				push('var offset = array.newmod('+moduleExpr+');');
 				if(constructor) {
-					pushCallingUserdefFuncCode(constructor, paramInfos, 'new VariableAgent1D(variable, offset)');
+					pushCallingUserdefFuncCode(constructor, paramInfos, pc, 'new VariableAgent1D(variable, offset)');
 					push('continue;');
 				}
 				break;
@@ -718,12 +852,12 @@ Evaluator.prototype = {
 				push('if(this.frameStack.length == 0) {');
 				push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
 				push('}');
-				push('var frame = this.frameStack.pop();');
-				push('this.args = frame.prevArgs;');
 				if(paramInfo) {
 					paramInfoGetExprBlock(paramInfo, function() {
 						push('var val = '+getParamExpr(paramInfo)+';');
 					});
+					push('var frame = this.frameStack.pop();');
+					push('this.args = frame.prevArgs;');
 					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
 					push('stack.push(val);');
 					push('} else {'); indent ++;
@@ -742,6 +876,8 @@ Evaluator.prototype = {
 					push('}');
 					indent --; push('}');
 				} else {
+					push('var frame = this.frameStack.pop();');
+					push('this.args = frame.prevArgs;');
 					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
 					push('    throw new HSPError(ErrorCode.NORETVAL);');
 					push('}');
@@ -757,13 +893,13 @@ Evaluator.prototype = {
 				push('}');
 				paramInfoGetExprBlock(paramInfos, function() {
 					if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
-						push('var end = '+getIntParamExpr(paramInfos[0])+';');
+						push('var end = '+getIntParamNativeValueExpr(paramInfos[0])+';');
 						push('if(end < 0) end = Infinity;');
 					} else {
 						push('var end = Infinity;');
 					}
 					if(paramInfos.length == 2) {
-						push('var begin = '+getIntParamExpr(paramInfos[1])+';');
+						push('var begin = '+getIntParamNativeValueExpr(paramInfos[1])+';');
 					} else {
 						push('var begin = 0;');
 					}
@@ -811,7 +947,7 @@ Evaluator.prototype = {
 				}
 				if(paramInfo) {
 					paramInfoGetExprBlock(paramInfo, function() {
-						pushContinueCode('(data.cnt = '+getIntParamExpr(paramInfo)+')');
+						pushContinueCode('(data.cnt = '+getIntParamNativeValueExpr(paramInfo)+')');
 					});
 				} else {
 					pushContinueCode('++data.cnt');
@@ -839,14 +975,14 @@ Evaluator.prototype = {
 				push('}')
 				var pos = insn.opts[0].pos;
 				var paramInfo = insn.opts[1];
-				push('var v = '+getNoSubscriptVariableExpr(paramInfo)+';');
+				push('var array = '+getNoSubscriptVariableExpr(paramInfo)+'.value;');
 				push('var data = this.loopStack[this.loopStack.length - 1];');
-				push('if(data.cnt >= v.variable.getL0()) {')
+				push('if(data.cnt >= array.getL0()) {')
 				push('    this.loopStack.pop();');
 				push('    this.pc = '+pos+';');
 				push('    continue;');
 				push('}');
-				push('if(v.variable.at(data.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
+				push('if(array.at(data.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
 				push('    data.cnt ++;');
 				push('    if(data.cnt >= data.end) {');
 				push('        this.loopStack.pop();');
@@ -869,7 +1005,7 @@ Evaluator.prototype = {
 					pushJumpingSubroutineCode();
 				}
 				paramInfoGetExprBlock(paramInfo, function() {
-					push('this.pc = '+getLabelParamExpr(paramInfo)+';');
+					push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
 				});
 				push('continue;');
 				break;
@@ -914,6 +1050,13 @@ Evaluator.prototype = {
 	},
 	fileRead: function fileRead(path, success, error) {
 		throw new FileReadException(path, success, error);
+	},
+	getArg: function getArg(argNum) {
+		var args = this.args;
+		if(!args) {
+			throw new HSPError(ErrorCode.INVALID_PARAMETER);
+		}
+		return args[argNum];
 	},
 	getThismod: function getThismod() {
 		var thismod = this.getArg(0);

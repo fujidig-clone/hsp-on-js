@@ -11,8 +11,12 @@ end
 basedir = Pathname($0).parent
 
 open(basedir+'_tmp.js', 'wb') do |f|
-  f.puts "var axbinary = [\n#{dump}\n].join('');"
-  f.puts "var showSequence = false;"
+  f.puts "var runInShellOptions = {"
+  f.puts "axBinary: [\n#{dump}\n].join(''),"
+  f.puts "showSequence: false,"
+  f.puts "showMainLoop: false,"
+  f.puts "compileOnly: false"
+  f.puts "};"
 end
 
 filenames = [basedir+'hsp-on-js-core.js', basedir+'_tmp.js', basedir+'src/run-in-shell.js']

@@ -22,7 +22,8 @@ Utils.objectExtend(Node.prototype, {
 	isFuncallNode: function () { return false; },
 	isUserDefFuncall: function () { return false; },
 	isBuiltinFuncall: function () { return false; },
-	isGetStackNode: function () { return false; }
+	isGetStackNode: function () { return false; },
+	toPureNode: function () { return this; }
 });
 
 var NodeType = {
@@ -82,7 +83,7 @@ Utils.objectExtend(LiteralNode.prototype, {
 		return '<LiteralNode:'+this.val+'>';
 	},
 	getValueType: function getValueType() {
-		return val.getType();
+		return this.val.getType();
 	}
 });
 
@@ -176,6 +177,9 @@ Utils.objectExtend(GetStackNode.prototype, {
 	},
 	getValueType: function getValueType() {
 		return this.originalNode.getValueType();
+	},
+	toPureNode: function toPureNode() {
+		return this.originalNode;
 	}
 });
 
