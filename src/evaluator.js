@@ -555,7 +555,9 @@ Evaluator.prototype = {
 			if(useStackPop == null) {
 				throw new Error('getParamExpr without paramInfoGetExprBlock');
 			}
-			return getParamExpr0(paramInfo.node);
+			var result = getParamExpr0(paramInfo.node);
+			stackPos -= paramInfo.stackSize;
+			return result;
 		}
 		function getParamExpr0(node) {
 			switch(node.nodeType) {
