@@ -389,7 +389,7 @@ Evaluator.prototype = {
 				var paramInfo = paramInfos[recvArgMax];
 				if(mptype == MPType.LOCALVAR || mptype == MPType.IMODULEVAR) continue;
 				if(mptype == MPType.ARRAYVAR && paramInfo &&
-				   !paramInfo.node.toPureNode().isVarNode()) {
+				   !paramInfo.getPureNode().isVarNode()) {
 					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
 					return;
 				} else if((!paramInfo || paramInfo.node.isDefaultNode()) && mptype != MPType.INUM) {
@@ -1014,7 +1014,40 @@ Evaluator.prototype = {
 				break;
 			case Instruction.Code.EXGOTO:
 				var paramInfos = insn.opts[0];
-				// TODO
+				var counterParamInfo = paramInfos[0];
+				var stepParamInfo    = paramInfos[1];
+				var endParamInfo     = paramInfos[2];
+				var labelParamInfo   = paramInfos[3];
+				if(!counterParamInfo.getPureNode().isVarNode()) {
+					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
+					break;
+				}
+				var stepExpr;
+				var posExpr;
+				var endExpr;
+				paramInfoGetExprBlock(paramInfos, function() {
+					push('var counter = '+getStrictIntParamNativeValueExpr(counterParamInfo)+';');
+					stepExpr = getIntParamNativeValueExpr(stepParamInfo);
+					if(stepParamInfo.stackSize != 0) {
+						push('var step = '+stepExpr+';');
+						stepExpr = 'step';
+					}
+					endExpr = getIntParamNativeValueExpr(endParamInfo);
+					if(endParamInfo.stackSize != 0) {
+						push('var end = '+endExpr+';');
+						endExpr = 'end';
+					}
+					posExpr = getLabelParamNativeValueExpr(labelParamInfo);
+					if(labelParamInfo.stackSize != 0) {
+						push('var pos = '+posExpr+';');
+						posExpr = 'pos';
+					}
+				});
+				push('if('+stepExpr+' >= 0) {');
+				push('    if(counter >= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
+				push('} else {');
+				push('    if(counter <= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
+				push('}');
 				break;
 			case Instruction.Code.ON:
 				var isGosub = insn.opts[0];

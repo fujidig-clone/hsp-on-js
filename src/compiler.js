@@ -290,7 +290,7 @@ Compiler.prototype = {
 			break;
 		case 0x18: // exgoto
 			this.tokensPos ++;
-			var paramInfos = this.compileParameters(sequence);
+			var paramInfos = this.compileParameters(sequence, false, true);
 			if(paramInfos.length != 4) throw this.error('exgoto の引数の数が違います', token);
 			this.pushNewInsn(sequence, Instruction.Code.EXGOTO, [paramInfos], token);
 			break;
@@ -385,7 +385,7 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
 		}
 	},
-	compileParameters: function compileParameters0(sequence, cannotBeOmitted, notReceiveVar, result) {
+	compileParameters: function compileParameters(sequence, cannotBeOmitted, notReceiveVar, result) {
 		return this.compileParameters0(sequence, cannotBeOmitted, notReceiveVar, result, true);
 	},
 	compileParametersSub: function compileParametersSub(sequence, cannotBeOmitted, notReceiveVar, result) {

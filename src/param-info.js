@@ -9,6 +9,9 @@ Utils.objectExtend(ParamInfo.prototype, {
 	},
 	isVar: function isVar() {
 		return this.node.isVarNode() && !this.node.onlyValue;
+	},
+	getPureNode: function getPureNode() {
+		return this.node.toPureNode();
 	}
 });
 
