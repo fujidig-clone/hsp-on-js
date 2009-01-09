@@ -664,6 +664,7 @@ Evaluator.prototype = {
 			return 'this.scanArg('+getParamExpr(paramInfo)+', "i").toIntValue()._value';
 		}
 		function getLabelParamNativeValueExpr(paramInfo) {
+			var node = paramInfo.node;
 			if(node.isLiteralNode() && node.val.getType() == VarType.LABEL) {
 				return '' + node.val.pos;
 			}
