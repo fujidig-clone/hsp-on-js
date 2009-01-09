@@ -145,11 +145,11 @@ Evaluator.prototype = {
 		function push(line) {
 			lines.push(Utils.strTimes('\t', indent) + line);
 		}
-		function pushJumpingSubroutineCode() {
+		function pushJumpingSubroutineCode(pc) {
 			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
-			push('this.frameStack.push(new Frame(this.pc + 1, null, this.args));');
+			push('this.frameStack.push(new Frame('+(pc + 1)+', null, this.args));');
 		}
 		function pushGettingArrayValueCode(varData, indexParamInfos) {
 			var result = paramInfoGetExprBlock(indexParamInfos, function() {
@@ -997,7 +997,7 @@ Evaluator.prototype = {
 				push('}');
 				break;
 			case Instruction.Code.GOSUB:
-				pushJumpingSubroutineCode();
+				pushJumpingSubroutineCode(pc);
 				push('this.pc = '+insn.opts[0].pos+';');
 				push('continue;');
 				break;
@@ -1005,7 +1005,7 @@ Evaluator.prototype = {
 			case Instruction.Code.GOSUB_EXPR:
 				var paramInfo = insn.opts[0];
 				if(insn.code == Instruction.Code.GOSUB_EXPR) {
-					pushJumpingSubroutineCode();
+					pushJumpingSubroutineCode(pc);
 				}
 				paramInfoGetExprBlock(paramInfo, function() {
 					push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
