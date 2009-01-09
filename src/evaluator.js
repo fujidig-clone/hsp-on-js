@@ -1017,10 +1017,38 @@ Evaluator.prototype = {
 				// TODO
 				break;
 			case Instruction.Code.ON:
-				var indexParamInfo = insn.opts[0];
-				var isGosub = insn.opts[1];
-				var labelParamInfos = insn.opts[2];
-				// TODO
+				var isGosub = insn.opts[0];
+				var labelParamInfos = insn.opts[1];
+				var indexParamInfo = insn.opts[2];
+				paramInfoGetExprBlock(labelParamInfos, indexParamInfo, function() {
+					var labelsIndex = null;
+					var labelExprs = [];
+					for(var i = 0; i < labelParamInfos.length; i ++) {
+						var paramInfo = labelParamInfos[i];
+						if(paramInfo.node.isLiteralNode() && paramInfo.node.val.getType() == VarType.LABEL) {
+							labelExprs[i] = '' + paramInfo.node.val.pos;
+						} else {
+							if(labelsIndex == null) {
+								push('var labels = [];');
+								labelsIndex = 0;
+							}
+							push('labels['+labelsIndex+'] = '+getLabelParamNativeValueExpr(labelParamInfos[i])+';');
+							labelExprs[i] = 'labels['+labelsIndex+']';
+							labelsIndex ++;
+						}
+					}
+					var indexExpr = getIntParamNativeValueExpr(indexParamInfo);
+					push('switch('+indexExpr+') {');
+					for(var i = 0; i < labelParamInfos.length; i ++) {
+						push('case '+i+': this.pc = '+labelExprs[i]+'; break;');
+					}
+					push('default: this.pc ++;');
+					push('}');
+				});
+				if(isGosub) {
+					pushJumpingSubroutineCode(pc);
+				}
+				push('continue;');
 				break;
 			default:
 				throw new Error("未対応の命令コード: "+insn.code);

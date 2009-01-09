@@ -300,7 +300,8 @@ Compiler.prototype = {
 			if(paramToken.ex1 || paramToken.ex2) {
 				throw this.error('パラメータは省略できません', token);
 			}
-			var indexParamInfo = this.compileParameter(sequence);
+			var posHead = this.tokensPos;
+			this.tokensPos += this.skipParameter(this.tokensPos);
 			var jumpTypeToken = this.ax.tokens[this.tokensPos];
 			if(jumpTypeToken.ex1 || jumpTypeToken.type != Token.Type.PROGCMD || jumpTypeToken.code > 1) {
 				throw this.error('goto / gosub が指定されていません', token);
@@ -308,7 +309,11 @@ Compiler.prototype = {
 			var isGosub = jumpTypeToken.code == 1;
 			this.tokensPos ++;
 			var labelParamInfos = this.compileParametersSub(sequence);
-			this.pushNewInsn(sequence, Instruction.Code.ON, [indexParamInfo, isGosub, labelParamInfos], token);
+			var posFoot = this.tokensPos;
+			this.tokensPos = posHead;
+			var indexParamInfo = this.compileParameter(sequence);
+			this.tokensPos = posFoot;
+			this.pushNewInsn(sequence, Instruction.Code.ON, [isGosub, labelParamInfos, indexParamInfo], token);
 			break;
 		default:
 			this.compileCommand(sequence);
