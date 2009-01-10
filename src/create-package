@@ -3,12 +3,10 @@ require 'optparse'
 
 out_path = 'hsp-on-js-core.js'
 out_enc = 'utf-8'
-omit_to_magic_number_p = true
 
 opt = OptionParser.new
 opt.on('-o PATH', 'output file path') {|v| out_path = v}
 opt.on('-e ENCODING', 'output file encoding') {|v| out_enc = v}
-opt.on('--[no-]omit', 'omit to magic number') {|v| omit_to_magic_number_p = v}
 
 opt.parse!(ARGV)
 
@@ -55,19 +53,6 @@ buf = ""
 basedir = File.dirname($0)
 filenames.each do |filename|
   open(File.join(basedir, filename), 'rb:utf-8') {|f| buf << f.read }
-end
-
-if omit_to_magic_number_p
-  insn_code = nil
-  buf.scan(/Instruction\.CodeNames = (\[.*?\])/m) do 
-    insn_code = eval($1).each_with_index.inject({}){|r,(e,i)| r[e] = i; r}
-  end
-  abort 'Instruction.CodeNames not found' unless insn_code
-  buf.gsub!(/case Instruction\.Code\.(\w+):/) do
-    code = insn_code[$1]
-    abort "Instruction.Code.#{$1} not found" unless code
-    "case #{code}: // #{$1}"
-  end
 end
 
 open(out_path,'wb:'+out_enc) {|f| f.puts buf }

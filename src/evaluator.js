@@ -706,6 +706,379 @@ Evaluator.prototype = {
 			push('var '+defaultVarName+' = '+expr+';');
 			return defaultVarName;
 		}
+		var insn2func = [];
+		insn2func[Instruction.Code.NOP] = function(insn, pc) {
+		};
+		insn2func[Instruction.Code.PUSH_VAR] = function(insn, pc) {
+			var varData = insn.opts[0];
+			var indexParamInfos = insn.opts[1];
+			pushGettingVariableCode(varData, indexParamInfos);
+		};
+		insn2func[Instruction.Code.GET_VAR] = function(insn, pc) {
+			var varData = insn.opts[0];
+			var indexParamInfos = insn.opts[1];
+			pushGettingArrayValueCode(varData, indexParamInfos);
+		};
+		insn2func[Instruction.Code.POP] = function(insn, pc) {
+			push('stack.pop();');
+		};
+		insn2func[Instruction.Code.POP_N] = function(insn, pc) {
+			pushStackPopCode(insn.opts[0]);
+		};
+		insn2func[Instruction.Code.DUP] = function(insn, pc) {
+			push('stack.push(stack[stack.length-1]);');
+		};
+		insn2func[Instruction.Code.GOTO] = function(insn, pc) {
+			push('this.pc = '+insn.opts[0].pos+';');
+			push('continue;');
+		};
+		insn2func[Instruction.Code.IFNE] =
+		insn2func[Instruction.Code.IFEQ] = function(insn, pc) {
+			var label = insn.opts[0];
+			var paramInfo = insn.opts[1];
+			var expr;
+			paramInfoGetExprBlock(paramInfo, function() {
+				var stackSize = stackPos;
+				expr = getParamExpr(paramInfo)+'.toIntValue()._value';
+				if(stackSize > 0) {
+					push('var val = '+expr+';');
+					expr = 'val';
+				}
+			});
+			if(insn.code == Instruction.Code.IFEQ) {
+				expr = '!' + expr;
+			}
+			push('if('+expr+') {');
+			push('    this.pc = '+insn.opts[0].pos+';');
+			push('    continue;');
+			push('}');
+		};
+		insn2func[Instruction.Code.ASSIGN] = function(insn, pc) {
+			var varData = insn.opts[0];
+			var indexParamInfos = insn.opts[1];
+			var rhsParamInfos = insn.opts[2];
+			pushAssignCode(varData, indexParamInfos, rhsParamInfos);
+		};
+		insn2func[Instruction.Code.COMPOUND_ASSIGN] = function(insn, pc) {
+			var calcCode = insn.opts[0];
+			var varData = insn.opts[1];
+			var indexParamInfos = insn.opts[2];
+			var rhsParamInfo = insn.opts[3];
+			pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo);
+		};
+		insn2func[Instruction.Code.INC] = function(insn, pc) {
+			var varData = insn.opts[0];
+			var indexParamInfos = insn.opts[1];
+			pushIncCode(varData, indexParamInfos);
+		};
+		insn2func[Instruction.Code.DEC] = function(insn, pc) {
+			var varData = insn.opts[0];
+			var indexParamInfos = insn.opts[1];
+			pushDecCode(varData, indexParamInfos);
+		};
+		insn2func[Instruction.Code.CALL_BUILTIN_CMD] =
+		insn2func[Instruction.Code.CALL_BUILTIN_FUNC] = function(insn, pc) {
+			var type = insn.opts[0];
+			var subid = insn.opts[1];
+			var paramInfos = insn.opts[2];
+			push('var func = BuiltinFuncs['+type+']['+subid+'];');
+			push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
+			push('var args = [];');
+			paramInfoGetExprBlock(paramInfos, function() {
+				for(var i = 0; i < paramInfos.length; i ++) {
+					var paramInfo = paramInfos[i];
+					var node = paramInfo.node;
+					if(node.isDefaultNode()) {
+						push('args['+i+'] = void 0;');
+					} else if(node.isVarNode() && !node.onlyValue) {
+						push('args['+i+'] = '+getNewVariableAgentExpr(node.varData)+';');
+					} else {
+						push('args['+i+'] = '+getParamExpr(paramInfo)+';');
+					}
+				}
+			});
+			if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
+				push('stack.push(func.apply(this, args));');
+			} else {
+				push('func.apply(this, args);');
+			}
+		};
+		insn2func[Instruction.Code.CALL_USERDEF_CMD] =
+		insn2func[Instruction.Code.CALL_USERDEF_FUNC] = function(insn, pc) {
+			var userDefFunc = insn.opts[0];
+			var paramInfos = insn.opts[1];
+			pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
+			push('continue;');
+		};
+		insn2func[Instruction.Code.NEWMOD] = function(insn, pc) {
+			var varParamInfo = insn.opts[0];
+			var module = insn.opts[1];
+			var paramInfos = insn.opts[2];
+			var argc = insn.opts[3];
+			if(!userDefFuncs[module.id]) {
+				userDefFuncs[module.id] = module;
+			}
+			var moduleExpr = 'userDefFuncs['+module.id+']';
+			var constructor = module.constructor;
+			if(!constructor && argc > 0) {
+				push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
+				return;
+			}
+			var variableExpr = getNoSubscriptVariableExpr(varParamInfo);
+			if(!variableExpr) return;
+			push('var variable = '+variableExpr+';');
+			push('if(variable.getType() != '+VarType.STRUCT+') {');
+			push('    variable.value = new StructArray();');
+			push('}');
+			push('var array = variable.value;');
+			push('var offset = array.newmod('+moduleExpr+');');
+			if(constructor) {
+				pushCallingUserdefFuncCode(constructor, paramInfos, pc, 'new VariableAgent1D(variable, offset)');
+				push('continue;');
+			}
+		};
+		insn2func[Instruction.Code.RETURN] = function(insn, pc) {
+			var paramInfo = insn.opts[0];
+			push('if(this.frameStack.length == 0) {');
+			push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
+			push('}');
+			if(paramInfo) {
+				paramInfoGetExprBlock(paramInfo, function() {
+					push('var val = '+getParamExpr(paramInfo)+';');
+				});
+				push('var frame = this.frameStack.pop();');
+				push('this.args = frame.prevArgs;');
+				push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
+				push('stack.push(val);');
+				push('} else {'); indent ++;
+				push('switch(val.getType()) {');
+				push('case '+VarType.STR+':');
+				push('    this.refstr.assign(0, val.toStrValue());');
+				push('    break;');
+				push('case '+VarType.DOUBLE+':');
+				push('    this.refdval.assign(0, val.toDoubleValue());');
+				push('    break;');
+				push('case '+VarType.INT+':');
+				push('    this.stat.assign(0, val.toIntValue());');
+				push('    break;');
+				push('default:');
+				push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+				push('}');
+				indent --; push('}');
+			} else {
+				push('var frame = this.frameStack.pop();');
+				push('this.args = frame.prevArgs;');
+				push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
+				push('    throw new HSPError(ErrorCode.NORETVAL);');
+				push('}');
+			}
+			push('this.pc = frame.pc;');
+			push('continue;');
+		};
+		insn2func[Instruction.Code.REPEAT] = function(insn, pc) {
+			var pos = insn.opts[0].pos;
+			var paramInfos = insn.opts[1];
+			push('if(this.loopStack.length >= 31) {');
+			push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
+			push('}');
+			paramInfoGetExprBlock(paramInfos, function() {
+				if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
+					push('var end = '+getIntParamNativeValueExpr(paramInfos[0])+';');
+					push('if(end < 0) end = Infinity;');
+				} else {
+					push('var end = Infinity;');
+				}
+				if(paramInfos.length == 2) {
+					push('var begin = '+getIntParamNativeValueExpr(paramInfos[1])+';');
+				} else {
+					push('var begin = 0;');
+				}
+			});
+			push('if(end == 0) {');
+			push('    this.pc = '+pos+';');
+			push('    continue;');
+			push('}');
+			push('end += begin;');
+			push('this.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
+		};
+		insn2func[Instruction.Code.LOOP] = function(insn, pc) {
+			push('if(this.loopStack.length == 0) {');
+			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
+			push('}');
+			push('var data = this.loopStack[this.loopStack.length - 1];');
+			push('data.cnt ++;');
+			push('if(data.cnt < data.end) {');
+			push('    this.pc = data.pc;');
+			push('    continue;');
+			push('}');
+			push('this.loopStack.pop();');
+		};
+		insn2func[Instruction.Code.CNT] = function(insn, pc) {
+			push('if(this.loopStack.length == 0) {');
+			push('    stack.push(new IntValue(0));');
+			push('} else {');
+			push('    stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));');
+			push('}');
+		};
+		insn2func[Instruction.Code.CONTINUE] = function(insn, pc) {
+			var pos = insn.opts[0].pos;
+			var paramInfo = insn.opts[1];
+			push('if(this.loopStack.length == 0) {');
+			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
+			push('}');
+			push('var data = this.loopStack[this.loopStack.length - 1];');
+			function pushContinueCode(newCntExpr) {
+				push('if('+newCntExpr+' >= data.end) {');
+				push('    this.loopStack.pop();');
+				push('    this.pc = '+pos+';');
+				push('} else {');
+				push('    this.pc = data.pc;');
+				push('}');
+			}
+			if(paramInfo) {
+				paramInfoGetExprBlock(paramInfo, function() {
+					pushContinueCode('(data.cnt = '+getIntParamNativeValueExpr(paramInfo)+')');
+				});
+			} else {
+				pushContinueCode('++data.cnt');
+			}
+			push('continue;');
+		};
+		insn2func[Instruction.Code.BREAK] = function(insn, pc) {
+			var label = insn.opts[0];
+			push('if(this.loopStack.length == 0) {');
+			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
+			push('}');
+			push('this.loopStack.pop();');
+			push('this.pc = '+label.pos+';');
+			push('continue;');
+		};
+		insn2func[Instruction.Code.FOREACH] = function(insn, pc) {
+			push('if(this.loopStack.length >= 31) {');
+			push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
+			push('}');
+			push('this.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
+		};
+		insn2func[Instruction.Code.EACHCHK] = function(insn, pc) {
+			push('if(this.loopStack.length == 0) {');
+			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
+			push('}')
+			var pos = insn.opts[0].pos;
+			var paramInfo = insn.opts[1];
+			push('var array = '+getNoSubscriptVariableExpr(paramInfo)+'.value;');
+			push('var data = this.loopStack[this.loopStack.length - 1];');
+			push('if(data.cnt >= array.getL0()) {')
+			push('    this.loopStack.pop();');
+			push('    this.pc = '+pos+';');
+			push('    continue;');
+			push('}');
+			push('if(array.at(data.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
+			push('    data.cnt ++;');
+			push('    if(data.cnt >= data.end) {');
+			push('        this.loopStack.pop();');
+			push('        this.pc = '+pos+';');
+			push('    } else {');
+			push('        this.pc = data.pc;');
+			push('    }');
+			push('    continue;');
+			push('}');
+		};
+		insn2func[Instruction.Code.GOSUB] = function(insn, pc) {
+			pushJumpingSubroutineCode(pc);
+			push('this.pc = '+insn.opts[0].pos+';');
+			push('continue;');
+		};
+		insn2func[Instruction.Code.GOTO_EXPR] =
+		insn2func[Instruction.Code.GOSUB_EXPR] = function(insn, pc) {
+			var paramInfo = insn.opts[0];
+			if(insn.code == Instruction.Code.GOSUB_EXPR) {
+				pushJumpingSubroutineCode(pc);
+			}
+			paramInfoGetExprBlock(paramInfo, function() {
+				push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
+			});
+			push('continue;');
+		};
+		insn2func[Instruction.Code.EXGOTO] = function(insn, pc) {
+			var paramInfos = insn.opts[0];
+			var counterParamInfo = paramInfos[0];
+			var stepParamInfo    = paramInfos[1];
+			var endParamInfo     = paramInfos[2];
+			var labelParamInfo   = paramInfos[3];
+			if(!counterParamInfo.getPureNode().isVarNode()) {
+				push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
+				return;
+			}
+			var stepExpr;
+			var posExpr;
+			var endExpr;
+			paramInfoGetExprBlock(paramInfos, function() {
+				push('var counter = '+getStrictIntParamNativeValueExpr(counterParamInfo)+';');
+				stepExpr = getIntParamNativeValueExpr(stepParamInfo);
+				if(stepParamInfo.stackSize != 0) {
+					push('var step = '+stepExpr+';');
+					stepExpr = 'step';
+				}
+				endExpr = getIntParamNativeValueExpr(endParamInfo);
+				if(endParamInfo.stackSize != 0) {
+					push('var end = '+endExpr+';');
+					endExpr = 'end';
+				}
+				posExpr = getLabelParamNativeValueExpr(labelParamInfo);
+				if(labelParamInfo.stackSize != 0) {
+					push('var pos = '+posExpr+';');
+					posExpr = 'pos';
+				}
+			});
+			push('if('+stepExpr+' >= 0) {');
+			push('    if(counter >= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
+			push('} else {');
+			push('    if(counter <= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
+			push('}');
+		};
+		insn2func[Instruction.Code.ON] = function(insn, pc) {
+			var isGosub = insn.opts[0];
+			var labelParamInfos = insn.opts[1];
+			var indexParamInfo = insn.opts[2];
+			paramInfoGetExprBlock(labelParamInfos, indexParamInfo, function() {
+				var labelsIndex = null;
+				var labelExprs = [];
+				for(var i = 0; i < labelParamInfos.length; i ++) {
+					var paramInfo = labelParamInfos[i];
+					if(paramInfo.node.isLiteralNode() && paramInfo.node.val.getType() == VarType.LABEL) {
+						labelExprs[i] = '' + paramInfo.node.val.pos;
+					} else {
+						if(labelsIndex == null) {
+							push('var labels = [];');
+							labelsIndex = 0;
+						}
+						push('labels['+labelsIndex+'] = '+getLabelParamNativeValueExpr(labelParamInfos[i])+';');
+						labelExprs[i] = 'labels['+labelsIndex+']';
+						labelsIndex ++;
+					}
+				}
+				var indexExpr = getIntParamNativeValueExpr(indexParamInfo);
+				push('switch('+indexExpr+') {');
+				for(var i = 0; i < labelParamInfos.length; i ++) {
+					push('case '+i+': this.pc = '+labelExprs[i]+'; break;');
+				}
+				push('default: this.pc ++;');
+				push('}');
+			});
+			if(isGosub) {
+				pushJumpingSubroutineCode(pc);
+			}
+			push('continue;');
+		};
+		function main() {
+			for(var pc = 0; pc < sequence.length; pc ++) {
+				var insn = sequence[pc];
+				push('case '+pc+':'); indent ++;
+				insn2func[insn.code](insn, pc);
+				push('this.pc ++;');
+				indent --;
+			}
+		}
 		var stackPos = 0;
 		var literals = this.literals;
 		var userDefFuncs = this.userDefFuncs;
@@ -713,385 +1086,11 @@ Evaluator.prototype = {
 		var indent = 0;
 		var sequence = this.sequence;
 		var useStackPop = null;
-		
 		push('for(;;) {'); indent ++;
 		push('switch(this.pc) {');
-		for(var pc = 0; pc < sequence.length; pc ++) {
-			var insn = sequence[pc];
-			push('case '+pc+':'); indent ++;
-			switch(insn.code) {
-			case Instruction.Code.NOP:
-				break;
-			case Instruction.Code.PUSH_VAR:
-				var varData = insn.opts[0];
-				var indexParamInfos = insn.opts[1];
-				pushGettingVariableCode(varData, indexParamInfos);
-				break;
-			case Instruction.Code.GET_VAR:
-				var varData = insn.opts[0];
-				var indexParamInfos = insn.opts[1];
-				pushGettingArrayValueCode(varData, indexParamInfos);
-				break;
-			case Instruction.Code.POP:
-				push('stack.pop();');
-				break;
-			case Instruction.Code.POP_N:
-				pushStackPopCode(insn.opts[0]);
-				break;
-			case Instruction.Code.DUP:
-				push('stack.push(stack[stack.length-1]);');
-				break;
-			case Instruction.Code.GOTO:
-				push('this.pc = '+insn.opts[0].pos+';');
-				push('continue;');
-				break;
-			case Instruction.Code.IFNE:
-			case Instruction.Code.IFEQ:
-				var label = insn.opts[0];
-				var paramInfo = insn.opts[1];
-				var expr;
-				paramInfoGetExprBlock(paramInfo, function() {
-					var stackSize = stackPos;
-					expr = getParamExpr(paramInfo)+'.toIntValue()._value';
-					if(stackSize > 0) {
-						push('var val = '+expr+';');
-						expr = 'val';
-					}
-				});
-				if(insn.code == Instruction.Code.IFEQ) {
-					expr = '!' + expr;
-				}
-				push('if('+expr+') {');
-				push('    this.pc = '+insn.opts[0].pos+';');
-				push('    continue;');
-				push('}');
-				break;
-			case Instruction.Code.ASSIGN:
-				var varData = insn.opts[0];
-				var indexParamInfos = insn.opts[1];
-				var rhsParamInfos = insn.opts[2];
-				pushAssignCode(varData, indexParamInfos, rhsParamInfos);
-				break;
-			case Instruction.Code.COMPOUND_ASSIGN:
-				var calcCode = insn.opts[0];
-				var varData = insn.opts[1];
-				var indexParamInfos = insn.opts[2];
-				var rhsParamInfo = insn.opts[3];
-				pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo);
-				break;
-			case Instruction.Code.INC:
-				var varData = insn.opts[0];
-				var indexParamInfos = insn.opts[1];
-				pushIncCode(varData, indexParamInfos);
-				break;
-			case Instruction.Code.DEC:
-				var varData = insn.opts[0];
-				var indexParamInfos = insn.opts[1];
-				pushDecCode(varData, indexParamInfos);
-				break;
-			case Instruction.Code.CALL_BUILTIN_CMD:
-			case Instruction.Code.CALL_BUILTIN_FUNC:
-				var type = insn.opts[0];
-				var subid = insn.opts[1];
-				var paramInfos = insn.opts[2];
-				push('var func = BuiltinFuncs['+type+']['+subid+'];');
-				push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
-				push('var args = [];');
-				paramInfoGetExprBlock(paramInfos, function() {
-					for(var i = 0; i < paramInfos.length; i ++) {
-						var paramInfo = paramInfos[i];
-						var node = paramInfo.node;
-						if(node.isDefaultNode()) {
-							push('args['+i+'] = void 0;');
-						} else if(node.isVarNode() && !node.onlyValue) {
-							push('args['+i+'] = '+getNewVariableAgentExpr(node.varData)+';');
-						} else {
-							push('args['+i+'] = '+getParamExpr(paramInfo)+';');
-						}
-					}
-				});
-				if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
-					push('stack.push(func.apply(this, args));');
-				} else {
-					push('func.apply(this, args);');
-				}
-				break;
-			case Instruction.Code.CALL_USERDEF_CMD:
-			case Instruction.Code.CALL_USERDEF_FUNC:
-				var userDefFunc = insn.opts[0];
-				var paramInfos = insn.opts[1];
-				pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
-				push('continue;');
-				break;
-			case Instruction.Code.NEWMOD:
-				var varParamInfo = insn.opts[0];
-				var module = insn.opts[1];
-				var paramInfos = insn.opts[2];
-				var argc = insn.opts[3];
-				if(!userDefFuncs[module.id]) {
-					userDefFuncs[module.id] = module;
-				}
-				var moduleExpr = 'userDefFuncs['+module.id+']';
-				var constructor = module.constructor;
-				if(!constructor && argc > 0) {
-					push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
-					break;
-				}
-				var variableExpr = getNoSubscriptVariableExpr(varParamInfo);
-				if(!variableExpr) break;
-				push('var variable = '+variableExpr+';');
-				push('if(variable.getType() != '+VarType.STRUCT+') {');
-				push('    variable.value = new StructArray();');
-				push('}');
-				push('var array = variable.value;');
-				push('var offset = array.newmod('+moduleExpr+');');
-				if(constructor) {
-					pushCallingUserdefFuncCode(constructor, paramInfos, pc, 'new VariableAgent1D(variable, offset)');
-					push('continue;');
-				}
-				break;
-			case Instruction.Code.RETURN:
-				var paramInfo = insn.opts[0];
-				push('if(this.frameStack.length == 0) {');
-				push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
-				push('}');
-				if(paramInfo) {
-					paramInfoGetExprBlock(paramInfo, function() {
-						push('var val = '+getParamExpr(paramInfo)+';');
-					});
-					push('var frame = this.frameStack.pop();');
-					push('this.args = frame.prevArgs;');
-					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
-					push('stack.push(val);');
-					push('} else {'); indent ++;
-					push('switch(val.getType()) {');
-					push('case '+VarType.STR+':');
-					push('    this.refstr.assign(0, val.toStrValue());');
-					push('    break;');
-					push('case '+VarType.DOUBLE+':');
-					push('    this.refdval.assign(0, val.toDoubleValue());');
-					push('    break;');
-					push('case '+VarType.INT+':');
-					push('    this.stat.assign(0, val.toIntValue());');
-					push('    break;');
-					push('default:');
-					push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
-					push('}');
-					indent --; push('}');
-				} else {
-					push('var frame = this.frameStack.pop();');
-					push('this.args = frame.prevArgs;');
-					push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
-					push('    throw new HSPError(ErrorCode.NORETVAL);');
-					push('}');
-				}
-				push('this.pc = frame.pc;');
-				push('continue;');
-				break;
-			case Instruction.Code.REPEAT:
-				var pos = insn.opts[0].pos;
-				var paramInfos = insn.opts[1];
-				push('if(this.loopStack.length >= 31) {');
-				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
-				push('}');
-				paramInfoGetExprBlock(paramInfos, function() {
-					if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
-						push('var end = '+getIntParamNativeValueExpr(paramInfos[0])+';');
-						push('if(end < 0) end = Infinity;');
-					} else {
-						push('var end = Infinity;');
-					}
-					if(paramInfos.length == 2) {
-						push('var begin = '+getIntParamNativeValueExpr(paramInfos[1])+';');
-					} else {
-						push('var begin = 0;');
-					}
-				});
-				push('if(end == 0) {');
-				push('    this.pc = '+pos+';');
-				push('    continue;');
-				push('}');
-				push('end += begin;');
-				push('this.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
-				break;
-			case Instruction.Code.LOOP:
-				push('if(this.loopStack.length == 0) {');
-				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
-				push('}');
-				push('var data = this.loopStack[this.loopStack.length - 1];');
-				push('data.cnt ++;');
-				push('if(data.cnt < data.end) {');
-				push('    this.pc = data.pc;');
-				push('    continue;');
-				push('}');
-				push('this.loopStack.pop();');
-				break;
-			case Instruction.Code.CNT:
-				push('if(this.loopStack.length == 0) {');
-				push('    stack.push(new IntValue(0));');
-				push('} else {');
-				push('    stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));');
-				push('}');
-				break;
-			case Instruction.Code.CONTINUE:
-				var pos = insn.opts[0].pos;
-				var paramInfo = insn.opts[1];
-				push('if(this.loopStack.length == 0) {');
-				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
-				push('}');
-				push('var data = this.loopStack[this.loopStack.length - 1];');
-				function pushContinueCode(newCntExpr) {
-					push('if('+newCntExpr+' >= data.end) {');
-					push('    this.loopStack.pop();');
-					push('    this.pc = '+pos+';');
-					push('} else {');
-					push('    this.pc = data.pc;');
-					push('}');
-				}
-				if(paramInfo) {
-					paramInfoGetExprBlock(paramInfo, function() {
-						pushContinueCode('(data.cnt = '+getIntParamNativeValueExpr(paramInfo)+')');
-					});
-				} else {
-					pushContinueCode('++data.cnt');
-				}
-				push('continue;');
-				break;
-			case Instruction.Code.BREAK:
-				var label = insn.opts[0];
-				push('if(this.loopStack.length == 0) {');
-				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
-				push('}');
-				push('this.loopStack.pop();');
-				push('this.pc = '+label.pos+';');
-				push('continue;');
-				break;
-			case Instruction.Code.FOREACH:
-				push('if(this.loopStack.length >= 31) {');
-				push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
-				push('}');
-				push('this.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
-				break;
-			case Instruction.Code.EACHCHK:
-				push('if(this.loopStack.length == 0) {');
-				push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
-				push('}')
-				var pos = insn.opts[0].pos;
-				var paramInfo = insn.opts[1];
-				push('var array = '+getNoSubscriptVariableExpr(paramInfo)+'.value;');
-				push('var data = this.loopStack[this.loopStack.length - 1];');
-				push('if(data.cnt >= array.getL0()) {')
-				push('    this.loopStack.pop();');
-				push('    this.pc = '+pos+';');
-				push('    continue;');
-				push('}');
-				push('if(array.at(data.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
-				push('    data.cnt ++;');
-				push('    if(data.cnt >= data.end) {');
-				push('        this.loopStack.pop();');
-				push('        this.pc = '+pos+';');
-				push('    } else {');
-				push('        this.pc = data.pc;');
-				push('    }');
-				push('    continue;');
-				push('}');
-				break;
-			case Instruction.Code.GOSUB:
-				pushJumpingSubroutineCode(pc);
-				push('this.pc = '+insn.opts[0].pos+';');
-				push('continue;');
-				break;
-			case Instruction.Code.GOTO_EXPR:
-			case Instruction.Code.GOSUB_EXPR:
-				var paramInfo = insn.opts[0];
-				if(insn.code == Instruction.Code.GOSUB_EXPR) {
-					pushJumpingSubroutineCode(pc);
-				}
-				paramInfoGetExprBlock(paramInfo, function() {
-					push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
-				});
-				push('continue;');
-				break;
-			case Instruction.Code.EXGOTO:
-				var paramInfos = insn.opts[0];
-				var counterParamInfo = paramInfos[0];
-				var stepParamInfo    = paramInfos[1];
-				var endParamInfo     = paramInfos[2];
-				var labelParamInfo   = paramInfos[3];
-				if(!counterParamInfo.getPureNode().isVarNode()) {
-					push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
-					break;
-				}
-				var stepExpr;
-				var posExpr;
-				var endExpr;
-				paramInfoGetExprBlock(paramInfos, function() {
-					push('var counter = '+getStrictIntParamNativeValueExpr(counterParamInfo)+';');
-					stepExpr = getIntParamNativeValueExpr(stepParamInfo);
-					if(stepParamInfo.stackSize != 0) {
-						push('var step = '+stepExpr+';');
-						stepExpr = 'step';
-					}
-					endExpr = getIntParamNativeValueExpr(endParamInfo);
-					if(endParamInfo.stackSize != 0) {
-						push('var end = '+endExpr+';');
-						endExpr = 'end';
-					}
-					posExpr = getLabelParamNativeValueExpr(labelParamInfo);
-					if(labelParamInfo.stackSize != 0) {
-						push('var pos = '+posExpr+';');
-						posExpr = 'pos';
-					}
-				});
-				push('if('+stepExpr+' >= 0) {');
-				push('    if(counter >= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
-				push('} else {');
-				push('    if(counter <= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
-				push('}');
-				break;
-			case Instruction.Code.ON:
-				var isGosub = insn.opts[0];
-				var labelParamInfos = insn.opts[1];
-				var indexParamInfo = insn.opts[2];
-				paramInfoGetExprBlock(labelParamInfos, indexParamInfo, function() {
-					var labelsIndex = null;
-					var labelExprs = [];
-					for(var i = 0; i < labelParamInfos.length; i ++) {
-						var paramInfo = labelParamInfos[i];
-						if(paramInfo.node.isLiteralNode() && paramInfo.node.val.getType() == VarType.LABEL) {
-							labelExprs[i] = '' + paramInfo.node.val.pos;
-						} else {
-							if(labelsIndex == null) {
-								push('var labels = [];');
-								labelsIndex = 0;
-							}
-							push('labels['+labelsIndex+'] = '+getLabelParamNativeValueExpr(labelParamInfos[i])+';');
-							labelExprs[i] = 'labels['+labelsIndex+']';
-							labelsIndex ++;
-						}
-					}
-					var indexExpr = getIntParamNativeValueExpr(indexParamInfo);
-					push('switch('+indexExpr+') {');
-					for(var i = 0; i < labelParamInfos.length; i ++) {
-						push('case '+i+': this.pc = '+labelExprs[i]+'; break;');
-					}
-					push('default: this.pc ++;');
-					push('}');
-				});
-				if(isGosub) {
-					pushJumpingSubroutineCode(pc);
-				}
-				push('continue;');
-				break;
-			default:
-				throw new Error("未対応の命令コード: "+insn.code);
-			}
-			push('this.pc ++;');
-			indent --;
-		}
+		main();
 		push('}');
 		indent --; push('}');
-		//print(lines.join("\n"));
 		return lines.join("\n");
 	},
 	selectNote: function selectNote(v) {
