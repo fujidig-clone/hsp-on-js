@@ -78,6 +78,8 @@ else
     struct-array.js
     variable.js
     variable-agent.js
+    param-info.js
+    calc-code.js
     compiler.js
     evaluator.js
   ]
