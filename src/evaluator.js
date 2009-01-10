@@ -534,7 +534,7 @@ Evaluator.prototype = {
 			} else {
 				push('var array = '+arrayExpr+';');
 				arrayExpr = 'array';
-				pushGettingIndicesCode(indexNodes);
+				pushGettingIndicesCode(indexParamInfos);
 				push('var offset = array.getOffset(indices);');
 				push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 			}

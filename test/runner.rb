@@ -52,7 +52,10 @@ class HSPTestRunner
     print "#{src_path} "
     open(src_path, 'rb') do |src_file|
       until src_file.eof?
+        start_lineno = src_file.lineno + 1
         write_to_tmp_script src_file
+        end_lineno = src_file.lineno
+        lineno_range = start_lineno..end_lineno
         message = nil
         Dir.chdir(@basedir) do
           message = IO.popen([*@hspcmp, "-o#{@obj_fname}", '-d', @tmp_fname], 'rb:cp932') {|io| io.read }
@@ -60,13 +63,13 @@ class HSPTestRunner
         succeeded_compile = $?.exitstatus == 0
         result.tests_count += 1
         unless succeeded_compile
-          result.messages << "#{src_path}: compile error\n"+message.gsub(/^/, '  ')
+          result.messages << "#{src_path}(#{lineno_range}): compile error\n"+message.gsub(/^/, '  ')
           result.errors_count += 1
           print 'E'
           next
         end
         IO.popen([*@hsp3cl, File.join(@basedir, @obj_fname)], 'rb') do |io|
-          print run_test(src_path, result, io)
+          print run_test(src_path, lineno_range, result, io)
         end
       end
     end
@@ -75,15 +78,21 @@ class HSPTestRunner
     delete_tmp_files
   end
   
-  def run_test(src_path, result, io)
+  def run_test(src_path, lineno_range, result, io)
     tag = nil
+    if io.eof?
+      result.messages << "#{src_path}(#{lineno_range}): no output"
+      result.errors_count += 1
+      return 'E'
+    end
     line = (io.gets || '').chomp
     if /\A##START TEST:(.+)/ =~ line
       tag = $1
     else
-      message = "#{src_path}: invalid output:\n"
+      message = "#{src_path}(#{lineno_range}): invalid output:\n"
       message << "#{line}\n#{io.read}".gsub(/^/, '  ')
       result.messages << message.chomp
+      result.errors_count += 1
       return 'E'
     end
     error_regexp = /\A##ERROR OCCURRED:#{Regexp.escape(tag)}:(\d+):(\d+)\z/
