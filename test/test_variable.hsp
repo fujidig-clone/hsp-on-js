@@ -2,6 +2,12 @@
 	is(a, 1)
 	a = 2
 	is(a, 2)
+	a.1 = 3
+	is(a.1, 3)
+	a.2.3 = 4
+	is(a.2.3, 4)
+	a.1.2.3.4 = 5
+	is(a.1.2.3.4, 5)
 ----------------------------------------
 ; •Ï”‚Í—v‘f” 1 ‚Ì int Œ^‚Å‰Šú‰»‚³‚ê‚é
 	is(a, 0)
@@ -69,6 +75,13 @@
 	is(length(a), 4)
 	a.5 --
 	is(length(a), 6)
+
+	is(a.0, 4)
+	is(a.1, 3)
+	is(a.2, 2)
+	is(a.3, 1)
+	is(a.4, 0)
+	is(a.5, -1)
 ----------------------------------------
 ; “Y‚¦š‚Ì’l‚Í int Œ^‚Ì‚İó‚¯•t‚¯‚é
 	assert_error 6
@@ -216,3 +229,77 @@
 	assert_error 7
 	dim a, 3, 3
 	a.1.0 = 111, 222, 333
+----------------------------------------
+	dim a
+	is(length(a), 1)
+	is(length2(a), 0)
+	is(length3(a), 0)
+	is(length4(a), 0)
+	dim a, 5
+	is(length(a), 5)
+	is(length2(a), 0)
+	is(length3(a), 0)
+	is(length4(a), 0)
+	dim a, 1, 2
+	is(length(a), 1)
+	is(length2(a), 2)
+	is(length3(a), 0)
+	is(length4(a), 0)
+	dim a, 1, 2, 3, 4
+	is(length(a), 1)
+	is(length2(a), 2)
+	is(length3(a), 3)
+	is(length4(a), 4)
+----------------------------------------
+	assert_error 3
+	dim a, -1
+----------------------------------------
+	assert_error 25
+	dim a.1
+----------------------------------------
+#module
+#deffunc f var v
+	is(v, 42)
+	v = 87
+	return
+#global
+
+	a = 42
+	f a
+	is(a, 87)
+----------------------------------------
+#module
+#deffunc f var v
+	v = 5
+	is(v, 5)
+	v *= 3
+	is(v, 15)
+	v ++
+	is(v, 16)
+	v --
+	is(v, 15)
+	return
+#global
+
+f a.1
+----------------------------------------
+#module
+#deffunc f var v
+	v = "foo"
+	return
+#global
+
+dim a, 3
+f a.0
+is(length(a), 1)
+is(a, "foo")
+----------------------------------------
+#module
+#deffunc f var v
+	assert_error 31
+	v = "foo"
+	return
+#global
+
+dim a, 3
+f a.1

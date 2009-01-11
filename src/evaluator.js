@@ -204,6 +204,7 @@ Evaluator.prototype = {
 				push('var variable = agent.variable;');
 				push('if(agent.indices) {');
 				push('    var indices = agent.indices.slice();');
+				var pos = stackPos;
 				for(var i = 0; i < paramInfos.length; i ++) {
 					push('    variable.assign(indices, '+getParamExpr(paramInfos[i])+');');
 					if(i != paramInfos.length - 1) {
@@ -212,6 +213,7 @@ Evaluator.prototype = {
 				}
 				push('} else {'); indent ++;
 				push('var offset = agent.offset;');
+				stackPos = pos;
 				push1DMultipleAssignCode(paramInfos);
 				indent --; push('}');
 			}
