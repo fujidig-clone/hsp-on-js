@@ -309,19 +309,17 @@ Evaluator.prototype = {
 				}
 				return;
 			} 
-			push('var variable = '+getVariableExpr(varData)+';');
-			push('var array = variable.value;');
+			push('var array = '+getVariableExpr(varData)+'.value;');
 			if(indexParamInfos.length == 0) {
 				push('if(array.getType() != '+VarType.INT+') {');
-				push('    variable.reset('+VarType.INT+');');
+				push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 				push('}');
 				push('array.assign(0, array.at(0).'+getCalcCodeName(calcCode)+'('+getParamExpr(rhsParamInfo)+'));');
 			} else if(indexParamInfos.length == 1) {
 				push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
 				push('if(array.getType() != '+VarType.INT+') {');
 				push('    if(offset == 0) {');
-				push('        variable.reset('+VarType.INT+');');
-				push('        array = variable.value;');
+				push('        throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 				push('    } else {');
 				push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 				push('    }');
@@ -334,9 +332,7 @@ Evaluator.prototype = {
 				push('var offset = array.getOffset(indices);');
 				push('if(array.getType() != '+VarType.INT+') {');
 				push('    if(offset == 0) {');
-				push('        variable.reset('+VarType.INT+');');
-				push('        array = variable.value;');
-				push('        array.expand(indices);');
+				push('        throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 				push('    } else {');
 				push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 				push('    }');
@@ -566,6 +562,9 @@ Evaluator.prototype = {
 			case NodeType.VAR:
 				if(node.indexNodes.length > 0) {
 					throw new Error('must not happen');
+				}
+				if(isVariableAgentVarData(node.varData)) {
+					return getVariableAgentExpr(node.varData)+'.toValue()';
 				}
 				return getVariableExpr(node.varData)+'.value.at(0)';
 			case NodeType.ARG:
