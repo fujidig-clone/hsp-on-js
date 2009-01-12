@@ -670,9 +670,9 @@ Compiler.prototype = {
 	getExtSysvarCallNode: function getExtSysvarCallNode() {
 		var token = this.ax.tokens[this.tokensPos];
 		if(token.code >= 0x100) {
-			return this.compileFuncall();
+			return this.getFuncallNode();
 		} else {
-			return this.compileSysvar();
+			return this.getSysvarCallNode();
 		}
 	},
 	getSysvarCallNode: function getSysvarCallNode() {
