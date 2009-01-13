@@ -12,7 +12,6 @@ class HSPTestRunner
   end
   
   def delete_tmp_files
-    return
     [File.join(@basedir, @tmp_fname),
      File.join(@basedir, @obj_fname)].each do |path|
       begin
