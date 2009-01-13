@@ -142,7 +142,7 @@ class HSPTestRunner
       result.errors_count += 1
       return 'E'
     end
-    line = (io.gets || '').chomp
+    line = io.gets.chomp
     if /\A##START TEST:(.+)/ =~ line
       tag = $1
     else

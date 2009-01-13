@@ -6,15 +6,23 @@ HSP on JS は JavaScript による HSP インタプリタの実装です。
 http://www.fujidig.com/hsp-on-js/samples.html
 
 = 実行方法 =
-run-in-shell を実行します。
-これは t.hsp を hspcmp でコンパイルし、その内容を run-in-shell.js に埋め込んで実行します。
+src をカレントディレクトリにした状態で run-in-shell を実行します。
+これは t.hsp を hspcmp でコンパイルし、その内容を t.ax.js に埋め込んで実行します。
 ruby1.9, hspcmp, SpiderMonkey シェルが必要です。
 
 = パッケージの作り方 =
-create-package を実行します。
+src/create-package を実行します。
 これは *.js を一つのファイルに連結します。
 出力ファイル名のデフォルトは hsp-on-js-core.js で -o オプションで変更できます。 
 ruby1.9 が必要です。
+
+= テストの実行の仕方 =
+パッケージを作り（デフォルトの ./hsp-on-js-core.js に出力）、test/runner.rb を実行します。
+引数に指定されたファイルでテストします。
+引数を指定しないと test/test_*.hsp でテストします。
+ruby1.9, hspcmp, SpiderMonkey シェルが必要です。
+--hsp3cl オプションで AX ファイルを実行するプログラムを変更できます。
+デフォルトは、./shell で、オフィシャル HSP の hsp3cl をテストすることも出来ます。
 
 -----
 fujidig / FUJI
