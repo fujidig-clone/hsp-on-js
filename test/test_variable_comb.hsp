@@ -1,0 +1,245 @@
+; スタックを使う式で
+; - 添え字指定なし
+; - 一次元の添え字指定あり
+; - 二次元の添え字指定あり
+;
+; - var エイリアス
+; - 直接の静的変数
+;
+; - 代入
+; - 連続代入
+; - 複合代入
+; - 比較演算の複合代入
+; - インクリメント
+; - デクリメント
+;
+; の組み合わせをテスト
+
+#module
+#define global ctype expr_int(%1) (expr_int0(%1)+expr_int0(0))
+#defcfunc expr_int0 int val
+	_dummy = 0
+	return val
+#define global ctype expr_str(%1) (expr_str0(%1)+expr_str0(""))
+#defcfunc expr_str0 str val
+	_dummy = 0
+	return val
+#define global ctype expr_double(%1) (expr_double0(%1)+expr_double0(0.0))
+#defcfunc expr_double0 double val
+	_dummy = 0
+	return val
+#global
+----------------------------------------
+	a = expr_int(1)
+	is(a, 1)
+
+	a = expr_int(2)
+	is(a, 2)
+
+	a(expr_int(1)) = expr_int(3)
+	is(a(expr_int(1)), 3)
+	is(length(a), 2)
+
+	a(expr_int(2), expr_int(3)) = expr_int(4)
+	is(a(expr_int(2), expr_int(3)), 4)
+	is(length(a), 3)
+	is(length2(a), 4)
+----------------------------------------
+#module
+#deffunc f var v
+	v = expr_int(1)
+	is(v, 1)
+	return
+#global
+
+	f a
+	is(a, 1)
+
+	f a(expr_int(1))
+	is(length(a), 2)
+	is(a(expr_int(1)), 1)
+
+	f a(expr_int(2), expr_int(3))
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), 1)
+----------------------------------------
+	a = expr_int(1), expr_int(2), expr_int(3)
+	is(a(expr_int(0)), 1)
+	is(a(expr_int(1)), 2)
+	is(a(expr_int(2)), 3)
+	is(length(a), 3)
+
+	a(expr_int(1)) = expr_int(222), expr_int(333), expr_int(444)
+	is(a(expr_int(0)), 1)
+	is(a(expr_int(1)), 222)
+	is(a(expr_int(2)), 333)
+	is(a(expr_int(3)), 444)
+	is(length(a), 4)
+
+	dim a, 3
+	a(expr_int(1), expr_int(1)) = expr_int(100), expr_int(200)
+	is(length(a), 3)
+	is(length2(a), 2)
+	is(a(expr_int(0), expr_int(0)), 0)
+	is(a(expr_int(1), expr_int(0)), 0)
+	is(a(expr_int(2), expr_int(0)), 0)
+	is(a(expr_int(0), expr_int(1)), 0)
+	is(a(expr_int(1), expr_int(1)), 100)
+	is(a(expr_int(2), expr_int(1)), 200)
+----------------------------------------
+#module
+#deffunc f var v, int a, int b
+	v = expr_int(a), expr_int(b)
+	is(v, a)
+	return
+#global
+	f a, 1, 2
+	is(a(expr_int(0)), 1)
+	is(a(expr_int(1)), 2)
+	is(length(a), 2)
+
+	f a(expr_int(1)), 111, 222
+	is(a(expr_int(0)), 1)
+	is(a(expr_int(1)), 111)
+	is(a(expr_int(2)), 222)
+	is(length(a), 3)
+
+	dim a, 3
+	f a(expr_int(1), expr_int(1)), 100, 200
+	is(a(expr_int(0), expr_int(0)), 0)
+	is(a(expr_int(1), expr_int(0)), 0)
+	is(a(expr_int(2), expr_int(0)), 0)
+	is(a(expr_int(0), expr_int(1)), 0)
+	is(a(expr_int(1), expr_int(1)), 100)
+	is(a(expr_int(2), expr_int(1)), 200)
+----------------------------------------
+	a = 5
+	a += expr_int(100)
+	is(a, 105)
+
+	a(expr_int(1)) += expr_int(5)
+	is(length(a), 2)
+	a(expr_int(1)) += expr_int(100)
+	is(a(expr_int(1)), 105)
+
+	a(expr_int(2), expr_int(3)) += expr_int(5)
+	is(length(a), 3)
+	is(length2(a), 4)
+	a(expr_int(2), expr_int(3)) += expr_int(100)
+	is(a(expr_int(2), expr_int(3)), 105)
+----------------------------------------
+#module
+#deffunc f1 var v
+	v += expr_int(5)
+	is(v, 5)
+	return
+#deffunc f2 var v
+	v += expr_int(100)
+	is(v, 105)
+	return
+#global
+	f1 a
+	f2 a
+	is(a, 105)
+
+	f1 a(expr_int(1))
+	f2 a(expr_int(1))
+	is(length(a), 2)
+	is(a(expr_int(1)), 105)
+
+	f1 a(expr_int(2), expr_int(3))
+	f2 a(expr_int(2), expr_int(3))
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), 105)
+----------------------------------------
+	a < = 100
+	is(a, 1)
+
+	a(expr_int(1)) < = expr_int(100)
+	is(length(a), 2)
+	is(a(expr_int(1)), 1)
+
+	a(expr_int(2), expr_int(3)) < = expr_int(100)
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), 1)
+----------------------------------------
+#module
+#deffunc f var v
+	v < = expr_int(100)
+	is(v, 1)
+	return
+#global
+	f a
+	is(a, 1)
+
+	f a(expr_int(1))
+	is(length(a), 2)
+	is(a(expr_int(1)), 1)
+
+	f a(expr_int(2), expr_int(3))
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), 1)
+----------------------------------------
+	a ++
+	is(a, 1)
+
+	a(expr_int(1)) ++
+	is(length(a), 2)
+	is(a(expr_int(1)), 1)
+
+	a(expr_int(2), expr_int(3)) ++
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), 1)
+----------------------------------------
+#module
+#deffunc f var v
+	v ++
+	is(v, 1)
+	return
+#global
+	f a
+	is(a, 1)
+
+	f a(expr_int(1))
+	is(length(a), 2)
+	is(a(expr_int(1)), 1)
+
+	f a(expr_int(2), expr_int(3))
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), 1)
+----------------------------------------
+	a --
+	is(a, -1)
+
+	a(expr_int(1)) --
+	is(length(a), 2)
+	is(a(expr_int(1)), -1)
+
+	a(expr_int(2), expr_int(3)) --
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), -1)
+----------------------------------------
+#module
+#deffunc f var v
+	v --
+	is(v, -1)
+	return
+#global
+	f a
+	is(a, -1)
+
+	f a(expr_int(1))
+	is(length(a), 2)
+	is(a(expr_int(1)), -1)
+
+	f a(expr_int(2), expr_int(3))
+	is(length(a), 3)
+	is(length2(a), 4)
+	is(a(expr_int(2), expr_int(3)), -1)
