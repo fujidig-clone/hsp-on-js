@@ -1,3 +1,5 @@
+; vartype ŠÖ”‚ÌƒeƒXƒg
+----------------------------------------
 	is(vartype("label"), 1)
 	is(vartype("str"), 2)
 	is(vartype("double"), 3)

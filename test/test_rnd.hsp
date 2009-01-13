@@ -1,3 +1,5 @@
+; rnd 関数、 randomize 命令のテスト
+----------------------------------------
 	is(rnd($8000), 41)
 	is(rnd($8000), 18467)
 	is(rnd($8000), 6334)
@@ -50,7 +52,7 @@
 		if flag : break
 	loop
 	ok(flag)
-	end
+	exit_test
 
 *sleep
 	start = gettime(7)

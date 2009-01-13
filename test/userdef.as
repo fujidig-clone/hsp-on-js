@@ -79,6 +79,8 @@
  _write_sep_next_assert __LINE__ : \
  mes "error: "+__a
 
+#define global exit_test mes "##TEST FINISH:"+_test_tag : end
+
 _test_tag = "TAG"
 repeat 8 : _test_tag += "_" + gettime(cnt) : loop
 mes "##START TEST:"+_test_tag

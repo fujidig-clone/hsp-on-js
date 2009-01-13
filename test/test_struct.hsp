@@ -1,3 +1,5 @@
+; モジュール変数のテスト
+----------------------------------------
 	dimtype a, 5
 	is(vartype(a), 5)
 	is(varuse(a.0), 0)
@@ -113,7 +115,7 @@
 	newmod a, mod
 	gosub *do_each
 	is(b, "[0][1][2][3]")
-	end
+	exit_test
 *do_each
 	b = ""
 	foreach a

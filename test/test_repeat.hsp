@@ -1,3 +1,5 @@
+; repeat, loop, continue, break, foreach, cnt, looplev ‚ÌƒeƒXƒg
+----------------------------------------
 	a = ""
 	repeat 4
 		a += "["+cnt+"]"
@@ -87,7 +89,7 @@
 	repeat 1, 123
 		gosub *a
 	loop
-	end
+	exit_test
 *a
 	is(cnt, 123)
 	return

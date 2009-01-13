@@ -12,6 +12,7 @@ class HSPTestRunner
   end
   
   def delete_tmp_files
+    return
     [File.join(@basedir, @tmp_fname),
      File.join(@basedir, @obj_fname)].each do |path|
       begin
@@ -21,17 +22,32 @@ class HSPTestRunner
     end
   end
 
-  def write_to_tmp_script(src_file)
+  def write_to_tmp_script(src_file, header, header_line_size)
     open(File.join(@basedir, @tmp_fname), 'wb') do |f|
-      f.print "\n" * src_file.lineno
+      f.print header
+      f.print "\n" * (src_file.lineno - header_line_size)
       src_file.each_line do |line|
         if line.start_with?("----")
           break
         end
         f.puts line
       end
-      f.puts 'end'
+      f.puts 'exit_test'
     end
+  end
+  
+  def get_header(src_file)
+    header = ""
+    until src_file.eof?
+      line = src_file.gets
+      if line.start_with?("----")
+        header << "\n"
+        break
+      else
+        header << line
+      end
+    end
+    header
   end
   
   def run(paths)
@@ -51,9 +67,11 @@ class HSPTestRunner
   def run_file(result, src_path)
     print "#{src_path} "
     open(src_path, 'rb') do |src_file|
+      header = get_header(src_file)
+      header_line_size = src_file.lineno
       until src_file.eof?
         start_lineno = src_file.lineno + 1
-        write_to_tmp_script src_file
+        write_to_tmp_script src_file, header, header_line_size
         end_lineno = src_file.lineno
         lineno_range = start_lineno..end_lineno
         message = nil
@@ -78,6 +96,46 @@ class HSPTestRunner
     delete_tmp_files
   end
   
+  def unexpected_eof(src_path, lineno_range, result)
+    result.messages << "#{src_path}(#{lineno_range}): finished without exit_test"
+    result.errors_count += 1
+    'E'
+  end
+  
+  def assertion_result(io, src_path, lineno, line, error_regexp, result)
+    case line
+    when 'pass'
+      nil
+    when 'fail'
+      message = "#{src_path}:#{lineno}: failed "
+      message << io.read
+      result.messages << message
+      result.failures_count += 1
+      'F'
+    when /\Aerror: (\d+(?:,\s*\d+)*)\z/
+      expected_errnos = $1.split(',').map{|i| i.to_i}
+      if error_regexp =~ (io.gets || '').chomp
+        if expected_errnos.include?($1.to_i)
+          return '.'
+        else
+          errno = $1.to_i
+          lineno = $2.to_i
+          result.messages << "#{src_path}:#{lineno}: error #{errno}"
+          result.errors_count += 1
+          return 'E'
+        end
+      else
+        result.messages << "#{src_path}:#{lineno}: failed assert_error\n"
+        result.failures_count += 1
+        return 'E'
+      end
+    else
+      result.messages << "#{src_path}:#{lineno}: invalid output: #{line.dump}"
+      result.errors_count += 1
+      'E'
+    end
+  end
+  
   def run_test(src_path, lineno_range, result, io)
     tag = nil
     if io.eof?
@@ -97,60 +155,29 @@ class HSPTestRunner
     end
     error_regexp = /\A##ERROR OCCURRED:#{Regexp.escape(tag)}:(\d+):(\d+)\z/
     next_regexp = /\A##NEXT ASSERT:#{Regexp.escape(tag)}:(\d+)\z/
-    status = '.'
-    lineno = nil
+    finish_regexp = /\A##TEST FINISH:#{Regexp.escape(tag)}\z/
     loop do
-      until io.eof?
-        case io.gets.chomp
-        when next_regexp
-          lineno = $1.to_i
-          break
-        when error_regexp
-          status = 'E'
-          errno = $1.to_i
-          lineno = $2.to_i
-          result.messages << "#{src_path}:#{lineno}: error #{errno}"
-          result.errors_count += 1
-        end
-      end
-      break if io.eof?
-      line = (io.gets || '').chomp
-      result.assertions_count += 1
-      case line
-      when 'pass'
-        #
-      when 'fail'
+      return unexpected_eof(src_path, lineno_range, result) if io.eof?
+      case io.gets.chomp
+      when next_regexp
         lineno = $1.to_i
-        message = "#{src_path}:#{lineno}: failed "
-        message << io.read
-        status = 'F'
-        result.messages << message
-        result.failures_count += 1
-        break
-      when /\Aerror: (\d+(?:,\s*\d+)*)\z/
-        expected_errnos = $1.split(',').map{|i| i.to_i}
-        if error_regexp =~ (io.gets || '').chomp
-          unless expected_errnos.include?($1.to_i)
-            status = 'E'
-            errno = $1.to_i
-            lineno = $2.to_i
-            result.messages << "#{src_path}:#{lineno}: error #{errno}"
-            result.errors_count += 1
-          end
-        else
-          result.messages << "#{src_path}:#{lineno}: failed assert_error\n"
-          status = 'F'
-          result.failures_count += 1
+        return unexpected_eof(src_path, lineno_range, result) if io.eof?
+        line = io.gets.chomp
+        result.assertions_count += 1
+        status = assertion_result(io, src_path, lineno, line, error_regexp, result)
+        if status
+          return status
         end
-        break
-      else
-        result.messages << "#{src_path}:#{lineno}: invalid output: #{line.dump}"
+      when error_regexp
+        errno = $1.to_i
+        lineno = $2.to_i
+        result.messages << "#{src_path}:#{lineno}: error #{errno}"
         result.errors_count += 1
-        status = 'E'
-        break
+        return 'E'
+      when finish_regexp
+        return '.'
       end
     end
-    status
   end
 end
 

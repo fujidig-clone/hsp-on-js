@@ -282,7 +282,7 @@ Evaluator.prototype = {
 			push('array.expand1D(offset + '+(paramInfos.length-1)+');');
 			push('array.assign(offset, rhs);');
 			for(var i = 1; i < paramInfos.length; i ++) {
-				push('var rhs = stack[len - '+getParamExpr(paramInfos[i])+'];');
+				push('var rhs = '+getParamExpr(paramInfos[i])+';');
 				push('if(rhs.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 				push('array.assign(offset + '+i+', rhs);');
 			}
