@@ -152,49 +152,43 @@ Evaluator.prototype = {
 			push('this.frameStack.push(new Frame('+(pc + 1)+', null, this.args));');
 		}
 		function pushGettingArrayValueCode(varData, indexParamInfos) {
-			var result = paramInfoGetExprBlock(indexParamInfos, function() {
-				return getArrayAndOffsetExpr(varData, indexParamInfos);
-			});
+			var result = getArrayAndOffsetExpr(varData, indexParamInfos);
 			var arrayExpr = result[0];
 			var offsetExpr = result[1];
 			push('stack.push('+arrayExpr+'.at('+offsetExpr+'));');
 		}
 		function pushGettingVariableCode(varData, indexParamInfos) {
 			var result;
-			paramInfoGetExprBlock(indexParamInfos, function() {
-				if(isVariableAgentVarData(varData)) {
-					result = getVariableAgentExpr(varData);
+			if(isVariableAgentVarData(varData)) {
+				result = getVariableAgentExpr(varData);
+			} else {
+				var variableExpr = getVariableExpr(varData);
+				if(indexParamInfos.length == 0) {
+					result = 'new VariableAgent0D('+variableExpr+')';
+				} else if(indexParamInfos.length == 1) {
+					var paramInfo = indexParamInfos[0];
+					push('var offset = '+getStrictIntParamNativeValueExpr(paramInfo)+';');
+					result = 'new VariableAgent1D('+variableExpr+', offset)';
 				} else {
-					var variableExpr = getVariableExpr(varData);
-					if(indexParamInfos.length == 0) {
-						result = 'new VariableAgent0D('+variableExpr+')';
-					} else if(indexParamInfos.length == 1) {
-						var paramInfo = indexParamInfos[0];
-						push('var offset = '+getStrictIntParamNativeValueExpr(paramInfo)+';');
-						result = 'new VariableAgent1D('+variableExpr+', offset)';
-					} else {
-						pushGettingIndicesCode(indexParamInfos);
-						result = 'new VariableAgentMD('+variableExpr+', indices)';
-					}
+					pushGettingIndicesCode(indexParamInfos);
+					result = 'new VariableAgentMD('+variableExpr+', indices)';
 				}
-			});
+			}
 			push('stack.push('+result+');');
 		}
 		function pushAssignCode(varData, indexParamInfos, rhsParamInfos) {
-			paramInfoGetExprBlock(indexParamInfos, rhsParamInfos, function() {
-				if(isVariableAgentVarData(varData)) {
-					pushVariableAgentAssignCode(varData, rhsParamInfos);
+			if(isVariableAgentVarData(varData)) {
+				pushVariableAgentAssignCode(varData, rhsParamInfos);
+			} else {
+				push('var variable = '+getVariableExpr(varData)+';');
+				if(indexParamInfos.length == 0) {
+					push0DAssignCode(rhsParamInfos);
+				} else if(indexParamInfos.length == 1) {
+					push1DAssignCode(indexParamInfos[0], rhsParamInfos);
 				} else {
-					push('var variable = '+getVariableExpr(varData)+';');
-					if(indexParamInfos.length == 0) {
-						push0DAssignCode(rhsParamInfos);
-					} else if(indexParamInfos.length == 1) {
-						push1DAssignCode(indexParamInfos[0], rhsParamInfos);
-					} else {
-						pushMDAssignCode(indexParamInfos, rhsParamInfos);
-					}
+					pushMDAssignCode(indexParamInfos, rhsParamInfos);
 				}
-			});
+			}
 		}
 		function pushVariableAgentAssignCode(varData, paramInfos) {
 			if(paramInfos.length == 1) {
@@ -204,7 +198,6 @@ Evaluator.prototype = {
 				push('var variable = agent.variable;');
 				push('if(agent.indices) {');
 				push('    var indices = agent.indices.slice();');
-				var pos = stackPos;
 				for(var i = 0; i < paramInfos.length; i ++) {
 					push('    variable.assign(indices, '+getParamExpr(paramInfos[i])+');');
 					if(i != paramInfos.length - 1) {
@@ -213,7 +206,6 @@ Evaluator.prototype = {
 				}
 				push('} else {'); indent ++;
 				push('var offset = agent.offset;');
-				stackPos = pos;
 				push1DMultipleAssignCode(paramInfos);
 				indent --; push('}');
 			}
@@ -341,9 +333,7 @@ Evaluator.prototype = {
 			}
 		}
 		function pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo) {
-			paramInfoGetExprBlock(indexParamInfos, rhsParamInfo, function() {
-				pushCompoundAssignCode0(calcCode, varData, indexParamInfos, rhsParamInfo);
-			});
+			pushCompoundAssignCode0(calcCode, varData, indexParamInfos, rhsParamInfo);
 		}
 		function pushIncDecCode(methodName, varData, indexParamInfos) {
 			if(isVariableAgentVarData(varData)) {
@@ -352,21 +342,19 @@ Evaluator.prototype = {
 				push('agent.'+methodName+'();');
 				return;
 			}
-			paramInfoGetExprBlock(indexParamInfos, function() {
-				push('var array = '+getVariableExpr(varData)+'.value;');
-				if(indexParamInfos.length == 0) {
-					push('array.'+methodName+'(0);');
-				} else if(indexParamInfos.length == 1) {
-					push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
-					push('array.expand1D(offset);');
-					push('array.'+methodName+'(offset);');
-				} else {
-					pushGettingIndicesCode(indexParamInfos);
-					push('array.expand(indices);');
-					push('var offset = array.getOffset(indices);');
-					push('array.'+methodName+'(offset);');
-				}
-			});
+			push('var array = '+getVariableExpr(varData)+'.value;');
+			if(indexParamInfos.length == 0) {
+				push('array.'+methodName+'(0);');
+			} else if(indexParamInfos.length == 1) {
+				push('var offset = '+getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
+				push('array.expand1D(offset);');
+				push('array.'+methodName+'(offset);');
+			} else {
+				pushGettingIndicesCode(indexParamInfos);
+				push('array.expand(indices);');
+				push('var offset = array.getOffset(indices);');
+				push('array.'+methodName+'(offset);');
+			}
 		}
 		function pushIncCode(varData, indexParamInfos) {
 			pushIncDecCode('inc', varData, indexParamInfos);
@@ -401,9 +389,7 @@ Evaluator.prototype = {
 				return;
 			}
 			push('var args = [];');
-			paramInfoGetExprBlock(paramInfos, function() {
-				pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr);
-			});
+			pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr);
 			push('if(this.frameStack.length >= 256) {');
 			push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 			push('}');
@@ -542,19 +528,8 @@ Evaluator.prototype = {
 			literals.push(literal);
 			return 'literals['+(literals.length - 1)+']';
 		}
-		function stackSizeSum(paramInfos) {
-			var sum = 0;
-			for(var i = 0; i < paramInfos.length; i ++) {
-				sum += paramInfos[i].stackSize;
-			}
-			return sum;
-		}
 		function getParamExpr(paramInfo) {
-			if(useStackPop == null) {
-				throw new Error('getParamExpr without paramInfoGetExprBlock');
-			}
 			var result = getParamExpr0(paramInfo.node);
-			stackPos -= paramInfo.stackSize;
 			return result;
 		}
 		function getParamExpr0(node) {
@@ -576,10 +551,7 @@ Evaluator.prototype = {
 			case NodeType.OPERATE:
 				return '('+getParamExpr0(node.lhsNode)+').'+getCalcCodeName(node.calcCode)+'('+getParamExpr0(node.rhsNode)+')';
 			case NodeType.GET_STACK:
-				if(useStackPop) {
-					return 'stack.pop()';
-				}
-				return 'stack[stack.length - '+(stackPos-node.offset)+']';
+				return 'stack.pop()';
 			default:
 				throw new Error('must not happen');
 			}
@@ -671,25 +643,6 @@ Evaluator.prototype = {
 			}
 			return 'this.scanArg('+getParamExpr(paramInfo)+', "l").toValue().pos';
 		}
-		function paramInfoGetExprBlock(/*paramInfo0, paramInfo1, ... paramInfoN, callback*/) {
-			var callback = arguments[arguments.length - 1];
-			var paramInfos = Array.prototype.slice.call(arguments, 0, -1);
-			paramInfos = Array.prototype.concat.apply([], paramInfos); // flatten
-			if(useStackPop != null) {
-				throw new Error('paramInfoGetExprBlock nesting');
-			}
-			var sum = stackSizeSum(paramInfos);
-			useStackPop = sum == 1;
-			if(useStackPop) {
-				sum = 0;
-			}
-			stackPos = sum;
-			
-			var result = callback();
-			useStackPop = null;
-			pushStackPopCode(sum);
-			return result;
-		}
 		function pushStackPopCode(size) {
 			if(size == 0) {
 				// nothing
@@ -737,15 +690,7 @@ Evaluator.prototype = {
 		insn2func[Instruction.Code.IFEQ] = function(insn, pc) {
 			var label = insn.opts[0];
 			var paramInfo = insn.opts[1];
-			var expr;
-			paramInfoGetExprBlock(paramInfo, function() {
-				var stackSize = stackPos;
-				expr = getParamExpr(paramInfo)+'.toIntValue()._value';
-				if(stackSize > 0) {
-					push('var val = '+expr+';');
-					expr = 'val';
-				}
-			});
+			var expr = getParamExpr(paramInfo)+'.toIntValue()._value';
 			if(insn.code == Instruction.Code.IFEQ) {
 				expr = '!' + expr;
 			}
@@ -785,19 +730,17 @@ Evaluator.prototype = {
 			push('var func = BuiltinFuncs['+type+']['+subid+'];');
 			push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
 			push('var args = [];');
-			paramInfoGetExprBlock(paramInfos, function() {
-				for(var i = 0; i < paramInfos.length; i ++) {
-					var paramInfo = paramInfos[i];
-					var node = paramInfo.node;
-					if(node.isDefaultNode()) {
-						push('args['+i+'] = void 0;');
-					} else if(node.isVarNode() && !node.onlyValue) {
-						push('args['+i+'] = '+getNewVariableAgentExpr(node.varData)+';');
-					} else {
-						push('args['+i+'] = '+getParamExpr(paramInfo)+';');
-					}
+			for(var i = 0; i < paramInfos.length; i ++) {
+				var paramInfo = paramInfos[i];
+				var node = paramInfo.node;
+				if(node.isDefaultNode()) {
+					push('args['+i+'] = void 0;');
+				} else if(node.isVarNode() && !node.onlyValue) {
+					push('args['+i+'] = '+getNewVariableAgentExpr(node.varData)+';');
+				} else {
+					push('args['+i+'] = '+getParamExpr(paramInfo)+';');
 				}
-			});
+			}
 			if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
 				push('stack.push(func.apply(this, args));');
 			} else {
@@ -844,9 +787,7 @@ Evaluator.prototype = {
 			push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
 			push('}');
 			if(paramInfo) {
-				paramInfoGetExprBlock(paramInfo, function() {
-					push('var val = '+getParamExpr(paramInfo)+';');
-				});
+				push('var val = '+getParamExpr(paramInfo)+';');
 				push('var frame = this.frameStack.pop();');
 				push('this.args = frame.prevArgs;');
 				push('if(frame.userDefFunc && frame.userDefFunc.isCType) {');
@@ -882,19 +823,17 @@ Evaluator.prototype = {
 			push('if(this.loopStack.length >= 31) {');
 			push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
 			push('}');
-			paramInfoGetExprBlock(paramInfos, function() {
-				if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
-					push('var end = '+getIntParamNativeValueExpr(paramInfos[0])+';');
-					push('if(end < 0) end = Infinity;');
-				} else {
-					push('var end = Infinity;');
-				}
-				if(paramInfos.length == 2) {
-					push('var begin = '+getIntParamNativeValueExpr(paramInfos[1])+';');
-				} else {
-					push('var begin = 0;');
-				}
-			});
+			if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
+				push('var end = '+getIntParamNativeValueExpr(paramInfos[0])+';');
+				push('if(end < 0) end = Infinity;');
+			} else {
+				push('var end = Infinity;');
+			}
+			if(paramInfos.length == 2) {
+				push('var begin = '+getIntParamNativeValueExpr(paramInfos[1])+';');
+			} else {
+				push('var begin = 0;');
+			}
 			push('if(end == 0) {');
 			push('    this.pc = '+pos+';');
 			push('    continue;');
@@ -928,21 +867,18 @@ Evaluator.prototype = {
 			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 			push('}');
 			push('var data = this.loopStack[this.loopStack.length - 1];');
-			function pushContinueCode(newCntExpr) {
-				push('if('+newCntExpr+' >= data.end) {');
-				push('    this.loopStack.pop();');
-				push('    this.pc = '+pos+';');
-				push('} else {');
-				push('    this.pc = data.pc;');
-				push('}');
-			}
+			var newCntExpr;
 			if(paramInfo) {
-				paramInfoGetExprBlock(paramInfo, function() {
-					pushContinueCode('(data.cnt = '+getIntParamNativeValueExpr(paramInfo)+')');
-				});
+				newCntExpr = '(data.cnt = '+getIntParamNativeValueExpr(paramInfo)+')';
 			} else {
-				pushContinueCode('++data.cnt');
+				newCntExpr = '++data.cnt';
 			}
+			push('if('+newCntExpr+' >= data.end) {');
+			push('    this.loopStack.pop();');
+			push('    this.pc = '+pos+';');
+			push('} else {');
+			push('    this.pc = data.pc;');
+			push('}');
 			push('continue;');
 		};
 		insn2func[Instruction.Code.BREAK] = function(insn, pc) {
@@ -995,9 +931,7 @@ Evaluator.prototype = {
 			if(insn.code == Instruction.Code.GOSUB_EXPR) {
 				pushJumpingSubroutineCode(pc);
 			}
-			paramInfoGetExprBlock(paramInfo, function() {
-				push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
-			});
+			push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
 			push('continue;');
 		};
 		insn2func[Instruction.Code.EXGOTO] = function(insn, pc) {
@@ -1013,24 +947,22 @@ Evaluator.prototype = {
 			var stepExpr;
 			var posExpr;
 			var endExpr;
-			paramInfoGetExprBlock(paramInfos, function() {
-				push('var counter = '+getStrictIntParamNativeValueExpr(counterParamInfo)+';');
-				stepExpr = getIntParamNativeValueExpr(stepParamInfo);
-				if(stepParamInfo.stackSize != 0) {
-					push('var step = '+stepExpr+';');
-					stepExpr = 'step';
-				}
-				endExpr = getIntParamNativeValueExpr(endParamInfo);
-				if(endParamInfo.stackSize != 0) {
-					push('var end = '+endExpr+';');
-					endExpr = 'end';
-				}
-				posExpr = getLabelParamNativeValueExpr(labelParamInfo);
-				if(labelParamInfo.stackSize != 0) {
-					push('var pos = '+posExpr+';');
-					posExpr = 'pos';
-				}
-			});
+			push('var counter = '+getStrictIntParamNativeValueExpr(counterParamInfo)+';');
+			stepExpr = getIntParamNativeValueExpr(stepParamInfo);
+			if(stepParamInfo.stackSize != 0) {
+				push('var step = '+stepExpr+';');
+				stepExpr = 'step';
+			}
+			endExpr = getIntParamNativeValueExpr(endParamInfo);
+			if(endParamInfo.stackSize != 0) {
+				push('var end = '+endExpr+';');
+				endExpr = 'end';
+			}
+			posExpr = getLabelParamNativeValueExpr(labelParamInfo);
+			if(labelParamInfo.stackSize != 0) {
+				push('var pos = '+posExpr+';');
+				posExpr = 'pos';
+			}
 			push('if('+stepExpr+' >= 0) {');
 			push('    if(counter >= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
 			push('} else {');
@@ -1041,31 +973,29 @@ Evaluator.prototype = {
 			var isGosub = insn.opts[0];
 			var labelParamInfos = insn.opts[1];
 			var indexParamInfo = insn.opts[2];
-			paramInfoGetExprBlock(labelParamInfos, indexParamInfo, function() {
-				var labelsIndex = null;
-				var labelExprs = [];
-				for(var i = 0; i < labelParamInfos.length; i ++) {
-					var paramInfo = labelParamInfos[i];
-					if(paramInfo.node.isLiteralNode() && paramInfo.node.val.getType() == VarType.LABEL) {
-						labelExprs[i] = '' + paramInfo.node.val.pos;
-					} else {
-						if(labelsIndex == null) {
-							push('var labels = [];');
-							labelsIndex = 0;
-						}
-						push('labels['+labelsIndex+'] = '+getLabelParamNativeValueExpr(labelParamInfos[i])+';');
-						labelExprs[i] = 'labels['+labelsIndex+']';
-						labelsIndex ++;
+			var labelsIndex = null;
+			var labelExprs = [];
+			for(var i = 0; i < labelParamInfos.length; i ++) {
+				var paramInfo = labelParamInfos[i];
+				if(paramInfo.node.isLiteralNode() && paramInfo.node.val.getType() == VarType.LABEL) {
+					labelExprs[i] = '' + paramInfo.node.val.pos;
+				} else {
+					if(labelsIndex == null) {
+						push('var labels = [];');
+						labelsIndex = 0;
 					}
+					push('labels['+labelsIndex+'] = '+getLabelParamNativeValueExpr(labelParamInfos[i])+';');
+					labelExprs[i] = 'labels['+labelsIndex+']';
+					labelsIndex ++;
 				}
-				var indexExpr = getIntParamNativeValueExpr(indexParamInfo);
-				push('switch('+indexExpr+') {');
-				for(var i = 0; i < labelParamInfos.length; i ++) {
-					push('case '+i+': this.pc = '+labelExprs[i]+'; break;');
-				}
-				push('default: this.pc ++;');
-				push('}');
-			});
+			}
+			var indexExpr = getIntParamNativeValueExpr(indexParamInfo);
+			push('switch('+indexExpr+') {');
+			for(var i = 0; i < labelParamInfos.length; i ++) {
+				push('case '+i+': this.pc = '+labelExprs[i]+'; break;');
+			}
+			push('default: this.pc ++;');
+			push('}');
 			if(isGosub) {
 				pushJumpingSubroutineCode(pc);
 			}
@@ -1080,13 +1010,11 @@ Evaluator.prototype = {
 				indent --;
 			}
 		}
-		var stackPos = 0;
 		var literals = this.literals;
 		var userDefFuncs = this.userDefFuncs;
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;
-		var useStackPop = null;
 		push('for(;;) {'); indent ++;
 		push('switch(this.pc) {');
 		main();

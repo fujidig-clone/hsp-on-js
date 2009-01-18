@@ -5,7 +5,7 @@ function ParamInfo(node, stackSize) {
 
 Utils.objectExtend(ParamInfo.prototype, {
 	toString: function toString() {
-		return '<ParamInfo: '+this.node+(this.stackSize!=0?','+this.stackSize:'')+'>';
+		return '<ParamInfo: '+this.node+'>';
 	},
 	isVar: function isVar() {
 		return this.node.isVarNode() && !this.node.onlyValue;
@@ -167,8 +167,7 @@ Utils.objectExtend(BuiltinFuncallNode.prototype, {
 	}
 });
 
-function GetStackNode(offset, originalNode) {
-	this.offset = offset;
+function GetStackNode(originalNode) {
 	this.originalNode = originalNode;
 }
 GetStackNode.prototype = new Node;
@@ -176,7 +175,7 @@ Utils.objectExtend(GetStackNode.prototype, {
 	nodeType: NodeType.GET_STACK,
 	isGetStackNode: function () { return true; },
 	toString: function toString() {
-		return '<GetStackNode:'+this.offset/*+','+this.originalNode*/+'>';
+		return '<GetStackNode'/*+':'+this.originalNode*/+'>';
 	},
 	getValueType: function getValueType() {
 		return this.originalNode.getValueType();

@@ -137,31 +137,27 @@ Compiler.prototype = {
 		var varToken = this.ax.tokens[this.tokensPos];
 		var varData = this.getVariableData(true);
 		++ this.tokensPos;
-		var indexParamInfos = this.compileNodes(sequence, this.getVariableSubscriptNodes());
+		var indexNodes = this.getVariableSubscriptNodes();
 		var token = this.ax.tokens[this.tokensPos++];
 		if(!(token && token.type == Token.Type.MARK)) {
 			throw this.error();
 		}
-		if(this.ax.tokens[this.tokensPos].ex1) {
-			if(token.val == 0) { // インクリメント
-				this.pushNewInsn(sequence, Instruction.Code.INC, [varData, indexParamInfos], token);
-				return;
-			}
-			if(token.val == 1) { // デクリメント
-				this.pushNewInsn(sequence, Instruction.Code.DEC, [varData, indexParamInfos], token);
-				return;
-			}
+		if(this.ax.tokens[this.tokensPos].ex1 && (token.val == 0 || token.val == 1)) {
+			// インクリメント / デクリメント
+			var indexParamInfos = this.compileNodes(sequence, indexNodes);
+			this.pushNewInsn(sequence, Instruction.Code.INC + token.val, [varData, indexParamInfos], token);
+			return;
 		}
+		var rhsParamInfos = this.compileParameters(sequence, true, true);
+		var indexParamInfos = this.compileNodes(sequence, indexNodes);
 		if(token.val != 8) { // CALCCODE_EQ
 			// 複合代入
-			var rhsParamInfos = this.compileParameters(sequence, true, true);
 			if(rhsParamInfos.length != 1) {
 				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
 			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN, [token.val, varData, indexParamInfos, rhsParamInfos[0]], token);
 			return;
 		}
-		var rhsParamInfos = this.compileParameters(sequence, true, true);
 		if(rhsParamInfos.length == 0) {
 			throw this.error("代入のパラメータの数が間違っています。", token);
 		}
@@ -270,7 +266,7 @@ Compiler.prototype = {
 			if(this.ax.tokens[this.tokensPos].ex2) {
 				throw this.error('パラメータは省略できません');
 			}
-			var varParamInfo = this.compileNode(sequence, this.getVarNode(true, false));
+			var varNode = this.getVarNode(true, false);
 			var structToken = this.ax.tokens[this.tokensPos++];
 			var prmInfo = this.ax.prmsInfo[structToken.code];
 			if(structToken.type != Token.Type.STRUCT || prmInfo.mptype != MPType.STRUCTTAG) {
@@ -286,7 +282,7 @@ Compiler.prototype = {
 				argc = this.getParametersNodesSub().length;
 			}
 			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
-				             [varParamInfo, module, paramInfos, argc], token);
+				             [this.compileNode(sequence, varNode), module, paramInfos, argc], token);
 			break;
 		case 0x18: // exgoto
 			this.tokensPos ++;
@@ -300,8 +296,7 @@ Compiler.prototype = {
 			if(paramToken.ex1 || paramToken.ex2) {
 				throw this.error('パラメータは省略できません', token);
 			}
-			var posHead = this.tokensPos;
-			this.tokensPos += this.skipParameter(this.tokensPos);
+			var indexParamInfo = this.compileParameter(sequence);
 			var jumpTypeToken = this.ax.tokens[this.tokensPos];
 			if(jumpTypeToken.ex1 || jumpTypeToken.type != Token.Type.PROGCMD || jumpTypeToken.code > 1) {
 				throw this.error('goto / gosub が指定されていません', token);
@@ -309,10 +304,6 @@ Compiler.prototype = {
 			var isGosub = jumpTypeToken.code == 1;
 			this.tokensPos ++;
 			var labelParamInfos = this.compileParametersSub(sequence);
-			var posFoot = this.tokensPos;
-			this.tokensPos = posHead;
-			var indexParamInfo = this.compileParameter(sequence);
-			this.tokensPos = posFoot;
 			this.pushNewInsn(sequence, Instruction.Code.ON, [isGosub, labelParamInfos, indexParamInfo], token);
 			break;
 		default:
@@ -395,7 +386,7 @@ Compiler.prototype = {
 		if(!result) result = [];
 		var len = result.length;
 		this.getParametersNodes0(cannotBeOmitted, notReceiveVar, result, isHead);
-		for(var i = len; i < result.length; i ++) {
+		for(var i = result.length - 1; i >= len; i --) {
 			result[i] = this.compileNode(sequence, result[i]);
 		}
 		return result;
@@ -405,7 +396,7 @@ Compiler.prototype = {
 	},
 	compileNodes: function compileNodes(sequence, nodes) {
 		var paramInfos = [];
-		for(var i = 0; i < nodes.length; i ++) {
+		for(var i = nodes.length - 1; i >= 0; i --) {
 			paramInfos[i] = this.compileNode(sequence, nodes[i]);
 		}
 		return paramInfos;
@@ -420,7 +411,8 @@ Compiler.prototype = {
 			switch(node.nodeType) {
 			case NodeType.VAR:
 				if(node.indexNodes.length > 0) {
-					parent[propname] = new GetStackNode(stackSize++, node);
+					parent[propname] = new GetStackNode(node);
+					stackSize ++;
 					self.pushNewInsn(sequence,
 					                 node.onlyValue ? Instruction.Code.GET_VAR : Instruction.Code.PUSH_VAR,
 					                 [node.varData, self.compileNodes(sequence, node.indexNodes)],
@@ -434,11 +426,12 @@ Compiler.prototype = {
 			case NodeType.DEFAULT:
 				break;
 			case NodeType.OPERATE:
-				traverse(node, 'lhsNode');
 				traverse(node, 'rhsNode');
+				traverse(node, 'lhsNode');
 				break;
 			case NodeType.USERDEF_FUNCALL:
-				parent[propname] = new GetStackNode(stackSize++, node);
+				parent[propname] = new GetStackNode(node);
+				stackSize ++;
 				var paramInfos = self.compileNodes(sequence, node.paramNodes);
 				self.pushNewInsn(sequence,
 				                 Instruction.Code.CALL_USERDEF_FUNC,
@@ -446,7 +439,8 @@ Compiler.prototype = {
 				                 node.token);
 				break;
 			case NodeType.BUILTIN_FUNCALL:
-				parent[propname] = new GetStackNode(stackSize++, node);
+				parent[propname] = new GetStackNode(node);
+				stackSize ++;
 				var paramInfos = self.compileNodes(sequence, node.paramNodes);
 				if(node.groupId == Token.Type.SYSVAR && node.subId == 0x04) {
 					self.pushNewInsn(sequence, Instruction.Code.CNT, [], node.token);
