@@ -1,0 +1,86 @@
+; gosub –½—ß‚ÌƒeƒXƒg
+----------------------------------------
+	x = "A"
+	gosub *sub
+	x += "C"
+	is(x, "ABC")
+	exit_test
+*sub
+	x += "B"
+	return
+----------------------------------------
+	assert_error 10
+	return
+----------------------------------------
+	is(sublev, 0)
+	gosub *sub_a
+	is(sublev, 0)
+	exit_test
+*sub_a
+	is(sublev, 1)
+	gosub *sub_b
+	is(sublev, 1)
+	return
+
+*sub_b
+	is(sublev, 2)
+	return
+----------------------------------------
+	gosub *sub
+	ok()
+	exit_test
+*sub
+	if sublev < 126 {
+		gosub *sub
+	}
+	return
+----------------------------------------
+	assert_error 29
+*sub
+	gosub *sub
+----------------------------------------
+	gosub *sub1
+	is(stat, 42)
+	gosub *sub2
+	is(refstr, "foo")
+	gosub *sub3
+	is(refdval, 1.5)
+	gosub *sub1
+	gosub *sub4
+	is(stat, 42)
+	exit_test
+*sub1
+	return 42
+*sub2
+	return "foo"
+*sub3
+	return 1.5
+*sub4
+	return
+----------------------------------------
+	x = "A"
+	label = *sub
+	gosub label
+	x += "C"
+	is(x, "ABC")
+	exit_test
+*sub
+	x += "B"
+	return
+----------------------------------------
+	v = 1
+	assert_error "8,6"
+	gosub v
+----------------------------------------
+	i = 0
+	labels = *sub1, *sub2, *sub3, *sub4, *sub5
+	foreach labels
+		gosub labels.cnt
+	loop
+	exit_test
+
+*sub1 : is(i, 0) : i ++ : return
+*sub2 : is(i, 1) : i ++ : return
+*sub3 : is(i, 2) : i ++ : return
+*sub4 : is(i, 3) : i ++ : return
+*sub5 : is(i, 4) : i ++ : return

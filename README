@@ -17,6 +17,7 @@ src/create-package を実行します。
 ruby1.9 が必要です。
 
 = テストの実行の仕方 =
+test ディレクトリ内は HSP on JS 用の回帰テストです。
 パッケージを作り（デフォルトの ./hsp-on-js-core.js に出力）、test/runner.rb を実行します。
 引数に指定されたファイルでテストします。
 引数を指定しないと test/test_*.hsp でテストします。

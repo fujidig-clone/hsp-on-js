@@ -192,7 +192,7 @@ Compiler.prototype = {
 			} else {
 				this.tokensPos ++;
 				var paramInfos = this.compileParameters(sequence);
-				if(paramInfos != 1) throw this.error('gosub の引数の数が違います', token);
+				if(paramInfos.length != 1) throw this.error('gosub の引数の数が違います', token);
 				this.pushNewInsn(sequence, Instruction.Code.GOSUB_EXPR, [paramInfos[0]], token);
 			}
 			break;

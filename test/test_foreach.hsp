@@ -1,0 +1,84 @@
+; foreach –½—ß‚ÌƒeƒXƒg
+----------------------------------------
+	a = 111, 222, 333
+	cnts = ""
+	vals = ""
+	foreach a
+		cnts += "[" + cnt + "]"
+		vals += "[" + a.cnt + "]"
+	loop
+
+	is(cnts, "[0][1][2]")
+	is(vals, "[111][222][333]")
+----------------------------------------
+	dim a
+	b = ""
+	foreach a
+		dim a, 5
+		b += "[" + cnt + "]"
+	loop
+	is(b, "[0][1][2][3][4]")
+----------------------------------------
+; varuse ‚ª false ‚Ì‚Æ‚« skip ‚·‚é
+	dimtype a, vartype("label")
+	b = ""
+	foreach a
+		b += "[" + cnt + "]"
+	loop
+	is(b, "")
+----------------------------------------
+	a = *label
+	a.2 = *label
+	a.4 = *label
+	b = ""
+	foreach a
+		b += "[" + cnt + "]"
+	loop
+	is(b, "[0][2][4]")
+
+	b = ""
+	foreach a
+		if cnt == 2 : continue
+		b += "[" + cnt + "]"
+	loop
+	is(b, "[0][4]")
+
+	a.3 = *label
+	b = ""
+	foreach a
+		if cnt == 2 : continue
+		b += "[" + cnt + "]"
+	loop
+	is(b, "[0][3][4]")
+
+	b = ""
+	foreach a
+		if cnt == 2 : continue 4
+		b += "[" + cnt + "]"
+	loop
+	is(b, "[0][4]")
+
+	a.5 = *label
+	a.4 = a.1
+
+	b = ""
+	foreach a
+		if cnt == 2 : continue 4
+		b += "[" + cnt + "]"
+	loop
+	is(b, "[0][5]")
+
+*label
+----------------------------------------
+	dim a
+	foreach a
+		is(looplev, 1)
+	loop
+	is(looplev, 0)
+----------------------------------------
+	dim a
+	assert_error 9
+*label
+	foreach a
+		goto *label
+	loop
