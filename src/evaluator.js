@@ -557,15 +557,13 @@ Evaluator.prototype = {
 			}
 		}
 		function getNoSubscriptVariableExpr(paramInfo) {
-			var node = paramInfo.node;
-			if(node.isGetStackNode()) {
-				node = node.originalNode;
-			}
+			var node = paramInfo.node.toPureNode();
 			if(!node.isVarNode() || node.onlyValue) {
 				push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
 				return null;
 			}
 			if(node.indexNodes.length > 0) {
+				// 添え字指定があってスタック上に VariableAgent が積まれていてもエラーで落とすので pop する必要はない
 				push('throw new HSPError(ErrorCode.BAD_ARRAY_EXPRESSION);');
 				return null;
 			}

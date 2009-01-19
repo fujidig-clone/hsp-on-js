@@ -1,0 +1,345 @@
+; ユーザ定義関数のテスト
+----------------------------------------
+	goto *main
+#deffunc f
+	x += "B"
+	return
+*main
+	x = "A"
+	f
+	x += "C"
+	is(x, "ABC")
+----------------------------------------
+	goto *main
+#deffunc f
+	is(sublev, 1)
+	return
+*main
+	is(sublev, 0)
+	f
+	is(sublev, 0)
+----------------------------------------
+	goto *main
+#defcfunc func5
+	x += "F"
+	is(sublev, 5)
+	return 42
+#deffunc cmd4
+	x += "E"
+	is(sublev, 4)
+	is(func5(), 42)
+	x += "G"
+	is(sublev, 4)
+	return
+#defcfunc func4
+	x += "I"
+	is(sublev, 4)
+	return 87
+*sub3
+	x += "D"
+	is(sublev, 3)
+	cmd4
+	x += "H"
+	is(sublev, 3)
+	is(func4(), 87)
+	x += "J"
+	is(sublev, 3)
+	return
+#deffunc cmd2
+	x += "C"
+	is(sublev, 2)
+	gosub *sub3
+	x += "K"
+	is(sublev, 2)
+	return
+#deffunc cmd1
+	x += "B"
+	is(sublev, 1)
+	cmd2
+	x += "L"
+	is(sublev, 1)
+	return
+*main
+	x = "A"
+	is(sublev, 0)
+	cmd1
+	x += "M"
+	is(sublev, 0)
+	is(x, "ABCDEFGHIJKLM")
+----------------------------------------
+	goto *main
+#deffunc f int x, double y, str z
+	is(x, 42)
+	is(y, 0.5)
+	is(z, "foo")
+	return
+*main
+	f 42, 0.5, "foo"
+----------------------------------------
+	goto *main
+#deffunc f
+	f
+	return
+*main
+	assert_error 29
+	f
+----------------------------------------
+; ユーザ定義関数から gosub してもエイリアスが有効である
+	goto *main
+#deffunc f2 int i
+	return
+#deffunc f int i
+	gosub *sub1
+	return
+*sub1
+	is(i, 42)
+	gosub *sub2
+	return
+*sub2
+	is(i, 42)
+	f2 87
+	is(i, 42)
+	return
+*main
+	f 42
+----------------------------------------
+; 仮引数は動的に振舞う
+	goto *main
+#deffunc f int i
+	if i : return
+	f 1
+	is(i, 0)
+	return
+*main
+	f 0
+----------------------------------------
+	goto *main
+#defcfunc f
+	assert_error 40
+	return
+*main
+	_ = f()
+----------------------------------------
+; パラメータの数が多すぎる
+; MEMO: オフィシャル HSP は命令を実行後にパラメータの数が多すぎることのチェックをする
+	goto *main
+#deffunc f
+	return
+*main
+	assert_error 16
+	f 0
+----------------------------------------
+; local 変数
+	goto *main
+#deffunc f int fl, local v
+	if fl {
+		is(v, 0)
+	} else {
+		v = 1
+		f 1
+	}
+	return
+*main
+	f 0
+	f 1
+----------------------------------------
+	goto *main
+#deffunc f1
+	return 42
+#deffunc f2
+	return 0.5
+#deffunc f3
+	return "foo"
+#deffunc f4
+	return
+*main
+	f1
+	is(stat, 42)
+	f2
+	is(refdval, 0.5)
+	f3
+	is(refstr, "foo")
+	f1
+	f4
+	is(stat, 42)
+----------------------------------------
+; パラメータは省略できないエラー
+	goto *main
+#deffunc f1 str s
+	return
+*main
+	assert_error 5
+	f1
+----------------------------------------
+	goto *main
+#deffunc f1 double d
+	return
+*main
+	assert_error 5
+	f1
+----------------------------------------
+	goto *main
+#deffunc f1 var v
+	return
+*main
+	assert_error "23,5"
+	f1
+----------------------------------------
+	goto *main
+#deffunc f1 array a
+	return
+*main
+	assert_error "23,5"
+	f1
+----------------------------------------
+; 型チェック
+	goto *main
+#deffunc f int i
+	return
+*main
+	f 1
+	f 1.0
+	assert_error 6
+	f "foo"
+----------------------------------------
+	goto *main
+#deffunc f double d
+	return
+*main
+	f 1
+	f 1.0
+	assert_error 6
+	f "foo"
+----------------------------------------
+	goto *main
+#deffunc f str s
+	return
+*main
+	f "foo"
+	ok()
+----------------------------------------
+	goto *main
+#deffunc f str s
+	return
+*main
+	assert_error 6
+	f 1
+----------------------------------------
+	goto *main
+#deffunc f str s
+	return
+*main
+	assert_error 6
+	f 1.0
+----------------------------------------
+; var エイリアスで受け取るだけで配列を拡張する
+	goto *main
+#deffunc f var v
+	return
+*main
+	f a.2
+	is(length(a), 3)
+	dim a, 1, 1
+	assert_error 7
+	f a.2
+----------------------------------------
+; array エイリアスで受け取るだけで配列を拡張する
+	goto *main
+#deffunc f array v
+	return
+*main
+	f a.2
+	is(length(a), 3)
+	dim a, 1, 1
+	assert_error 7
+	f a.2
+----------------------------------------
+; array エイリアスは添え字つきでもエラーは投げず、添え字指定なしと同じように受け取る
+	goto *main
+#deffunc fv var v, int i
+	v = i
+	return
+#deffunc fa array a, int i
+	a = i
+	return
+*main
+	fv x.3, 42
+	is(x.3, 42)
+	fa x.3, 87
+	is(x.3, 42)
+	is(x.0, 87)
+----------------------------------------
+; int エイリアスは省略可能
+	goto *main
+#deffunc f int i
+	is(i, 0)
+	return
+*main
+	f
+----------------------------------------
+; 引数の先頭や途中に local
+	goto *main
+#deffunc f1 local a, str b, str c
+	is(a, 0)
+	is(b, "foo")
+	is(c, "bar")
+	return
+#deffunc f2 str a, local b, str c
+	is(a, "hoge")
+	is(b, 0)
+	is(c, "huga")
+	return
+#deffunc f3 local a, str b
+	return
+*main
+	f1 "foo", "bar"
+	f2 "hoge", "huga"
+	assert_error 16
+	f3 "foo", "bar"
+----------------------------------------
+; 途中の引数の省略
+	goto *main
+#deffunc f1 int a, int b, int c
+	is(a, 0)
+	is(b, 0)
+	is(c, 0)
+	return
+#deffunc f2 int a, int b, int c
+	is(a, 1)
+	is(b, 0)
+	is(c, 2)
+	return
+#deffunc f3 int a, int b, int c
+	is(a, 0)
+	is(b, 1)
+	is(c, 2)
+	return
+#deffunc f4 int a, int b, int c
+	is(a, 0)
+	is(b, 0)
+	is(c, 1)
+	return
+#deffunc f5 int a, int b, int c, int d
+	is(a, 1)
+	is(b, 0)
+	is(c, 0)
+	is(d, 2)
+	return
+#deffunc f6 int a, local b, int c
+	is(a, 0)
+	is(b, 0)
+	is(c, 1)
+	return
+*main
+	f1
+	f1 , ,
+	f2 1, , 2
+	f3 , 1, 2
+	f4 , , 1
+	f5 1, , , 2
+	f6 , 1
+----------------------------------------
+; sublev = 0 の状態でエイリアスを参照
+#deffunc f int i
+	assert_error 30
+	_ = i
