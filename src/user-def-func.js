@@ -6,7 +6,7 @@ function UserDefFunc(isCType, name, label, paramTypes, id) {
 	this.id = id;
 }
 
-UserDefFunc.prototype.toString = function toString() {
+UserDefFunc.prototype.toString = function() {
 	return '<UserDefFunc:'+this.name+' isCType='+this.isCType+', label='+this.label+', paramTypes=['+this.paramTypes.join(', ')+']>';
 };
 
@@ -18,7 +18,7 @@ function Module(name, constructor, destructor, membersCount, id) {
 	this.id = id;
 }
 
-Module.prototype.toString = function toString() {
+Module.prototype.toString = function() {
 	return '<Module:'+this.name+' membersCount='+this.membersCount+'>';
 };
 

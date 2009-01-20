@@ -1,84 +1,84 @@
 function Value() {}
 
 Value.prototype = {
-	add: function add(rhs) {
+	add: function(rhs) {
 		throw this._unsupportedError('+');
 	},
-	sub: function sub(rhs) {
+	sub: function(rhs) {
 		throw this._unsupportedError('-');
 	},
-	mul: function mul(rhs) {
+	mul: function(rhs) {
 		throw this._unsupportedError('*');
 	},
-	div: function div(rhs) {
+	div: function(rhs) {
 		throw this._unsupportedError('/');
 	},
-	mod: function mod(rhs) {
+	mod: function(rhs) {
 		throw this._unsupportedError('\\');
 	},
-	and: function and(rhs) {
+	and: function(rhs) {
 		throw this._unsupportedError('&');
 	},
-	or: function or(rhs) {
+	or: function(rhs) {
 		throw this._unsupportedError('|');
 	},
-	xor: function xor(rhs) {
+	xor: function(rhs) {
 		throw this._unsupportedError('^');
 	},
-	eq: function eq(rhs) {
+	eq: function(rhs) {
 		throw this._unsupportedError('==');
 	},
-	ne: function ne(rhs) {
+	ne: function(rhs) {
 		throw this._unsupportedError('!=');
 	},
-	gt: function gt(rhs) {
+	gt: function(rhs) {
 		throw this._unsupportedError('>');
 	},
-	lt: function lt(rhs) {
+	lt: function(rhs) {
 		throw this._unsupportedError('<');
 	},
-	gteq: function gteq(rhs) {
+	gteq: function(rhs) {
 		throw this._unsupportedError('>=');
 	},
-	lteq: function lteq(rhs) {
+	lteq: function(rhs) {
 		throw this._unsupportedError('<=');
 	},
-	rsh: function rsh(rhs) {
+	rsh: function(rhs) {
 		throw this._unsupportedError('>>');
 	},
-	lsh: function lsh(rhs) {
+	lsh: function(rhs) {
 		throw this._unsupportedError('<<');
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.NONE;
 	},
-	toIntValue: function toIntValue() {
+	toIntValue: function() {
 		throw this._convertError("int");
 	},
-	toDoubleValue: function toDoubleValue() {
+	toDoubleValue: function() {
 		throw this._convertError("double");
 	},
-	toStrValue: function toStrValue() {
+	toStrValue: function() {
 		throw this._convertError("str");
 	},
-	toValue: function toValue() {
+	toValue: function() {
 		return this;
 	},
-	_unsupportedError: function _unsupportedError(op) {
+	_unsupportedError: function(op) {
 		return new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                    VarTypeNames[this.getType()]+" 型は `"+op+"' 演算子をサポートしていません");
 	},
-	_convertError: function _convertError(type) {
+	_convertError: function(type) {
 		return new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                    VarTypeNames[this.getType()]+" 型は "+type + " に変換できません");
 	},
-	toString: function toString() {
+	toString: function() {
 		return '<Value>';
 	},
-	isUsing: function isUsing() {
+	isUsing: function() {
 		return null;
 	},
-	isVariable: function isVariable() {
+	isVariable: function() {
 		return false;
 	}
 };

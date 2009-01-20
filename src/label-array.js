@@ -6,7 +6,7 @@ function LabelArray() {
 LabelArray.prototype = new HSPArray();
 
 Utils.objectExtend(LabelArray.prototype, {
-	expand: function expand(indices) {
+	expand: function(indices) {
 		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
@@ -17,7 +17,7 @@ Utils.objectExtend(LabelArray.prototype, {
 		}
 		return isExpanded;
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		var isExpanded = this.expandLen1D(index);
 		if(isExpanded) {
 			var newLen = this.l0;
@@ -28,7 +28,7 @@ Utils.objectExtend(LabelArray.prototype, {
 		}
 		return isExpanded;
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.LABEL;
 	}
 });

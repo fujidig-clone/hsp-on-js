@@ -5,7 +5,7 @@ function Instruction(code, opts, fileName, lineNo) {
 	this.lineNo = lineNo;
 }
 
-Instruction.prototype.toString = function toString() {
+Instruction.prototype.toString = function() {
 	return this.fileName + '#' + this.lineNo + ': ' + Instruction.CodeNames[this.code] + ' <' + this.opts.join(', ') + '>';
 };
 

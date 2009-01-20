@@ -22,7 +22,7 @@ function VariableData(proxyVarType, id) {
 	this.id = id;
 }
 
-VariableData.prototype.toString = function toString() {
+VariableData.prototype.toString = function() {
 	var type;
 	var outputId = true;
 	switch(this.proxyVarType) {
@@ -65,7 +65,7 @@ var ProxyVarType = {
 };
 
 Compiler.prototype = {
-	compile: function compile() {
+	compile: function() {
 		var sequence = [];
 		while(this.tokensPos < this.ax.tokens.length) {
 			var token = this.ax.tokens[this.tokensPos];
@@ -115,11 +115,11 @@ Compiler.prototype = {
 		}
 		return sequence;
 	},
-	pushNewInsn: function pushNewInsn(sequence, code, opts, token) {
+	pushNewInsn: function(sequence, code, opts, token) {
 		token || (token = this.ax.tokens[this.tokensPos]);
 		sequence.push(new Instruction(code, opts, token.fileName, token.lineNo));
 	},
-	getFinfoIdByMinfoId: function getFinfoIdByMinfoId(minfoId) {
+	getFinfoIdByMinfoId: function(minfoId) {
 		var funcsInfo = this.ax.funcsInfo;
 		for(var i = 0; i < funcsInfo.length; i ++) {
 			var funcInfo = funcsInfo[i];
@@ -129,11 +129,11 @@ Compiler.prototype = {
 		}
 		return null;
 	},
-	error: function error(message, token) {
+	error: function(message, token) {
 		token || (token = this.ax.tokens[this.tokensPos]);
 		return new CompileError(message, token.fileName, token.lineNo);
 	},
-	compileAssignment: function compileAssignment(sequence) {
+	compileAssignment: function(sequence) {
 		var varToken = this.ax.tokens[this.tokensPos];
 		var varData = this.getVariableData(true);
 		++ this.tokensPos;
@@ -163,7 +163,7 @@ Compiler.prototype = {
 		}
 		this.pushNewInsn(sequence, Instruction.Code.ASSIGN, [varData, indexParamInfos, rhsParamInfos], token);
 	},
-	compileProgramCommand: function compileProgramCommand(sequence) {
+	compileProgramCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
 		switch(token.code) {
 		case 0x00: // goto
@@ -310,7 +310,7 @@ Compiler.prototype = {
 			this.compileCommand(sequence);
 		}
 	},
-	compileBasicCommand: function compileBasicCommand(sequence) {
+	compileBasicCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
 		switch(token.code) {
 		case 0x00: // onexit
@@ -328,7 +328,7 @@ Compiler.prototype = {
 			this.compileCommand(sequence);
 		}
 	},
-	compileGuiCommand: function compileGuiCommand(sequence) {
+	compileGuiCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
 		switch(token.code) {
 		case 0x00: // button
@@ -342,13 +342,13 @@ Compiler.prototype = {
 			this.compileCommand(sequence);
 		}
 	},
-	compileCommand: function compileCommand(sequence) {
+	compileCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var paramInfos = this.compileParameters(sequence);
 		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
 		                 [token.type, token.code, paramInfos], token);
 	},
-	compileBranchCommand: function compileBranchCommand(sequence) {
+	compileBranchCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var skipTo = token.pos + token.size + token.skipOffset;
 		var label = new Label;
@@ -376,13 +376,13 @@ Compiler.prototype = {
 			this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
 		}
 	},
-	compileParameters: function compileParameters(sequence, cannotBeOmitted, notReceiveVar, result) {
+	compileParameters: function(sequence, cannotBeOmitted, notReceiveVar, result) {
 		return this.compileParameters0(sequence, cannotBeOmitted, notReceiveVar, result, true);
 	},
-	compileParametersSub: function compileParametersSub(sequence, cannotBeOmitted, notReceiveVar, result) {
+	compileParametersSub: function(sequence, cannotBeOmitted, notReceiveVar, result) {
 		return this.compileParameters0(sequence, cannotBeOmitted, notReceiveVar, result, false);
 	},
-	compileParameters0: function compileParameters0(sequence, cannotBeOmitted, notReceiveVar, result, isHead) {
+	compileParameters0: function(sequence, cannotBeOmitted, notReceiveVar, result, isHead) {
 		if(!result) result = [];
 		var len = result.length;
 		this.getParametersNodes0(cannotBeOmitted, notReceiveVar, result, isHead);
@@ -391,17 +391,17 @@ Compiler.prototype = {
 		}
 		return result;
 	},
-	compileParameter: function compileParameter(sequence, notReceiveVar) {
+	compileParameter: function(sequence, notReceiveVar) {
 		return this.compileNode(sequence, this.getParameterNode(notReceiveVar));
 	},
-	compileNodes: function compileNodes(sequence, nodes) {
+	compileNodes: function(sequence, nodes) {
 		var paramInfos = [];
 		for(var i = nodes.length - 1; i >= 0; i --) {
 			paramInfos[i] = this.compileNode(sequence, nodes[i]);
 		}
 		return paramInfos;
 	},
-	compileNode: function compileNode(sequence, root) {
+	compileNode: function(sequence, root) {
 		var stackSize = 0;
 		var propname = 0;
 		var rootWrapper = [root];
@@ -458,13 +458,13 @@ Compiler.prototype = {
 		traverse(rootWrapper, 0);
 		return new ParamInfo(rootWrapper[0], stackSize);
 	},
-	getParametersNodes: function getParametersNodes(cannotBeOmitted, notReceiveVar, nodes) {
+	getParametersNodes: function(cannotBeOmitted, notReceiveVar, nodes) {
 		return this.getParametersNodes0(cannotBeOmitted, notReceiveVar, nodes, true);
 	},
-	getParametersNodesSub: function getParametersNodesSub(cannotBeOmitted, notReceiveVar, nodes) {
+	getParametersNodesSub: function(cannotBeOmitted, notReceiveVar, nodes) {
 		return this.getParametersNodes0(cannotBeOmitted, notReceiveVar, nodes, false);
 	},
-	getParametersNodes0: function getParametersNodes0(cannotBeOmitted, notReceiveVar, nodes, isHead) {
+	getParametersNodes0: function(cannotBeOmitted, notReceiveVar, nodes, isHead) {
 		if(!nodes) nodes = [];
 		if(isHead && this.ax.tokens[this.tokensPos].ex2) {
 			if(cannotBeOmitted) {
@@ -492,7 +492,7 @@ Compiler.prototype = {
 		}
 		return nodes;
 	},
-	getParameterNode: function getParameterNode(notReceiveVar) {
+	getParameterNode: function(notReceiveVar) {
 		var headPos = this.tokensPos;
 		var stack = [];
 		LOOP: while(true) {
@@ -561,14 +561,14 @@ Compiler.prototype = {
 		}
 		return node;
 	},
-	isOnlyVar: function isOnlyVar(pos, headPos) {
+	isOnlyVar: function(pos, headPos) {
 		if(pos != headPos) return false;
 		var nextTokenPos = pos + 1;
 		nextTokenPos += this.skipParenAndParameters(nextTokenPos);
 		var nextToken = this.ax.tokens[nextTokenPos];
 		return (!nextToken || nextToken.ex1 || nextToken.ex2 || this.isRightParenToken(nextToken));
 	},
-	skipParameter: function skipParameter(pos) {
+	skipParameter: function(pos) {
 		var size = 0;
 		var parenLevel = 0;
 		while(true) {
@@ -595,7 +595,7 @@ Compiler.prototype = {
 			}
 		}
 	},
-	skipParameters: function skipParameters(pos) {
+	skipParameters: function(pos) {
 		var skipped = 0;
 		var size = 0;
 		while((skipped = this.skipParameter(pos + size))) {
@@ -603,7 +603,7 @@ Compiler.prototype = {
 		}
 		return size;
 	},
-	skipParenAndParameters: function skipParenAndParameters(pos) {
+	skipParenAndParameters: function(pos) {
 		var parenToken = this.ax.tokens[pos];
 		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 40)) {
 			return 0;
@@ -616,7 +616,7 @@ Compiler.prototype = {
 		}
 		return size + 1;
 	},
-	compileOperator: function compileOperator(calcCode, lhs, rhs) {
+	compileOperator: function(calcCode, lhs, rhs) {
 		if(!(0 <= calcCode && calcCode < 16)) {
 			throw this.error("演算子コード " + token.code + " は解釈できません。", token);
 		}
@@ -630,7 +630,7 @@ Compiler.prototype = {
 		}
 		return new OperateNode(calcCode, lhs, rhs);
 	},
-	operate: function operate(lhs, rhs, calcCode) {
+	operate: function(lhs, rhs, calcCode) {
 		switch(calcCode) {
 		case  0: return lhs.add(rhs);
 		case  1: return lhs.sub(rhs);
@@ -651,7 +651,7 @@ Compiler.prototype = {
 		default:  throw new Error('must not happen');
 		}
 	},
-	getVarNode: function getVarNode(mustBeVar, onlyValue) {
+	getVarNode: function(mustBeVar, onlyValue) {
 		var token = this.ax.tokens[this.tokensPos];
 		var varData = this.getVariableData(mustBeVar);
 		++ this.tokensPos;
@@ -661,7 +661,7 @@ Compiler.prototype = {
 		var indexNodes = this.getVariableSubscriptNodes();
 		return new VarNode(varData, indexNodes, onlyValue, token);
 	},
-	getExtSysvarCallNode: function getExtSysvarCallNode() {
+	getExtSysvarCallNode: function() {
 		var token = this.ax.tokens[this.tokensPos];
 		if(token.code >= 0x100) {
 			return this.getFuncallNode();
@@ -669,11 +669,11 @@ Compiler.prototype = {
 			return this.getSysvarCallNode();
 		}
 	},
-	getSysvarCallNode: function getSysvarCallNode() {
+	getSysvarCallNode: function() {
 		var token = this.ax.tokens[this.tokensPos++];
 		return new BuiltinFuncallNode(token.type, token.code, [], token);
 	},
-	compileOptionalJumpType: function compileOptionalJumpType(sequence) {
+	compileOptionalJumpType: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
 		var jumpType;
 		if(token.type == Token.Type.PROGCMD && token.val == 0) {
@@ -687,20 +687,20 @@ Compiler.prototype = {
 		}
 		return this.compileNode(sequence, new LiteralNode(jumpType));
 	},
-	getUserDefFuncallNode: function getUserDefFuncallNode() {
+	getUserDefFuncallNode: function() {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
 		var nodes = this.getUserDefFuncallParamNodes(userDefFunc, true, true);
 		return new UserDefFuncallNode(userDefFunc, nodes, token);
 	},
-	compileUserDefCommand: function compileUserDefCommand(sequence) {
+	compileUserDefCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
 		var paramInfos = this.compileNodes(sequence, this.getUserDefFuncallParamNodes(userDefFunc, false, true));
 		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_CMD,
 		                 [userDefFunc, paramInfos], token);
 	},
-	getUserDefFuncallParamNodes: function getUserDefFuncallParamNodes(userDefFunc, isCType, isHead) {
+	getUserDefFuncallParamNodes: function(userDefFunc, isCType, isHead) {
 		var argsCount = 0; // 仮引数の現在位置
 		var nodes = [];
 		function nextMPType() {
@@ -738,7 +738,7 @@ Compiler.prototype = {
 		if(isCType) this.compileRightParen();
 		return nodes;
 	},
-	getUserDefFunc: function getUserDefFunc(finfoId) {
+	getUserDefFunc: function(finfoId) {
 		var func = this.userDefFuncs[finfoId];
 		if(func) return func;
 		var funcInfo = this.ax.funcsInfo[finfoId];
@@ -755,26 +755,26 @@ Compiler.prototype = {
 		}
 		return this.userDefFuncs[finfoId] = new UserDefFunc(isCType, funcInfo.name, this.labels[funcInfo.otindex], paramTypes, finfoId);
 	},
-	getFuncallNode: function getFuncallNode() {
+	getFuncallNode: function() {
 		var token = this.ax.tokens[this.tokensPos++];
 		this.compileLeftParen();
 		var nodes = this.getParametersNodes();
 		this.compileRightParen();
 		return new BuiltinFuncallNode(token.type, token.code, nodes, token);
 	},
-	compileLeftParen: function compileLeftParen() {
+	compileLeftParen: function() {
 		var parenToken = this.ax.tokens[this.tokensPos++];
 		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 40)) {
 			throw this.error('関数名の後ろに開き括弧がありません。', parenToken);
 		}
 	},
-	compileRightParen: function compileRightParen() {
+	compileRightParen: function() {
 		var parenToken = this.ax.tokens[this.tokensPos++];
 		if(!(parenToken && parenToken.type == Token.Type.MARK && parenToken.code == 41)) {
 			throw this.error('関数パラメータの後ろに閉じ括弧がありません。', parenToken);
 		}
 	},
-	getVariableData: function getVariableData(mustBeVar) {
+	getVariableData: function(mustBeVar) {
 		var token = this.ax.tokens[this.tokensPos];
 		var type;
 		var id;
@@ -800,7 +800,7 @@ Compiler.prototype = {
 		}
 		return new VariableData(type, id);
 	},
-	getProxyVarType: function getProxyVarType() {
+	getProxyVarType: function() {
 		var token = this.ax.tokens[this.tokensPos];
 		if(token.code == -1) {
 			if(this.isLeftParenToken(this.ax.tokens[this.tokensPos + 1])) {
@@ -829,13 +829,13 @@ Compiler.prototype = {
 			return ProxyVarType.ARG_NOTVAR;
 		}
 	},
-	isLeftParenToken: function isLeftParenToken(token) {
+	isLeftParenToken: function(token) {
 		return token && token.type == Token.Type.MARK && token.code == 40;
 	},
-	isRightParenToken: function isRightParenToken(token) {
+	isRightParenToken: function(token) {
 		return token && token.type == Token.Type.MARK && token.code == 41;
 	},
-	getVariableSubscriptNodes: function getVariableSubscriptNodes() {
+	getVariableSubscriptNodes: function() {
 		if(!this.isLeftParenToken(this.ax.tokens[this.tokensPos])) {
 			return [];
 		}

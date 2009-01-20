@@ -3,10 +3,10 @@ function VCRandom() {
 }
 
 VCRandom.prototype = {
-	srand: function srand(s) {
+	srand: function(s) {
 		this.x = s|0;
 	},
-	rand: function rand() {
+	rand: function() {
 		this.x = (this.x*214013|0)+2531011|0;
 		return (this.x >> 16) & 32767;
 	}

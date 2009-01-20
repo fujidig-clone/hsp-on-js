@@ -65,7 +65,7 @@ function AXData(data) {
 }
 
 AXData.prototype = {
-	createTokens: function createTokens() {
+	createTokens: function() {
 		var tokens = [];
 		var cs = new BinaryParser(this.cs);
 		var dinfo = new BinaryParser(this.dinfo);
@@ -125,7 +125,7 @@ AXData.prototype = {
 		}
 		return tokens;
 	},
-	createVariableNames: function createVariableNames() {
+	createVariableNames: function() {
 		var variableNames = new Array(this.max_val);
 		var dinfo = new BinaryParser(this.dinfo);
 		var i = 0;
@@ -146,7 +146,7 @@ AXData.prototype = {
 		}
 		return variableNames;
 	},
-	createFuncsInfo: function createFuncsInfo() {
+	createFuncsInfo: function() {
 		var funcsInfo = [];
 		var finfo = new BinaryParser(this.finfo);
 		while(!finfo.isEOS()) {
@@ -171,7 +171,7 @@ AXData.prototype = {
 		}
 		return funcsInfo;
 	},
-	createPrmsInfo: function createPrmsInfo() {
+	createPrmsInfo: function() {
 		var prmsInfo = [];
 		var minfo = new BinaryParser(this.minfo);
 		while(!minfo.isEOS()) {
@@ -184,10 +184,10 @@ AXData.prototype = {
 		}
 		return prmsInfo;
 	},
-	getDSStr: function getDSStr(index) {
+	getDSStr: function(index) {
 		return Utils.getCStr(this.ds, index);
 	},
-	getDSDouble: function getDSDouble(index) {
+	getDSDouble: function(index) {
 		return BinaryParser.readDouble(this.ds, index);
 	}
 };

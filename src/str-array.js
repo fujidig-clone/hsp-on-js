@@ -6,10 +6,10 @@ function StrArray() {
 StrArray.prototype = new HSPArray();
 
 Utils.objectExtend(StrArray.prototype, {
-	assign: function assign(offset, rhs) {
+	assign: function(offset, rhs) {
 		this.values[offset].assign(rhs);
 	},
-	expand: function expand(indices) {
+	expand: function(indices) {
 		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
@@ -19,7 +19,7 @@ Utils.objectExtend(StrArray.prototype, {
 		}
 		return isExpanded;
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		var isExpanded = this.expandLen1D(index);
 		if(isExpanded) {
 			var newLen = this.l0;
@@ -29,13 +29,13 @@ Utils.objectExtend(StrArray.prototype, {
 		}
 		return isExpanded;
 	},
-	at: function at(offset) {
+	at: function(offset) {
 		return this.values[offset].getValue();
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.STR;
 	},
-	strDim: function strDim(strLength, l0, l1, l2, l3) {
+	strDim: function(strLength, l0, l1, l2, l3) {
 		if(strLength == undefined || strLength <= 64) {
 			strLength = 64;
 		}
@@ -46,28 +46,28 @@ Utils.objectExtend(StrArray.prototype, {
 			this.values[i] = new StrBuffer(strLength);
 		}
 	},
-	getbyte: function getbyte(offset, bytesOffset) {
+	getbyte: function(offset, bytesOffset) {
 		return this.values[offset].getbyte(bytesOffset);
 	},
-	setbyte: function setbyte(offset, bytesOffset, val) {
+	setbyte: function(offset, bytesOffset, val) {
 		this.values[offset].setbyte(bytesOffset, val);
 	},
-	getbytes: function getbytes(offset, bytesOffset, length) {
+	getbytes: function(offset, bytesOffset, length) {
 		return this.values[offset].getbytes(bytesOffset, length);
 	},
-	setbytes: function setbytes(offset, bytesOffset, buf) {
+	setbytes: function(offset, bytesOffset, buf) {
 		this.values[offset].setbytes(bytesOffset, buf);
 	},
-	getByteSize: function getByteSize(offset) {
+	getByteSize: function(offset) {
 		return this.values[offset].getByteSize();
 	},
-	expandByteSize: function expandByteSize(offset, size) {
+	expandByteSize: function(offset, size) {
 		this.values[offset].expandByteSize(size);
 	},
-	bufferAt: function bufferAt(offset) {
+	bufferAt: function(offset) {
 		return this.values[offset];
 	},
-	inc: function inc(offset) {
+	inc: function(offset) {
 		var buf = this.values[offset];
 		buf.assign(new StrValue(buf.getValue()._value + '1'));
 	}

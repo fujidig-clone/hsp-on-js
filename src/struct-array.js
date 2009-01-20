@@ -7,13 +7,13 @@ function StructArray() {
 StructArray.prototype = new HSPArray();
 
 Utils.objectExtend(StructArray.prototype, {
-	assign: function assign(offset, rhs) {
+	assign: function(offset, rhs) {
 		this.values[offset] = rhs.toValue();
 		if(rhs == StructValue.EMPTY && offset < this.searchFrom) {
 			this.searchFrom = offset;
 		}
 	},
-	expand: function expand(indices) {
+	expand: function(indices) {
 		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
@@ -24,7 +24,7 @@ Utils.objectExtend(StructArray.prototype, {
 		}
 		return isExpanded;
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		var isExpanded = this.expandLen1D(index);
 		if(isExpanded) {
 			var newLen = this.l0;
@@ -35,11 +35,11 @@ Utils.objectExtend(StructArray.prototype, {
 		}
 		return isExpanded;
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.STRUCT;
 	},
 	// 配列インデックスを返す
-	newmod: function newmod(module) {
+	newmod: function(module) {
 		var len = this.l0;
 		var index;
 		for(index = this.searchFrom; index < len; index ++) {

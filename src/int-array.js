@@ -6,7 +6,7 @@ function IntArray() {
 IntArray.prototype = new HSPArray();
 
 Utils.objectExtend(IntArray.prototype, {
-	expand: function expand(indices) {
+	expand: function(indices) {
 		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
@@ -17,7 +17,7 @@ Utils.objectExtend(IntArray.prototype, {
 		}
 		return isExpanded;
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		var isExpanded = this.expandLen1D(index);
 		if(isExpanded) {
 			var newLen = this.l0;
@@ -28,17 +28,17 @@ Utils.objectExtend(IntArray.prototype, {
 		}
 		return isExpanded;
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.INT;
 	},
-	getbyte: function getbyte(offset, bytesOffset) {
+	getbyte: function(offset, bytesOffset) {
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
 		return this.values[i]._value >> (bytesOffset % 4 * 8) & 0xff;
 	},
-	setbyte: function setbyte(offset, bytesOffset, val) {
+	setbyte: function(offset, bytesOffset, val) {
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
@@ -48,13 +48,13 @@ Utils.objectExtend(IntArray.prototype, {
 		value |= (val & 0xff) << (bytesOffset % 4 * 8);
 		this.values[i] = new IntValue(value);
 	},
-	getByteSize: function getByteSize(offset) {
+	getByteSize: function(offset) {
 		return (this.values.length - offset) * 4;
 	},
-	inc: function inc(offset) {
+	inc: function(offset) {
 		this.values[offset] = new IntValue(this.values[offset]._value + 1);
 	},
-	dec: function dec(offset) {
+	dec: function(offset) {
 		this.values[offset] = new IntValue(this.values[offset]._value - 1);
 	}
 });

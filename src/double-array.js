@@ -6,7 +6,7 @@ function DoubleArray() {
 DoubleArray.prototype = new HSPArray();
 
 Utils.objectExtend(DoubleArray.prototype, {
-	expand: function expand(indices) {
+	expand: function(indices) {
 		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
@@ -17,7 +17,7 @@ Utils.objectExtend(DoubleArray.prototype, {
 		}
 		return isExpanded;
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		var isExpanded = this.expandLen1D(index);
 		if(isExpanded) {
 			var newLen = this.l0;
@@ -28,13 +28,13 @@ Utils.objectExtend(DoubleArray.prototype, {
 		}
 		return isExpanded;
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.DOUBLE;
 	},
-	inc: function inc(offset) {
+	inc: function(offset) {
 		this.values[offset] = new DoubleValue(this.values[offset]._value + 1);
 	},
-	dec: function dec(offset) {
+	dec: function(offset) {
 		this.values[offset] = new DoubleValue(this.values[offset]._value - 1);
 	}
 });

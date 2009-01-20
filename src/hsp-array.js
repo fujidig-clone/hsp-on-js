@@ -6,10 +6,10 @@ function HSPArray() {
 }
 
 HSPArray.prototype = {
-	assign: function assign(offset, rhs) {
+	assign: function(offset, rhs) {
 		this.values[offset] = rhs.toValue();
 	},
-	expandLen: function expandLen(indices) {
+	expandLen: function(indices) {
 		if(indices.length > 4) {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
@@ -51,14 +51,14 @@ HSPArray.prototype = {
 		this.l3 = l3;
 		return true;
 	},
-	expandLen1D: function expandLen1D(index) {
+	expandLen1D: function(index) {
 		if(index < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		if(index < this.l0) return false;
 		if(this.l1) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		this.l0 = index + 1;
 		return true;
 	},
-	getOffset: function getOffset(indices) {
+	getOffset: function(indices) {
 		if(indices.length > this.countDimensions()) {
 			return null;
 		}
@@ -79,71 +79,71 @@ HSPArray.prototype = {
 		}
 		return offset;
 	},
-	countDimensions: function countDimensions() {
+	countDimensions: function() {
 		if(!this.l1) return 1;
 		if(!this.l2) return 2;
 		if(!this.l3) return 3;
 		return 4;
 	},
-	allLength: function allLength() {
+	allLength: function() {
 		var length = this.l0;
 		if(this.l1) length *= this.l1;
 		if(this.l2) length *= this.l2;
 		if(this.l3) length *= this.l3;
 		return length;
 	},
-	at: function at(offset) {
+	at: function(offset) {
 		return this.values[offset];
 	},
-	getL0: function getL0() { return this.l0; },
-	getL1: function getL1() { return this.l1; },
-	getL2: function getL2() { return this.l2; },
-	getL3: function getL3() { return this.l3; },
-	getbyte: function getbyte(offset, bytesOffset) {
+	getL0: function() { return this.l0; },
+	getL1: function() { return this.l1; },
+	getL2: function() { return this.l2; },
+	getL3: function() { return this.l3; },
+	getbyte: function(offset, bytesOffset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません");
 	},
-	setbyte: function setbyte(offset, bytesOffset, val) {
+	setbyte: function(offset, bytesOffset, val) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ書き込みに対応していません");
 	},
-	getbytes: function getbytes(offset, bytesOffset, length) {
+	getbytes: function(offset, bytesOffset, length) {
 		var result = "";
 		for(var i = 0; i < length; i ++) {
 			result += String.fromCharCode(this.getbyte(offset, bytesOffset + i));
 		}
 		return result;
 	},
-	setbytes: function setbytes(offset, bytesOffset, buf) {
+	setbytes: function(offset, bytesOffset, buf) {
 		for(var i = 0; i < buf.length; i ++) {
 			this.setbyte(offset, bytesOffset + i, buf.charCodeAt(i));
 		}
 	},
-	getByteSize: function getByteSize(offset) {
+	getByteSize: function(offset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はメモリ読み込みに対応していません");
 	},
-	expandByteSize: function expandByteSize(offset, size) {
+	expandByteSize: function(offset, size) {
 		throw new HSPError(ErrorCode.TYPE_MISMATCH,
 		                   VarTypeNames[this.getType()]+" 型はメモリ領域の拡張に対応していません");
 	},
-	ref: function ref(offset) {
+	ref: function(offset) {
 		return new Reference(this, offset);
 	},
-	bufferAt: function bufferAt(offset) {
+	bufferAt: function(offset) {
 		throw new HSPError(ErrorCode.TYPE_MISMATCH);
 	},
-	inc: function inc(offset) {
+	inc: function(offset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はインクリメントに対応していません");
 	},
-	dec: function dec(offset) {
+	dec: function(offset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はデクリメントに対応していません");
 	}
 };
 
-HSPArray.lengthToIndices = function lengthToIndices(l0, l1, l2, l3) {
+HSPArray.lengthToIndices = function(l0, l1, l2, l3) {
 	var indices = [l0, l1, l2, l3];
 	// 後ろから 0 を取り除く
 	var i = indices.length - 1;

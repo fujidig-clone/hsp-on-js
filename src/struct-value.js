@@ -6,21 +6,21 @@ function StructValue(module, members) {
 StructValue.prototype = new Value;
 
 Utils.objectExtend(StructValue.prototype, {
-	eq: function eq(rhs) {
+	eq: function(rhs) {
 		if(rhs.getType() != VarType.STRUCT) return new IntValue(false);
 		return new IntValue(this.members == rhs.toValue().members);
 	},
-	ne: function ne(rhs) {
+	ne: function(rhs) {
 		if(rhs.getType() != VarType.STRUCT) return new IntValue(false);
 		return new IntValue(this.members != rhs.toValue().members);
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.STRUCT;
 	},
-	toString: function toString() {
+	toString: function() {
 		return '<StructValue: module='+this.module.name+'>';
 	},
-	isUsing: function isUsing() {
+	isUsing: function() {
 		return 1;
 	}
 });

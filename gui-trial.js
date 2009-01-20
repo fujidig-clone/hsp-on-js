@@ -12,47 +12,39 @@ function Color(r, g, b, a) {
 }
 
 HSPonJS.Utils.objectExtend(Color, {
-	toRGBAString: function toRGBAString(r, g, b, a) {
+	toRGBAString: function(r, g, b, a) {
 		return 'rgba('+r+','+g+','+b+','+a+')';
 	},
-	toRGBString: function toRGBString(r, g, b) {
+	toRGBString: function(r, g, b) {
 		return 'rgb('+r+','+g+','+b+')';
 	},
-	toHexString: function toHexString(r, g, b) {
+	toHexString: function(r, g, b) {
 		return '#' + (0x1000000 | r << 16 | g << 8 | b).toString(16).slice(1);
 	}
 });
 
 Color.prototype = {
-	toRGBAString: function toRGBAString() {
+	toRGBAString: function() {
 		return Color.toRGBAString(this.r, this.g, this.b, this.a);
 	},
-	toRGBString: function toRGBString() {
+	toRGBString: function() {
 		return Color.toRGBString(this.r, this.g, this.b);
 	},
-	toHexString: function toHexString() {
+	toHexString: function() {
 		return Color.toHexString(this.r, this.g, this.b);
 	},
-	toString: function toString() {
+	toString: function() {
 		return '<Color: '+this.toRGBAString()+'>';
 	}
 };
 
-var addEvent = (function(){
-    return window.addEventListener
-        ?  function(e, n, f){ e.addEventListener(n, f, false) }
-        :  window.attachEvent 
-        ?  function(e, n, f){ e.attachEvent('on' + n, f) }
-        :  null;
-})();
+var addEvent =
+ window.addEventListener ? function(e, n, f) { e.addEventListener(n, f, false); }
+                         : function(e, n, f) { e.attachEvent('on' + n, f); };
 
-var removeEvent = (function(){
-    return window.removeEventListener
-        ?  function(e, n, f){ e.removeEventListener(n, f, false) }
-        :  window.attachEvent 
-        ?  function(e, n, f){ e.detachEvent('on' + n, f) }
-        :  function(e, n, f){ delete window['on' + n] };
-})();
+var removeEvent = 
+ window.removeEventListener ? function(e, n, f) { e.removeEventListener(n, f, false); }
+                            : function(e, n, f) { e.detachEvent('on' + n, f); };
 
 HSPonJS.emptyFunction = function(){};
 
@@ -90,13 +82,13 @@ function Screen() {
 }
 
 Screen.prototype = {
-	setContext: function setContext(ctx) {
+	setContext: function(ctx) {
 		this.ctx = ctx;
 		this.width = ctx.canvas.width;
 		this.height = ctx.canvas.height;
 		this.canvas = ctx.canvas;
 	},
-	clear: function clear(n) {
+	clear: function(n) {
 		this.clearInfo();
 		var ctx = this.ctx;
 		switch(n) {
@@ -121,7 +113,7 @@ Screen.prototype = {
 		this.selectColor(0, 0, 0);
 		this.setFont('monospace', 18, 0);
 	},
-	clearInfo: function clearInfo() {
+	clearInfo: function() {
 		this.currentX = this.currentY = 0;
 		this.currentR = this.currentG = this.currentB = 0;
 		this.mesX = this.mesY = 0;
@@ -132,20 +124,20 @@ Screen.prototype = {
 		this.copyMode = 0;
 		this.copyAlpha = 0;
 	},
-	changeToNewCanvas: function changeToNewCanvas(width, height) {
+	changeToNewCanvas: function(width, height) {
 		var canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
 		this.setContext(canvas.getContext('2d'));
 		this.clear();
 	},
-	selectColor: function selectColor(r, g, b) {
+	selectColor: function(r, g, b) {
 		this.currentR = r & 255;
 		this.currentG = g & 255;
 		this.currentB = b & 255;
 		this.ctx.fillStyle = this.ctx.strokeStyle = Color.toRGBString(this.currentR, this.currentG, this.currentB);
 	},
-	selectColorByHSV: function selectColorByHSV(h, s, v) {
+	selectColorByHSV: function(h, s, v) {
 		h = h % 192;
 		s = s & 255;
 		v = v & 255;
@@ -174,7 +166,7 @@ Screen.prototype = {
 		}
 		this.selectColor(r, g, b);
 	},
-	drawEllipse: function drawEllipse(x1, y1, x2, y2, fill_p) {
+	drawEllipse: function(x1, y1, x2, y2, fill_p) {
 		// FIXME アンチエイリアスのかかった線が描画されてしまう
 		var w = (x2 - x1) / 2;
 		var h = (y2 - y1) / 2;
@@ -194,7 +186,7 @@ Screen.prototype = {
 			ctx.stroke();
 		}
 	},
-	drawText: function drawText(text) {
+	drawText: function(text) {
 		var lines = text.split(/\r\n|[\r\n]/);
 		var ctx = this.ctx;
 		ctx.textBaseline = 'top';
@@ -214,7 +206,7 @@ Screen.prototype = {
 		// 前か後ろで何か描画してやるとうまくいくみたいなので、しておく。
 		ctx.fillRect(0, 0, 0, 0); 
 	},
-	setFont: function setFont(name, size, style) {
+	setFont: function(name, size, style) {
 		var str = "";
 		if(style & 2) {
 			str += "italic ";
@@ -228,7 +220,7 @@ Screen.prototype = {
 		this.fontSize = size;
 		this.fontStyle = style;
 	},
-	drawLine: function drawLine(x1, y1, x2, y2) {
+	drawLine: function(x1, y1, x2, y2) {
 		// FIXME アンチエイリアスのかかった線が描画されてしまう
 		this.currentX = x1;
 		this.currentY = y1;
@@ -238,7 +230,7 @@ Screen.prototype = {
 		ctx.lineTo(x1 + 0.5, y1 + 0.5);
 		ctx.stroke();
 	},
-	drawRect: function drawRect(x1, y1, x2, y2) {
+	drawRect: function(x1, y1, x2, y2) {
 		var width = Math.abs(x2 - x1) + 1;
 		var height = Math.abs(y2 - y1) + 1;
 		var x = Math.min(x1, x2);
@@ -248,7 +240,7 @@ Screen.prototype = {
 };
 
 HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
-	guiInitialize: function guiInitialize(iframe, width, height) {
+	guiInitialize: function(iframe, width, height) {
 		this.iframe = iframe;
 		var doc = this.iframeDoc = iframe.contentWindow.document;
 		var mainScreen = this.mainScreen = new Screen;
@@ -256,7 +248,7 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		this.quited = false;
 		this.atQuitCallbacks = [];
 		
-		mainScreen.changeToNewCanvas = function changeToNewCanvas(width, height) {
+		mainScreen.changeToNewCanvas = function(width, height) {
 			iframe.setAttribute('width', width);
 			iframe.setAttribute('height', height);
 			if(this.ctx) {
@@ -348,17 +340,17 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 			removeEvent(doc, 'mouseup', onmouseup);
 		};
 	},
-	removeCanvasElement: function removeCanvasElement() {
+	removeCanvasElement: function() {
 		if(this.mainScreen.ctx) {
 			this.iframeDoc.body.removeChild(this.mainScreen.ctx.canvas);
 		}
 	},
-	getScreen: function getScreen(id) {
+	getScreen: function(id) {
 		var screen = this.screens[id];
 		if(!screen) throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 		return screen;
 	},
-	quit: function quit() {
+	quit: function() {
 		if(this.quited) return;
 		if(this.timeoutID != undefined) {
 			clearTimeout(this.timeoutID);
@@ -375,10 +367,10 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		this.onQuit();
 		this.quited = true;
 	},
-	addCallbackOnQuit: function addCallbackOnQuit(callback) {
+	addCallbackOnQuit: function(callback) {
 		this.atQuitCallbacks.push(callback);
 	},
-	removeCallbackOnQuit: function removeCallbackOnQuit(callback) {
+	removeCallbackOnQuit: function(callback) {
 		var index = this.atQuitCallbacks.indexOf(callback);
 		if(index >= 0) {
 			this.atQuitCallbacks.splice(index, 1);
@@ -388,7 +380,7 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 
 with(HSPonJS) {
 	HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
-		onInternalError: function onInternalError(e) {
+		onInternalError: function(e) {
 			var insn = this.sequence[this.pc];
 			var msg = 'JavaScript Error!\n';
 			msg += e.name+': '+e.message+'\n';
@@ -401,14 +393,14 @@ with(HSPonJS) {
 			alert(msg);
 			throw e;
 		},
-		onError: function onError(e) {
+		onError: function(e) {
 			alert(this.getErrorOutput(e));
 			this.quit();
 		},
-		onEnd: function onEnd(e) {
+		onEnd: function(e) {
 			this.quit();
 		},
-		onWait: function onWait(e) {
+		onWait: function(e) {
 			var self = this;
 			this.timeoutID = setTimeout(function() {
 				self.timeoutID = undefined;
@@ -416,7 +408,7 @@ with(HSPonJS) {
 				self.resume();
 			}, e.msec);
 		},
-		onFileRead: function onFileRead(e) {
+		onFileRead: function(e) {
 			var self = this;
 			self.fileReadXHR = XHRReadURL(
 				e.path,
@@ -431,7 +423,7 @@ with(HSPonJS) {
 		}
 	});
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTCMD], {
-		0x03: function dialog(message, type, option) {
+		0x03: function(message, type, option) { // dialog
 			this.scanArgs(arguments, '.?NSN');
 			message = message ? CP932.decode(message.toStrValue()._value) : "";
 			type = type ? type.toIntValue()._value : 0;
@@ -444,13 +436,13 @@ with(HSPonJS) {
 				this.stat.assign(0, new IntValue(1));
 			}
 		},
-		0x0c: function pset(x, y) {
+		0x0c: function(x, y) { // pset
 			this.scanArgs(arguments, 'NN');
 			x = x ? x.toIntValue()._value : this.currentScreen.currentX;
 			y = y ? y.toIntValue()._value : this.currentScreen.currentY;
 			this.currentScreen.ctx.fillRect(x, y, 1, 1);
 		},
-		0x0d: function pget(x, y) {
+		0x0d: function(x, y) { // pget
 			this.scanArgs(arguments, 'NN');
 			x = x ? x.toIntValue()._value : this.currentScreen.currentX;
 			y = y ? y.toIntValue()._value : this.currentScreen.currentY;
@@ -464,17 +456,17 @@ with(HSPonJS) {
 			}
 			this.currentScreen.selectColor(r, g, b);
 		},
-		0x0f: function mes(text) {
+		0x0f: function(text) { // mes
 			this.scanArgs(arguments, '.?');
 			text = text ? CP932.decode(text.toStrValue()._value) : "";
 			this.currentScreen.drawText(text);
 		},
-		0x11: function pos(x, y) {
+		0x11: function(x, y) { // pos
 			this.scanArgs(arguments, 'NN');
 			if(x) this.currentScreen.currentX = x.toIntValue()._value;
 			if(y) this.currentScreen.currentY = y.toIntValue()._value;
 		},
-		0x12: function circle(x1, y1, x2, y2, fill_p) {
+		0x12: function(x1, y1, x2, y2, fill_p) { // circle
 			this.scanArgs(arguments, 'NNNNN');
 			x1 = x1 ? x1.toIntValue()._value : 0;
 			y1 = y1 ? y1.toIntValue()._value : 0;
@@ -484,19 +476,19 @@ with(HSPonJS) {
 
 			this.currentScreen.drawEllipse(x1, y1, x2, y2, fill_p);
 		},
-		0x13: function cls(color) {
+		0x13: function(color) { // cls
 			this.scanArgs(arguments, 'N');
 			color = color ? color.toIntValue()._value : 0;
 			this.currentScreen.clear(color);
 		},
-		0x14: function font(name, size, style) {
+		0x14: function(name, size, style) { // font
 			this.scanArgs(arguments, 'sNN');
 			name = CP932.decode(name.toStrValue()._value);
 			size = size ? size.toIntValue()._value : 18;
 			style = style ? style.toIntValue()._value : 0;
 			this.currentScreen.setFont(name, size, style);
 		},
-		0x17: function picload(path, mode) {
+		0x17: function(path, mode) { // picload
 			this.scanArgs(arguments, 'sN');
 			path = CP932.decode(path.toStrValue()._value);
 			mode = mode ? mode.toIntValue()._value : 0;
@@ -528,25 +520,25 @@ with(HSPonJS) {
 			this.addCallbackOnQuit(callback);
 			throw new VoidException;
 		},
-		0x18: function color(r, g, b) {
+		0x18: function(r, g, b) { // color
 			this.scanArgs(arguments, 'NNN');
 			r = r ? r.toIntValue()._value & 255 : 0;
 			g = g ? g.toIntValue()._value & 255 : 0;
 			b = b ? b.toIntValue()._value & 255 : 0;
 			this.currentScreen.selectColor(r, g, b);
 		},
-		0x1b: function redraw() {
+		0x1b: function() { // redraw
 			this.scanArgs(arguments, 'NNNNN');
 			// 何もしない
 		},
-		0x1d: function gsel(screenId) {
+		0x1d: function(screenId) { // gsel
 			this.scanArgs(arguments, 'N');
 			screenId = screenId ? screenId.toIntValue()._value : 0;
 			var screen = this.getScreen(screenId);
 			this.currentScreen = screen;
 			this.currentScreenId = screenId;
 		},
-		0x1e: function gcopy(srcScreenId, srcX, srcY, width, height) {
+		0x1e: function(srcScreenId, srcX, srcY, width, height) { // gcopy
 			this.scanArgs(arguments, 'NNNNN');
 			var screen = this.currentScreen;
 			srcScreenId = srcScreenId ? srcScreenId.toIntValue()._value : 0;
@@ -589,7 +581,7 @@ with(HSPonJS) {
 			              screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
 			ctx.restore();
 		},
-		0x1f: function gzoom(destWidth, destHeight, srcScreenId, srcX, srcY, srcWidth, srcHeight, mode) {
+		0x1f: function(destWidth, destHeight, srcScreenId, srcX, srcY, srcWidth, srcHeight, mode) { // gzoom
 			this.scanArgs(arguments, 'NNNNNNNN');
 			var screen = this.currentScreen;
 			destWidth = destWidth ? destWidth.toIntValue()._value : screen.width;
@@ -669,7 +661,7 @@ with(HSPonJS) {
 			ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
 			ctx.restore();
 		},
-		0x20: function gmode(mode, width, height, alpha) {
+		0x20: function(mode, width, height, alpha) { // gmode
 			this.scanArgs(arguments, 'NNNN');
 			mode = mode ? mode.toIntValue()._value : 0;
 			width = width ? width.toIntValue()._value : 32;
@@ -682,19 +674,19 @@ with(HSPonJS) {
 			screen.copyHeight = height;
 			screen.copyAlpha = alpha;
 		},
-		0x22: function hsvcolor(h, s, v) {
+		0x22: function(h, s, v) { // hsvcolor
 			this.scanArgs(arguments, 'NNN');
 			h = h ? h.toIntValue()._value % 192 : 0;
 			s = s ? s.toIntValue()._value & 255 : 0;
 			v = v ? v.toIntValue()._value & 255 : 0;
 			this.currentScreen.selectColorByHSV(h, s, v);
 		},
-		0x23: function getkey(v, key) {
+		0x23: function(v, key) { // getkey
 			this.scanArgs(arguments, 'vN');
 			key = key ? key.toIntValue()._value : 1;
 			v.assign(new IntValue(this.keyPressed[key]));
 		},
-		0x29: function buffer(screenId, width, height) {
+		0x29: function(screenId, width, height) { // buffer
 			this.scanArgs(arguments, 'NNNNNNNN');
 			screenId = screenId ? screenId.toIntValue()._value : 0;
 			width = width ? width.toIntValue()._value : 640;
@@ -707,7 +699,7 @@ with(HSPonJS) {
 			this.currentScreen = screen;
 			this.currentScreenId = screenId;
 		},
-		0x2a: function screen(screenId, width, height) {
+		0x2a: function(screenId, width, height) { // screen
 			this.scanArgs(arguments, 'NNNNNNNN');
 			screenId = screenId ? screenId.toIntValue()._value : 0;
 			width = width ? width.toIntValue()._value : 640;
@@ -720,7 +712,7 @@ with(HSPonJS) {
 				throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ID 0 以外の screen は未対応');
 			}
 		},
-		0x2f: function line(x1, y1, x2, y2) {
+		0x2f: function(x1, y1, x2, y2) { // line
 			this.scanArgs(arguments, 'NNNN');
 			x1 = x1 ? x1.toIntValue()._value : 0;
 			y1 = y1 ? y1.toIntValue()._value : 0;
@@ -728,7 +720,7 @@ with(HSPonJS) {
 			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.currentY;
 			this.currentScreen.drawLine(x1, y1, x2, y2);
 		},
-		0x31: function boxf(x1, y1, x2, y2) {
+		0x31: function(x1, y1, x2, y2) { // boxf
 			this.scanArgs(arguments, 'NNNN');
 			x1 = x1 ? x1.toIntValue()._value : 0;
 			y1 = y1 ? y1.toIntValue()._value : 0;
@@ -736,7 +728,7 @@ with(HSPonJS) {
 			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.height;
 			this.currentScreen.drawRect(x1, y1, x2, y2);
 		},
-		0x34: function stick(v, notrigerMask) {
+		0x34: function(v, notrigerMask) { // stick
 			this.scanArgs(arguments, 'vNN');
 			notrigerMask = notrigerMask ? notrigerMask.toIntValue()._value : 0;
 			var state = 0;
@@ -756,7 +748,7 @@ with(HSPonJS) {
 			this.lastStickState = state;
 			v.assign(new IntValue(trigger | state & notrigerMask));
 		},
-		0x35: function grect(x, y, rad, width, height) {
+		0x35: function(x, y, rad, width, height) { // grect
 			this.scanArgs(arguments, 'NNNNN');
 			var screen = this.currentScreen;
 			x = x ? x.toIntValue()._value : 0;
@@ -782,18 +774,18 @@ with(HSPonJS) {
 		}
 	});
 	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTSYSVAR], {
-		0x000: function mousex() {
+		0x000: function() { // mousex
 			return new IntValue(this.currentScreen.mouseX);
 		},
-		0x001: function mousey() {
+		0x001: function() { // mousey
 			return new IntValue(this.currentScreen.mouseY);
 		},
-		0x002: function mousew() {
+		0x002: function() { // mousew
 			var result = this.currentScreen.mouseW;
 			this.currentScreen.mouseW = 0;
 			return new IntValue(result);
 		},
-		0x100: function ginfo(type) {
+		0x100: function(type) { // ginfo
 			this.scanArgs(arguments, 'n');
 			type = type.toIntValue()._value;
 			switch(type) {
@@ -826,7 +818,7 @@ with(HSPonJS) {
 			}
 		}
 	});
-	BuiltinFuncs[Token.Type.PROGCMD][0x1c] = function logmes(text) {
+	BuiltinFuncs[Token.Type.PROGCMD][0x1c] = function(text) { // logmes
 		this.scanArgs(arguments, 's');
 		text = CP932.decode(text.toStrValue()._value);
 		if(typeof console != 'undefined' && typeof console.log == 'function') {

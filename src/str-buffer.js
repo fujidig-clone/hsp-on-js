@@ -7,7 +7,7 @@ function StrBuffer(length) {
 }
 
 StrBuffer.prototype = {
-	assign: function assign(val) {
+	assign: function(val) {
 		val = val.toStrValue();
 		if(val._value.length + 1 >= this._length) {
 			this._length = val._value.length + 1;
@@ -19,13 +19,13 @@ StrBuffer.prototype = {
 		}
 		this._valCache = val;
 	},
-	getValue: function getValue() {
+	getValue: function() {
 		if(!this._valCache) {
 			this._valCache = new StrValue(Utils.getCStr(this._str));
 		}
 		return this._valCache;
 	},
-	getbyte: function getbyte(pos) {
+	getbyte: function(pos) {
 		if(!(0 <= pos && pos < this._length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
@@ -34,7 +34,7 @@ StrBuffer.prototype = {
 		}
 		return 0;
 	},
-	setbyte: function setbyte(pos, val) {
+	setbyte: function(pos, val) {
 		var str = this._str;
 		if(!(0 <= pos && pos < this._length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
@@ -46,7 +46,7 @@ StrBuffer.prototype = {
 		}
 		this._valCache = null;
 	},
-	getbytes: function getbytes(pos, length) {
+	getbytes: function(pos, length) {
 		if(!(0 <= pos && pos + length <= this._length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
 		}
@@ -55,7 +55,7 @@ StrBuffer.prototype = {
 		}
 		return this._str.slice(pos) + Utils.strTimes("\0", length - (this._str.length - pos));
 	},
-	setbytes: function setbytes(pos, buf) {
+	setbytes: function(pos, buf) {
 		var str = this._str;
 		if(!(0 <= pos && pos + buf.length <= this._length)) {
 			throw new HSPError(ErrorCode.BUFFER_OVERFLOW);
@@ -69,14 +69,14 @@ StrBuffer.prototype = {
 		}
 		this._valCache = null;
 	},
-	getByteSize: function getByteSize() {
+	getByteSize: function() {
 		return this._length;
 	},
-	expandByteSize: function expandByteSize(size) {
+	expandByteSize: function(size) {
 		if(this._length >= size) return;
 		this._length = size;
 	},
-	splice: function splice(index, length, sub) {
+	splice: function(index, length, sub) {
 		// (index >= 0 && length >= 0 && index + length <= this.getByteSize()) の条件が偽のときの動作は未定義とする
 		var str = this._str;
 		if(index < str.length) {

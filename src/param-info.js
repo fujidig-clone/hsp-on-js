@@ -4,29 +4,29 @@ function ParamInfo(node, stackSize) {
 }
 
 Utils.objectExtend(ParamInfo.prototype, {
-	toString: function toString() {
+	toString: function() {
 		return '<ParamInfo: '+this.node+'>';
 	},
-	isVar: function isVar() {
+	isVar: function() {
 		return this.node.isVarNode() && !this.node.onlyValue;
 	},
-	getPureNode: function getPureNode() {
+	getPureNode: function() {
 		return this.node.toPureNode();
 	}
 });
 
 function Node() {}
 Utils.objectExtend(Node.prototype, {
-	isVarNode:     function () { return false; },
-	isArgNode:     function () { return false; },
-	isLiteralNode: function () { return false; },
-	isDefaultNode: function () { return false; },
-	isOperateNode: function () { return false; },
-	isFuncallNode: function () { return false; },
-	isUserDefFuncall: function () { return false; },
-	isBuiltinFuncall: function () { return false; },
-	isGetStackNode: function () { return false; },
-	toPureNode: function () { return this; }
+	isVarNode:     function() { return false; },
+	isArgNode:     function() { return false; },
+	isLiteralNode: function() { return false; },
+	isDefaultNode: function() { return false; },
+	isOperateNode: function() { return false; },
+	isFuncallNode: function() { return false; },
+	isUserDefFuncall: function() { return false; },
+	isBuiltinFuncall: function() { return false; },
+	isGetStackNode: function() { return false; },
+	toPureNode: function() { return this; }
 });
 
 var NodeType = {
@@ -49,13 +49,13 @@ function VarNode(varData, indexNodes, onlyValue, token) {
 VarNode.prototype = new Node;
 Utils.objectExtend(VarNode.prototype, {
 	nodeType: NodeType.VAR,
-	isVarNode: function () { return true; },
-	toString: function toString() {
+	isVarNode: function() { return true; },
+	toString: function() {
 		return '<VarNode:'+this.varData+',['+this.indexNodes+']'+
 		       (!this.onlyValue?',var':'')+
 		       (this.ignoreIndices?'ignore idicies':'')+'>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return 0;
 	}
 });
@@ -66,11 +66,11 @@ function ArgNode(id) {
 ArgNode.prototype = new Node;
 Utils.objectExtend(ArgNode.prototype, {
 	nodeType: NodeType.ARG,
-	isArgNode: function () { return true; },
-	toString: function toString() {
+	isArgNode: function() { return true; },
+	toString: function() {
 		return '<ArgNode:'+this.id+'>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return 0;
 	}
 });
@@ -81,11 +81,11 @@ function LiteralNode(val) {
 LiteralNode.prototype = new Node;
 Utils.objectExtend(LiteralNode.prototype, {
 	nodeType: NodeType.LITERAL,
-	isLiteralNode: function () { return true; },
-	toString: function toString() {
+	isLiteralNode: function() { return true; },
+	toString: function() {
 		return '<LiteralNode:'+this.val+'>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return this.val.getType();
 	}
 });
@@ -95,11 +95,11 @@ function DefaultNode() {
 DefaultNode.prototype = new Node;
 Utils.objectExtend(DefaultNode.prototype, {
 	nodeType: NodeType.DEFAULT,
-	isDefaultNode: function () { return true; },
-	toString: function toString() {
+	isDefaultNode: function() { return true; },
+	toString: function() {
 		return '<DefaultNode>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return 0;
 	}
 });
@@ -112,11 +112,11 @@ function OperateNode(calcCode, lhsNode, rhsNode) {
 OperateNode.prototype = new Node;
 Utils.objectExtend(OperateNode.prototype, {
 	nodeType: NodeType.OPERATE,
-	isOperateNode: function () { return true; },
-	toString: function toString() {
+	isOperateNode: function() { return true; },
+	toString: function() {
 		return '<OperateNode:'+this.calcCode+' '+this.lhsNode+' '+this.rhsNode+'>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		if(isCompareCalcCode(this.calcCode)) {
 			return VarType.INT;
 		}
@@ -129,7 +129,7 @@ function FuncallNode(paramNodes) {
 }
 FuncallNode.prototype = new Node;
 Utils.objectExtend(FuncallNode.prototype, {
-	isFuncallNode: function () { return true; }
+	isFuncallNode: function() { return true; }
 });
 
 function UserDefFuncallNode(userDefFunc, paramNodes, token) {
@@ -140,11 +140,11 @@ function UserDefFuncallNode(userDefFunc, paramNodes, token) {
 UserDefFuncallNode.prototype = new FuncallNode;
 Utils.objectExtend(UserDefFuncallNode.prototype, {
 	nodeType: NodeType.USERDEF_FUNCALL,
-	isUserDefFuncallNode: function () { return true; },
-	toString: function toString() {
+	isUserDefFuncallNode: function() { return true; },
+	toString: function() {
 		return '<UserDefFuncallNode:'+this.userDefFunc+', ['+this.paramNodes+']>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return 0;
 	}
 });
@@ -158,11 +158,11 @@ function BuiltinFuncallNode(groupId, subId, paramNodes, token) {
 BuiltinFuncallNode.prototype = new FuncallNode;
 Utils.objectExtend(BuiltinFuncallNode.prototype, {
 	nodeType: NodeType.BUILTIN_FUNCALL,
-	isBuiltinFuncallNode: function () { return true; },
-	toString: function toString() {
+	isBuiltinFuncallNode: function() { return true; },
+	toString: function() {
 		return '<BuiltinFuncallNode:'+this.groupId+', '+this.subId+', ['+this.paramNodes+']>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return 0;
 	}
 });
@@ -173,14 +173,14 @@ function GetStackNode(originalNode) {
 GetStackNode.prototype = new Node;
 Utils.objectExtend(GetStackNode.prototype, {
 	nodeType: NodeType.GET_STACK,
-	isGetStackNode: function () { return true; },
-	toString: function toString() {
+	isGetStackNode: function() { return true; },
+	toString: function() {
 		return '<GetStackNode'/*+':'+this.originalNode*/+'>';
 	},
-	getValueType: function getValueType() {
+	getValueType: function() {
 		return this.originalNode.getValueType();
 	},
-	toPureNode: function toPureNode() {
+	toPureNode: function() {
 		return this.originalNode;
 	}
 });

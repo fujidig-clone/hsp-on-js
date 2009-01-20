@@ -3,7 +3,7 @@ function Variable() {
 }
 
 Variable.prototype = {
-	assign: function assign(indices, rhs) {
+	assign: function(indices, rhs) {
 		this.value.expand(indices);
 		if(this.getType() != rhs.getType()) {
 			if(this.value.getOffset(indices) != 0) {
@@ -16,7 +16,7 @@ Variable.prototype = {
 		var offset = this.value.getOffset(indices);
 		return this.value.assign(offset, rhs);
 	},
-	reset: function reset(type) {
+	reset: function(type) {
 		switch(type) {
 		case VarType.LABEL:
 			this.value = new LabelArray();
@@ -37,31 +37,31 @@ Variable.prototype = {
 			throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[type]+' 型の値は変数に代入できません');
 		}
 	},
-	expand: function expand(indices) {
+	expand: function(indices) {
 		return this.value.expand(indices);
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		return this.value.expand1D(index);
 	},
-	getType: function getType() {
+	getType: function() {
 		return this.value.getType();
 	},
-	at: function at(offset) {
+	at: function(offset) {
 		return this.value.at(offset);
 	},
-	getL0: function getL0() {
+	getL0: function() {
 		return this.value.getL0();
 	},
-	getL1: function getL1() {
+	getL1: function() {
 		return this.value.getL1();
 	},
-	getL2: function getL2() {
+	getL2: function() {
 		return this.value.getL2();
 	},
-	getL3: function getL3() {
+	getL3: function() {
 		return this.value.getL3();
 	},
-	dim: function dim(type, l0, l1, l2, l3) {
+	dim: function(type, l0, l1, l2, l3) {
 		var ary;
 		switch(type) {
 		case VarType.LABEL:
@@ -86,34 +86,34 @@ Variable.prototype = {
 		ary.expand(indices);
 		this.value = ary;
 	},
-	getbyte: function getbyte(offset, bytesOffset) {
+	getbyte: function(offset, bytesOffset) {
 		return this.value.getbyte(offset, bytesOffset);
 	},
-	setbyte: function setbyte(offset, bytesOffset, val) {
+	setbyte: function(offset, bytesOffset, val) {
 		return this.value.setbyte(offset, bytesOffset, val);
 	},
-	getbytes: function getbytes(offset, bytesOffset, length) {
+	getbytes: function(offset, bytesOffset, length) {
 		return this.value.getbytes(offset, bytesOffset, length);
 	},
-	setbytes: function setbytes(offset, bytesOffset, buf) {
+	setbytes: function(offset, bytesOffset, buf) {
 		return this.value.setbytes(offset, bytesOffset, buf);
 	},
-	getByteSize: function getByteSize(offset) {
+	getByteSize: function(offset) {
 		return this.value.getByteSize(offset);
 	},
-	expandByteSize: function expandByteSize(offset, size) {
+	expandByteSize: function(offset, size) {
 		return this.value.expandByteSize(offset, size);
 	},
-	bufferAt: function bufferAt(offset) {
+	bufferAt: function(offset) {
 		return this.value.bufferAt(offset);
 	},
-	ref: function ref(offset) {
+	ref: function(offset) {
 		return this.value.ref(offset);
 	},
-	inc: function inc(offset) {
+	inc: function(offset) {
 		return this.value.inc(offset);
 	},
-	dec: function dec(offset) {
+	dec: function(offset) {
 		return this.value.dec(offset);
 	}
 };

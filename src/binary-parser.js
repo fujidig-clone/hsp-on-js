@@ -16,25 +16,25 @@ function BinaryParser(data, index, length) {
 
 (function() {
 	var p = BinaryParser;
-	p.CheckBufferError = function CheckBufferError(message) { this.message = message; };
+	p.CheckBufferError = function(message) { this.message = message; };
 	p.CheckBufferError.prototype = new Error;
 	p.CheckBufferError.prototype.name = 'BinaryParser.CheckBufferError';
 	
 	p.prototype = {
-		readChar: function readChar() {
+		readChar: function() {
 			this.checkBuffer(this.offset + 1);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			if(result & 0x80) result -= 0x100;
 			++ this.offset;
 			return result;
 		},
-		readUChar: function readUChar() {
+		readUChar: function() {
 			this.checkBuffer(this.offset + 1);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			++ this.offset;
 			return result;
 		},
-		readShort: function readShort() {
+		readShort: function() {
 			this.checkBuffer(this.offset + 2);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
@@ -42,14 +42,14 @@ function BinaryParser(data, index, length) {
 			this.offset += 2;
 			return result;
 		},
-		readUShort: function readUShort() {
+		readUShort: function() {
 			this.checkBuffer(this.offset + 2);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
 			this.offset += 2;
 			return result;
 		},
-		readInt24: function readInt24() {
+		readInt24: function() {
 			this.checkBuffer(this.offset + 3);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
@@ -58,7 +58,7 @@ function BinaryParser(data, index, length) {
 			this.offset += 3;
 			return result;
 		},
-		readUInt24: function readUInt24() {
+		readUInt24: function() {
 			this.checkBuffer(this.offset + 3);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
@@ -66,7 +66,7 @@ function BinaryParser(data, index, length) {
 			this.offset += 3;
 			return result;
 		},
-		readInt: function readInt() {
+		readInt: function() {
 			this.checkBuffer(this.offset + 4);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
@@ -75,7 +75,7 @@ function BinaryParser(data, index, length) {
 			this.offset += 4;
 			return result;
 		},
-		readUInt: function readUInt() {
+		readUInt: function() {
 			this.checkBuffer(this.offset + 4);
 			var result = this.buffer[this.buffer.length - this.offset - 1];
 			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
@@ -84,14 +84,14 @@ function BinaryParser(data, index, length) {
 			this.offset += 4;
 			return result;
 		},
-		readDouble: function readDouble() {
+		readDouble: function() {
 			return this.decodeFloat(52, 11, 8);
 		},
 
-		isEOS: function isEOS() {
+		isEOS: function() {
 			return this.buffer.length <= this.offset;
 		},
-		decodeFloat: function decodeFloat(precisionBits, exponentBits, bytes) {
+		decodeFloat: function(precisionBits, exponentBits, bytes) {
 			this.checkBuffer(this.offset + bytes);
 			var bias = Math.pow(2, exponentBits - 1) - 1, signal = this.readBits(this.offset * 8 + precisionBits + exponentBits, 1),
 				exponent = this.readBits(this.offset * 8 + precisionBits, exponentBits), significand = 0,
@@ -106,7 +106,7 @@ function BinaryParser(data, index, length) {
 				: (1 + signal * -2) * (exponent || significand ? !exponent ? Math.pow(2, -bias + 1) * significand
 				: Math.pow(2, exponent - bias) * (1 + significand) : 0);
 		},
-		readBits: function readBits(start, length) {
+		readBits: function(start, length) {
 			//shl fix: Henri Torgemane ~1996 (compressed by Jonas Raoni)
 			function shl(a, b) {
 				while(b--)a = ((a %= 0x7fffffff + 1) & 0x40000000) == 0x40000000 ? a * 2 : (a - 0x40000000) * 2 + 0x7fffffff + 1;
@@ -123,40 +123,40 @@ function BinaryParser(data, index, length) {
 			);
 			return sum;
 		},
-		hasNeededBytes: function hasNeededBytes(neededBytes) {
+		hasNeededBytes: function(neededBytes) {
 			return this.buffer.length >= neededBytes;
 		},
-		checkBuffer: function checkBuffer(neededBytes) {
+		checkBuffer: function(neededBytes) {
 			if(!this.hasNeededBytes(neededBytes))
 				throw new p.CheckBufferError("checkBuffer::missing bytes");
 		}
 	};
 	
-	p.readChar = function readChar(data, index) {
+	p.readChar = function(data, index) {
 		return new p(data, index, 1).readChar();
 	};
-	p.readUChar = function readUChar(data, index) {
+	p.readUChar = function(data, index) {
 		return new p(data, index, 1).readUChar();
 	};
-	p.readShort = function readShort(data, index) {
+	p.readShort = function(data, index) {
 		return new p(data, index, 2).readShort();
 	};
-	p.readUShort = function readUShort(data, index) {
+	p.readUShort = function(data, index) {
 		return new p(data, index, 2).readUShort();
 	};
-	p.readInt24 = function readInt24(data, index) {
+	p.readInt24 = function(data, index) {
 		return new p(data, index, 3).readInt24();
 	};
-	p.readUInt24 = function readUInt24(data, index) {
+	p.readUInt24 = function(data, index) {
 		return new p(data, index, 3).readUInt24();
 	};
-	p.readInt = function readInt(data, index) {
+	p.readInt = function(data, index) {
 		return new p(data, index, 4).readInt();
 	};
-	p.readUInt = function readUInt(data, index) {
+	p.readUInt = function(data, index) {
 		return new p(data, index, 4).readUInt();
 	};
-	p.readDouble = function readDouble(data, index) {
+	p.readDouble = function(data, index) {
 		return new p(data, index, 8).readDouble();
 	};
 })();

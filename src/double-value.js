@@ -5,7 +5,7 @@ function DoubleValue(value) {
 DoubleValue.prototype = new Value;
 
 DoubleValue.ZERO = new DoubleValue(0);
-DoubleValue.of = function of(value) {
+DoubleValue.of = function(value) {
 	if(value == 0) {
 		return DoubleValue.ZERO;
 	}
@@ -13,52 +13,52 @@ DoubleValue.of = function of(value) {
 };
 
 Utils.objectExtend(DoubleValue.prototype, {
-	add: function add(rhs) {
+	add: function(rhs) {
 		return new DoubleValue(this._value + rhs.toDoubleValue()._value);
 	},
-	sub: function sub(rhs) {
+	sub: function(rhs) {
 		return new DoubleValue(this._value - rhs.toDoubleValue()._value);
 	},
-	mul: function mul(rhs) {
+	mul: function(rhs) {
 		return new DoubleValue(this._value * rhs.toDoubleValue()._value);
 	},
-	div: function div(rhs) {
+	div: function(rhs) {
 		return new DoubleValue(this._value / rhs.toDoubleValue()._value);
 	},
-	mod: function mod(rhs) {
+	mod: function(rhs) {
 		return new DoubleValue(this._value % rhs.toDoubleValue()._value);
 	},
-	eq: function eq(rhs) {
+	eq: function(rhs) {
 		return new IntValue(this._value == rhs.toDoubleValue()._value);
 	},
-	ne: function ne(rhs) {
+	ne: function(rhs) {
 		return new IntValue(this._value != rhs.toDoubleValue()._value);
 	},
-	gt: function gt(rhs) {
+	gt: function(rhs) {
 		return new IntValue(this._value > rhs.toDoubleValue()._value);
 	},
-	lt: function lt(rhs) {
+	lt: function(rhs) {
 		return new IntValue(this._value < rhs.toDoubleValue()._value);
 	},
-	gteq: function gteq(rhs) {
+	gteq: function(rhs) {
 		return new IntValue(this._value >= rhs.toDoubleValue()._value);
 	},
-	lteq: function lteq(rhs) {
+	lteq: function(rhs) {
 		return new IntValue(this._value <= rhs.toDoubleValue()._value);
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.DOUBLE;
 	},
-	toIntValue: function toIntValue() {
+	toIntValue: function() {
 		return new IntValue(this._value);
 	},
-	toDoubleValue: function toDoubleValue() {
+	toDoubleValue: function() {
 		return this;
 	},
-	toStrValue: function toStrValue() {
+	toStrValue: function() {
 		return new StrValue(Formatter.convertFloat(this._value, {}, 0, null));
 	},
-	toString: function toString() {
+	toString: function() {
 		return '<DoubleValue:'+this._value+'>';
 	}
 });

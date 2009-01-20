@@ -40,7 +40,7 @@ function XHRReadURL(url, success, error) {
 
 with(HSPonJS) {
 	HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
-		onInternalError: function onInternalError(e) {
+		onInternalError: function(e) {
 			var insn = this.sequence[this.pc];
 			var msg = 'JavaScript Error!\n';
 			msg += e.name+': '+e.message+'\n';
@@ -53,17 +53,17 @@ with(HSPonJS) {
 			alert(msg);
 			throw e;
 		},
-		onError: function onError(e) {
+		onError: function(e) {
 			alert(this.getErrorOutput(e));
 			this.quit();
 		},
-		onStop: function onStop() {
+		onStop: function() {
 			resizeTextarea(this.resultTextarea);
 		},
-		onEnd: function onEnd(e) {
+		onEnd: function(e) {
 			this.quit();
 		},
-		onWait: function onWait(e) {
+		onWait: function(e) {
 			var self = this;
 			this.timeoutID = setTimeout(function() {
 				self.timeoutID = undefined;
@@ -71,7 +71,7 @@ with(HSPonJS) {
 				self.resume();
 			}, e.msec);
 		},
-		onFileRead: function onFileRead(e) {
+		onFileRead: function(e) {
 			var self = this;
 			self.fileReadXHR = XHRReadURL(
 				e.path,
@@ -84,7 +84,7 @@ with(HSPonJS) {
 					self.resume(function(){ e.error.call(self); });
 				});
 		},
-		quit: function quit() {
+		quit: function() {
 			if(this.quited) return;
 			if(this.timeoutID != undefined) {
 				clearTimeout(this.timeoutID);
@@ -97,7 +97,7 @@ with(HSPonJS) {
 			this.quited = true;
 		}
 	});
-	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
+	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function(val) { // mes
 		this.scanArgs(arguments, '.?');
 		if(val) {
 			this.resultTextarea.value += CP932.decode(val.toStrValue()._value) + "\n";
@@ -105,7 +105,7 @@ with(HSPonJS) {
 			this.resultTextarea.value += "\n";
 		}
 	};
-	BuiltinFuncs[Token.Type.EXTCMD][0x13] = function cls(n) {
+	BuiltinFuncs[Token.Type.EXTCMD][0x13] = function(n) { // cls
 		this.scanArgs(arguments, 'N');
 		this.resultTextarea.value = '';
 	};

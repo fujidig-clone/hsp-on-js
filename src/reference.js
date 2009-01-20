@@ -5,78 +5,78 @@ function Reference(value, offset) {
 }
 
 Reference.prototype = {
-	assign: function assign(offset, rhs) {
+	assign: function(offset, rhs) {
 		return this.value.assign(this.base + offset, rhs);
 	},
-	expand: function expand(indices) {
+	expand: function(indices) {
 		var offset = indices.length > 0 ? indices[0] : 0;
 		if(indices.length > 1 || offset < 0 || offset >= this.l0) {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
 		return false;
 	},
-	expand1D: function expand1D(index) {
+	expand1D: function(index) {
 		if(index < 0 || index >= this.l0) {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
 		return false;
 	},
-	getOffset: function getOffset(indices) {
+	getOffset: function(indices) {
 		var offset = indices.length > 0 ? indices[0] : 0;
 		if(indices.length > 1 || offset < 0 || offset >= this.l0) {
 			return null;
 		}
 		return offset;
 	},
-	getType: function getType() {
+	getType: function() {
 		return this.value.getType();
 	},
-	at: function at(offset) {
+	at: function(offset) {
 		return this.value.at(this.base + offset);
 	},
-	getL0: function getL0() {
+	getL0: function() {
 		return this.l0;
 	},
-	getL1: function getL1() {
+	getL1: function() {
 		return 0;
 	},
-	getL2: function getL2() {
+	getL2: function() {
 		return 0;
 	},
-	getL3: function getL3() {
+	getL3: function() {
 		return 0;
 	},
-	getbyte: function getbyte(offset, bytesOffset) {
+	getbyte: function(offset, bytesOffset) {
 		return this.value.getbyte(this.base + offset, bytesOffset);
 	},
-	setbyte: function setbyte(offset, bytesOffset, val) {
+	setbyte: function(offset, bytesOffset, val) {
 		return this.value.setbyte(this.base + offset, bytesOffset, val);
 	},
-	getbytes: function getbytes(offset, bytesOffset, length) {
+	getbytes: function(offset, bytesOffset, length) {
 		return this.value.getbytes(this.base + offset, bytesOffset, length);
 	},
-	setbytes: function setbytes(offset, bytesOffset, buf) {
+	setbytes: function(offset, bytesOffset, buf) {
 		return this.value.setbytes(this.base + offset, bytesOffset, buf);
 	},
-	getByteSize: function getByteSize(offset) {
+	getByteSize: function(offset) {
 		return this.value.getByteSize(this.base + offset);
 	},
-	expandByteSize: function expandByteSize(offset, size) {
+	expandByteSize: function(offset, size) {
 		return this.value.expandByteSize(this.base + offset, size);
 	},
-	bufferAt: function bufferAt(offset) {
+	bufferAt: function(offset) {
 		return this.value.bufferAt(offset);
 	},
-	ref: function ref(offset) {
+	ref: function(offset) {
 		if(offset == 0) {
 			return this;
 		}
 		return new Reference(this.value, this.base + offset);
 	},
-	inc: function inc(offset) {
+	inc: function(offset) {
 		return this.value.inc(this.base + offset);
 	},
-	dec: function dec(offset) {
+	dec: function(offset) {
 		return this.value.dec(this.base + offset);
 	}
 };

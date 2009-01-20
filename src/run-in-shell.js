@@ -3,7 +3,7 @@ var main;
 var nameSpace = {};
 with(nameSpace) {
 
-main = function main() {
+main = function() {
 	var options = runInShellOptions;
 	var axBinary = options.axBinary;
 	var showSequence = options.showSequence;
@@ -51,7 +51,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Utils.objectExtend(nameSpace, HSPonJS);
 }
 
-BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
+BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function(val) {
 	this.scanArgs(arguments, '.?');
 	if(val) {
 		print(CP932.decode(val.toStrValue()._value));
@@ -60,11 +60,11 @@ BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function mes(val) {
 	}
 };
 
-Evaluator.prototype.onError = function onError(e) {
+Evaluator.prototype.onError = function(e) {
 	print(this.getErrorOutput(e));
 };
 
-Evaluator.prototype.onEnd = function onEnd(e) {
+Evaluator.prototype.onEnd = function(e) {
 	quit(e.status);
 };
 

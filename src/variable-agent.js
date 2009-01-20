@@ -3,103 +3,103 @@ function VariableAgent() {
 }
 
 VariableAgent.prototype = {
-	add: function add(rhs) {
+	add: function(rhs) {
 		return this.toValue().add(rhs);
 	},
-	sub: function sub(rhs) {
+	sub: function(rhs) {
 		return this.toValue().sub(rhs);
 	},
-	mul: function mul(rhs) {
+	mul: function(rhs) {
 		return this.toValue().mul(rhs);
 	},
-	div: function div(rhs) {
+	div: function(rhs) {
 		return this.toValue().div(rhs);
 	},
-	mod: function mod(rhs) {
+	mod: function(rhs) {
 		return this.toValue().mod(rhs);
 	},
-	and: function and(rhs) {
+	and: function(rhs) {
 		return this.toValue().and(rhs);
 	},
-	or: function or(rhs) {
+	or: function(rhs) {
 		return this.toValue().or(rhs);
 	},
-	xor: function xor(rhs) {
+	xor: function(rhs) {
 		return this.toValue().xor(rhs);
 	},
-	eq: function eq(rhs) {
+	eq: function(rhs) {
 		return this.toValue().eq(rhs);
 	},
-	ne: function ne(rhs) {
+	ne: function(rhs) {
 		return this.toValue().ne(rhs);
 	},
-	gt: function gt(rhs) {
+	gt: function(rhs) {
 		return this.toValue().gt(rhs);
 	},
-	lt: function lt(rhs) {
+	lt: function(rhs) {
 		return this.toValue().lt(rhs);
 	},
-	gteq: function gteq(rhs) {
+	gteq: function(rhs) {
 		return this.toValue().gteq(rhs);
 	},
-	lteq: function lteq(rhs) {
+	lteq: function(rhs) {
 		return this.toValue().lteq(rhs);
 	},
-	rsh: function rsh(rhs) {
+	rsh: function(rhs) {
 		return this.toValue().rsh(rhs);
 	},
-	lsh: function lsh(rhs) {
+	lsh: function(rhs) {
 		return this.toValue().lsh(rhs);
 	},
-	getType: function getType() {
+	getType: function() {
 		return this.variable.getType();
 	},
-	toIntValue: function toIntValue() {
+	toIntValue: function() {
 		return this.toValue().toIntValue();
 	},
-	toDoubleValue: function toDoubleValue() {
+	toDoubleValue: function() {
 		return this.toValue().toDoubleValue();
 	},
-	toStrValue: function toStrValue() {
+	toStrValue: function() {
 		return this.toValue().toStrValue();
 	},
-	isUsing: function isUsing() {
+	isUsing: function() {
 		return this.toValue().isUsing();
 	},
-	getbyte: function getbyte(bytesOffset) {
+	getbyte: function(bytesOffset) {
 		return this.variable.getbyte(this.getOffset(), bytesOffset);
 	},
-	setbyte: function setbyte(bytesOffset, val) {
+	setbyte: function(bytesOffset, val) {
 		return this.variable.setbyte(this.getOffset(), bytesOffset, val);
 	},
-	getbytes: function getbytes(bytesOffset, length) {
+	getbytes: function(bytesOffset, length) {
 		return this.variable.getbytes(this.getOffset(), bytesOffset, length);
 	},
-	setbytes: function setbytes(bytesOffset, buf) {
+	setbytes: function(bytesOffset, buf) {
 		return this.variable.setbytes(this.getOffset(), bytesOffset, buf);
 	},
-	getByteSize: function getByteSize() {
+	getByteSize: function() {
 		return this.variable.getByteSize(this.getOffset());
 	},
-	expandByteSize: function expandByteSize(size) {
+	expandByteSize: function(size) {
 		return this.variable.expandByteSize(this.getOffset(), size);
 	},
-	ref: function ref() {
+	ref: function() {
 		return this.variable.ref(this.getOffset());
 	},
-	getBuffer: function getBuffer() {
+	getBuffer: function() {
 		return this.variable.bufferAt(this.getOffset());
 	},
-	inc: function inc() {
+	inc: function() {
 		return this.variable.inc(this.getOffset());
 	},
-	dec: function dec() {
+	dec: function() {
 		return this.variable.dec(this.getOffset());
 	},
-	toValue: function toValue() {
+	toValue: function() {
 		return this.variable.at(this.getOffset());
 	},
-	isVariable: function isVariable() {
+	isVariable: function() {
 		return true;
 	},
 	indices: null
@@ -112,13 +112,13 @@ function VariableAgent0D(variable) {
 VariableAgent0D.prototype = new VariableAgent;
 
 Utils.objectExtend(VariableAgent0D.prototype, {
-	getOffset: function getOffset() {
+	getOffset: function() {
 		return 0;
 	},
-	toValue: function toValue() {
+	toValue: function() {
 		return this.variable.at(0);
 	},
-	assign: function assign(rhs) {
+	assign: function(rhs) {
 		var type = rhs.getType();
 		var variable = this.variable;
 		if(variable.value.getType() != type) {
@@ -126,7 +126,7 @@ Utils.objectExtend(VariableAgent0D.prototype, {
 		}
 		variable.value.assign(0, rhs);
 	},
-	expand: function expand() {
+	expand: function() {
 	},
 	offset: 0,
 	existSubscript: false
@@ -140,7 +140,7 @@ function VariableAgent1D(variable, offset) {
 VariableAgent1D.prototype = new VariableAgent;
 
 Utils.objectExtend(VariableAgent1D.prototype, {
-	getOffset: function getOffset() {
+	getOffset: function() {
 		var offset = this.offset;
 		if(0 <= offset && offset < this.variable.value.getL0()) {
 			return offset;
@@ -148,7 +148,7 @@ Utils.objectExtend(VariableAgent1D.prototype, {
 			throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		}
 	},
-	assign: function assign(rhs) {
+	assign: function(rhs) {
 		var offset = this.offset;
 		var variable = this.variable;
 		var array = variable.value;
@@ -164,7 +164,7 @@ Utils.objectExtend(VariableAgent1D.prototype, {
 		array.expand1D(offset);
 		array.assign(offset, rhs);
 	},
-	expand: function expand() {
+	expand: function() {
 		this.variable.value.expand1D(this.offset);
 	},
 	existSubscript: true
@@ -178,15 +178,15 @@ function VariableAgentMD(variable, indices) {
 VariableAgentMD.prototype = new VariableAgent;
 
 Utils.objectExtend(VariableAgentMD.prototype, {
-	getOffset: function getOffset() {
+	getOffset: function() {
 		var offset = this.variable.value.getOffset(this.indices);
 		if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);
 		return offset;
 	},
-	assign: function assign(rhs) {
+	assign: function(rhs) {
 		return this.variable.assign(this.indices, rhs);
 	},
-	expand: function expand() {
+	expand: function() {
 		this.variable.expand(this.indices);
 	},
 	existSubscript: true

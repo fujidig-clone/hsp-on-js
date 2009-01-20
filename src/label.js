@@ -10,13 +10,13 @@ Label.prototype = new Value;
 */
 
 Utils.objectExtend(Label.prototype, {
-	toString: function toString() {
+	toString: function() {
 		return '<Label:'+this.pos+'>';
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.LABEL;
 	},
-	isUsing: function isUsing() {
+	isUsing: function() {
 		//return this != Label.EMPTY;
 		return this.pos != 0;
 	}

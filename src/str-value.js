@@ -9,7 +9,7 @@ function StrValue(str) {
 StrValue.prototype = new Value;
 
 StrValue.EMPTY_STR = new StrValue('');
-StrValue.of = function of(str) {
+StrValue.of = function(str) {
 	if(str.length == 0) {
 		return StrValue.EMPTY_STR;
 	}
@@ -17,13 +17,13 @@ StrValue.of = function of(str) {
 };
 
 Utils.objectExtend(StrValue.prototype, {
-	add: function add(rhs) {
+	add: function(rhs) {
 		return new StrValue(this._value + rhs.toStrValue()._value);
 	},
-	eq: function eq(rhs) {
+	eq: function(rhs) {
 		return new IntValue(this._value == rhs.toStrValue()._value);
 	},
-	ne: function ne(rhs) {
+	ne: function(rhs) {
 		var l = this._value, r = rhs.toStrValue()._value;
 		if(l == r) {
 			return new IntValue(0);
@@ -33,22 +33,22 @@ Utils.objectExtend(StrValue.prototype, {
 			return new IntValue(-1);
 		}
 	},
-	gt: function gt(rhs) {
+	gt: function(rhs) {
 		return new IntValue(this._value > rhs.toStrValue()._value);
 	},
-	lt: function lt(rhs) {
+	lt: function(rhs) {
 		return new IntValue(this._value < rhs.toStrValue()._value);
 	},
-	gteq: function gteq(rhs) {
+	gteq: function(rhs) {
 		return new IntValue(this._value >= rhs.toStrValue()._value);
 	},
-	lteq: function lteq(rhs) {
+	lteq: function(rhs) {
 		return new IntValue(this._value <= rhs.toStrValue()._value);
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.STR;
 	},
-	toIntValue: function toIntValue() {
+	toIntValue: function() {
 		if(this._value.charAt(0) == '$') {
 			var n = 0;
 			for(var i = 1; i < this._value.length; i ++) {
@@ -70,18 +70,18 @@ Utils.objectExtend(StrValue.prototype, {
 		}
 		return new IntValue(parseInt(this._value, 10));
 	},
-	toDoubleValue: function toDoubleValue() {
+	toDoubleValue: function() {
 		var n = parseFloat(this._value);
 		if(isNaN(n)) n = 0;
 		return new DoubleValue(n);
 	},
-	toStrValue: function toStrValue() {
+	toStrValue: function() {
 		return this;
 	},
-	toString: function toString() {
+	toString: function() {
 		return '<StrValue:'+this._value+'>';
 	},
-	indexOf: function indexOf(pattern, fromIndex) {
+	indexOf: function(pattern, fromIndex) {
 		// ネイティブの String#indexOf でマッチする部分を探し、
 		// マッチした部分が二バイト文字の途中からでないか 1 バイトずつ戻っていきながらチェックする
 		
@@ -116,7 +116,7 @@ Utils.objectExtend(StrValue.prototype, {
 			pos = index + 1;
 		}
 	},
-	lineIndex: function lineIndex(lineNumber) {
+	lineIndex: function(lineNumber) {
 		if(lineNumber < 0) return null;
 		var str = this._value;
 		var i = 0;
@@ -135,11 +135,11 @@ Utils.objectExtend(StrValue.prototype, {
 			return result;
 		}
 	},
-	lineLength: function lineLength(index) {
+	lineLength: function(index) {
 		var str = this._value;
 		return /[\r\n]|$/.exec(str.slice(index)).index;
 	},
-	lineLengthIncludeCR: function lineLengthIncludeCR(index) {
+	lineLengthIncludeCR: function(index) {
 		var str = this._value;
 		var matched = /\r\n|[\r\n]|$/.exec(str.slice(index));
 		return matched.index + matched[0].length;

@@ -1,5 +1,5 @@
 var Formatter = {
-	sprintf: function sprintf(evaluator, format, args) {
+	sprintf: function(evaluator, format, args) {
 		var argsIndex = 0;
 		format = format.toStrValue()._value;
 		var re = /%[- #+0-9.]*[\s\S]?/g;
@@ -47,7 +47,7 @@ var Formatter = {
 		}
 		return new StrValue(Utils.getCStr(result));
 	},
-	sprintfForJS: function sprintfForJS(format) {
+	sprintfForJS: function(format) {
 		var args = [];
 		for(var i = 1; i < arguments.length; i ++) {
 			var arg = arguments[i];
@@ -65,7 +65,7 @@ var Formatter = {
 		var dummyEvaluator = {scanArg: function(){}};
 		return Formatter.sprintf(dummyEvaluator, new StrValue(format), args)._value;
 	},
-	addSpaces: function addSpaces(str, flags, width) {
+	addSpaces: function(str, flags, width) {
 		var spaces = Utils.strTimes(' ', Math.max(width - str.length, 0));
 		if(flags['-']) {
 			return str + spaces;
@@ -73,12 +73,12 @@ var Formatter = {
 			return spaces + str;
 		}
 	},
-	addZeros: function addZeros(str, width) {
+	addZeros: function(str, width) {
 		var length = width - str.length;
 		var zeros = Utils.strTimes('0', Math.max(length, 0));
 		return zeros + str;
 	},
-	signPrefix: function signPrefix(isNegative, flags) {
+	signPrefix: function(isNegative, flags) {
 		if(isNegative) {
 			return '-';
 		} else if(flags['+']) {
@@ -89,7 +89,7 @@ var Formatter = {
 			return '';
 		}
 	},
-	convertInt: function convertInt(val, flags, width, prec, signed, radix, pre) {
+	convertInt: function(val, flags, width, prec, signed, radix, pre) {
 		if(!signed) {
 			if(val & 0x80000000) val += 0x100000000;
 		}
@@ -112,10 +112,10 @@ var Formatter = {
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
 	},
-	convertMemoryAddress: function convertMemoryAddress(val, flags, width, prec) {
+	convertMemoryAddress: function(val, flags, width, prec) {
 		return Formatter.convertInt(val, {'-': flags['-']}, width, 8, false, 16, '').toUpperCase();
 	},
-	convertExp: function convertExp(val, flags, width, prec) {
+	convertExp: function(val, flags, width, prec) {
 		if(prec == null) prec = 6;
 		var isNegative = val != Math.abs(val);
 		val = Math.abs(val);
@@ -144,7 +144,7 @@ var Formatter = {
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
 	},
-	convertFloatG: function convertFloatG(val, flags, width, prec) {
+	convertFloatG: function(val, flags, width, prec) {
 		if(prec == null) prec = 6;
 		prec = Math.max(prec, 1);
 		var str;
@@ -176,7 +176,7 @@ var Formatter = {
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
 	},
-	convertFloat: function convertFloat(val, flags, width, prec) {
+	convertFloat: function(val, flags, width, prec) {
 		if(prec == null) prec = 6;
 		var isNegative = val != Math.abs(val);
 		val = Math.abs(val);
@@ -189,7 +189,7 @@ var Formatter = {
 		str = prefix + str;
 		return Formatter.addSpaces(str, flags, width);
 	},
-	convertFloatSub: function convertFloatSub(val, prec) {
+	convertFloatSub: function(val, prec) {
 		if(isNaN(val)) return Formatter.convertNaN(prec);
 		if(val == Infinity) return Formatter.convertInf(prec);
 		var exponent = val != 0 ? Math.floor(Math.log(val) / Math.LN10) : 0;
@@ -222,7 +222,7 @@ var Formatter = {
 		}
 		return str;
 	},
-	convertNaN: function convertNaN(prec) {
+	convertNaN: function(prec) {
 		switch(prec) {
 		case 0: return '1';
 		case 1: return '1.$';
@@ -231,7 +231,7 @@ var Formatter = {
 		default:return '1.#IND' + Utils.strTimes('0', prec - 4);
 		}
 	},
-	convertInf: function convertInf(prec) {
+	convertInf: function(prec) {
 		switch(prec) {
 		case 0: return '1';
 		case 1: return '1.$';

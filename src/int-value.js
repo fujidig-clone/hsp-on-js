@@ -10,7 +10,7 @@ IntValue.prototype = new Value;
 		cache[i] = new IntValue(i-128);
 	}
 	
-	IntValue.of = function of(value) {
+	IntValue.of = function(value) {
 		value = value|0;
 		if(-128 <= value && value <= 127) {
 			return cache[value+128];
@@ -20,75 +20,75 @@ IntValue.prototype = new Value;
 })();
 
 Utils.objectExtend(IntValue.prototype, {
-	add: function add(rhs) {
+	add: function(rhs) {
 		return new IntValue(this._value + rhs.toIntValue()._value);
 	},
-	sub: function sub(rhs) {
+	sub: function(rhs) {
 		return new IntValue(this._value - rhs.toIntValue()._value);
 	},
-	mul: function mul(rhs) {
+	mul: function(rhs) {
 		return new IntValue(this._value * rhs.toIntValue()._value);
 	},
-	div: function div(rhs) {
+	div: function(rhs) {
 		var rhsValue = rhs.toIntValue()._value;
 		if(rhsValue == 0) {
 			throw new HSPError(ErrorCode.DIVIDED_BY_ZERO);
 		}
 		return new IntValue(this._value / rhsValue);
 	},
-	mod: function mod(rhs) {
+	mod: function(rhs) {
 		var rhsValue = rhs.toIntValue()._value;
 		if(rhsValue == 0) {
 			throw new HSPError(ErrorCode.DIVIDED_BY_ZERO);
 		}
 		return new IntValue(this._value % rhsValue);
 	},
-	and: function and(rhs) {
+	and: function(rhs) {
 		return new IntValue(this._value & rhs.toIntValue()._value);
 	},
-	or: function or(rhs) {
+	or: function(rhs) {
 		return new IntValue(this._value | rhs.toIntValue()._value);
 	},
-	xor: function xor(rhs) {
+	xor: function(rhs) {
 		return new IntValue(this._value ^ rhs.toIntValue()._value);
 	},
-	eq: function eq(rhs) {
+	eq: function(rhs) {
 		return new IntValue(this._value == rhs.toIntValue()._value);
 	},
-	ne: function ne(rhs) {
+	ne: function(rhs) {
 		return new IntValue(this._value != rhs.toIntValue()._value);
 	},
-	gt: function gt(rhs) {
+	gt: function(rhs) {
 		return new IntValue(this._value > rhs.toIntValue()._value);
 	},
-	lt: function lt(rhs) {
+	lt: function(rhs) {
 		return new IntValue(this._value < rhs.toIntValue()._value);
 	},
-	gteq: function gteq(rhs) {
+	gteq: function(rhs) {
 		return new IntValue(this._value >= rhs.toIntValue()._value);
 	},
-	lteq: function lteq(rhs) {
+	lteq: function(rhs) {
 		return new IntValue(this._value <= rhs.toIntValue()._value);
 	},
-	rsh: function rhs(rhs) {
+	rsh: function(rhs) {
 		return new IntValue(this._value >> rhs.toIntValue()._value);
 	},
-	lsh: function lhs(rhs) {
+	lsh: function(rhs) {
 		return new IntValue(this._value << rhs.toIntValue()._value);
 	},
-	getType: function getType() {
+	getType: function() {
 		return VarType.INT;
 	},
-	toIntValue: function toIntValue() {
+	toIntValue: function() {
 		return this;
 	},
-	toDoubleValue: function toDoubleValue() {
+	toDoubleValue: function() {
 		return new DoubleValue(this._value);
 	},
-	toStrValue: function toStrValue() {
+	toStrValue: function() {
 		return new StrValue(this._value);
 	},
-	toString: function toString() {
+	toString: function() {
 		return '<IntValue:'+this._value+'>';
 	}
 });

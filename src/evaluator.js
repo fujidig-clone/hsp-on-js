@@ -54,7 +54,7 @@ function throwHSPError(errorCode) {
 }
 
 Evaluator.prototype = {
-	evaluate: function evaluate() {
+	evaluate: function() {
 		this.mainLoop = this.createMainLoop();
 		try {
 			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
@@ -62,7 +62,7 @@ Evaluator.prototype = {
 			this.disposeException(e);
 		}
 	},
-	resume: function resume(callback) {
+	resume: function(callback) {
 		try {
 			if(callback) callback();
 			this.pc ++;
@@ -71,7 +71,7 @@ Evaluator.prototype = {
 			this.disposeException(e);
 		}
 	},
-	resumeWithEvent: function resumeWithEvent(event) {
+	resumeWithEvent: function(event) {
 		try {
 			if(event.isGosub) {
 				if(this.frameStack.length >= 256) {
@@ -89,7 +89,7 @@ Evaluator.prototype = {
 			this.disposeException(e);
 		}
 	},
-	buildVariables: function buildVariables() {
+	buildVariables: function() {
 		var axdata = this.axdata;
 		var varCount = axdata.max_val;
 		var variables = new Array(varCount);
@@ -104,7 +104,7 @@ Evaluator.prototype = {
 		}
 		return variables;
 	},
-	disposeException: function disposeException(e) {
+	disposeException: function(e) {
 		if(!(e instanceof HSPException)) {
 			this.onInternalError(e);
 		} else if(e instanceof HSPError) {
@@ -127,21 +127,21 @@ Evaluator.prototype = {
 		} else if(e instanceof VoidException) {
 		}
 	},
-	onInternalError: function onInternalError(e) {
+	onInternalError: function(e) {
 		throw e;
 	},
-	onStop: function onStop() {
+	onStop: function() {
 	},
-	createMainLoop: function createMainLoop() {
+	createMainLoop: function() {
 		var src = '';
 		for(var prop in HSPonJS) {
 			src += 'var '+prop+' = HSPonJS.'+prop+';\n';
 		}
-		src += 'return function mainLoop(stack, literals, variables, userDefFuncs) {\n';
+		src += 'return function(stack, literals, variables, userDefFuncs) {\n';
 		src += this.createMainLoopSrc() + '\n};';
 		return Function(src)();
 	},
-	createMainLoopSrc: function createMainLoopSrc() {
+	createMainLoopSrc: function() {
 		function push(line) {
 			lines.push(Utils.strTimes('\t', indent) + line);
 		}
@@ -1020,42 +1020,42 @@ Evaluator.prototype = {
 		indent --; push('}');
 		return lines.join("\n");
 	},
-	selectNote: function selectNote(v) {
+	selectNote: function(v) {
 		if(this.note) {
 			this.oldNotes[this.oldNotesPos] = this.note;
 			this.oldNotesPos = (this.oldNotesPos + 1) % 256;
 		}
 		this.note = v;
 	},
-	undoNote: function undoNote() {
+	undoNote: function() {
 		this.oldNotesPos = (this.oldNotesPos - 1 + 256) % 256;
 		this.note = this.oldNotes[this.oldNotesPos];
 		this.oldNotes[this.oldNotesPos] = null;
 	},
-	getNote: function getNote() {
+	getNote: function() {
 		if(!this.note) {
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ノートパッドが選択されていません');
 		}
 		return this.note.getBuffer();
 	},
-	fileRead: function fileRead(path, success, error) {
+	fileRead: function(path, success, error) {
 		throw new FileReadException(path, success, error);
 	},
-	getArg: function getArg(argNum) {
+	getArg: function(argNum) {
 		var args = this.args;
 		if(!args) {
 			throw new HSPError(ErrorCode.INVALID_PARAMETER);
 		}
 		return args[argNum];
 	},
-	getThismod: function getThismod() {
+	getThismod: function() {
 		var thismod = this.getArg(0);
 		if(!(thismod instanceof VariableAgent && thismod.getType() == VarType.STRUCT && thismod.isUsing())) {
 			throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
 		}
 		return thismod;
 	},
-	getErrorOutput: function getErrorOutput(e) {
+	getErrorOutput: function(e) {
 		var insn = this.sequence[this.pc];
 		var lines = [];
 		lines.push('#Error '+e.errcode+': '+e.getErrorMessage());
@@ -1088,7 +1088,7 @@ Evaluator.prototype = {
 		}
 		return lines.join("\n");
 	},
-	getBackTrace: function getBackTrace() {
+	getBackTrace: function() {
 		var result = [];
 		var sequence = this.sequence;
 		var frameStack = this.frameStack;
@@ -1117,7 +1117,7 @@ Evaluator.prototype = {
 		}
 		return result;
 	},
-	getBuiltinFuncName: function getBuiltinFuncName(insn) {
+	getBuiltinFuncName: function(insn) {
 		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
 		   insn.code != Instruction.Code.CALL_BUILTIN_FUNC) {
 			return undefined;
@@ -1144,7 +1144,7 @@ Evaluator.prototype = {
 	// 
 	// * の指定があっても問題がある場合はエラーを投げる。（次のルールには渡さない）
 	// 「'i*s' で int 型のパラメータが並んでいて最後に文字列型のパラメータがあることを調べる」のような使い方は*出来ない*。
-	scanArgs: function scanArgs(args, format) {
+	scanArgs: function(args, format) {
 		var argsIndex = 0;
 		var formatIndex = 0;
 		while(formatIndex < format.length) {
@@ -1174,7 +1174,7 @@ Evaluator.prototype = {
 			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
 		}
 	},
-	scanArg: function scanArg(arg, c, isOptionalArguments) {
+	scanArg: function(arg, c, isOptionalArguments) {
 		if(arg == undefined) {
 			if(isOptionalArguments) {
 				return arg;
@@ -1233,13 +1233,13 @@ Evaluator.prototype = {
 		}
 		return arg;
 	},
-	typeMismatchError: function typeMismatchError(actualType, expectedType) {
+	typeMismatchError: function(actualType, expectedType) {
 		return this.typeMismatchError0(actualType, VarTypeNames[expectedType]+' 型');
 	},
-	typeMismatchErrorIntOrDouble: function typeMismatchErrorIntOrDouble(actualType) {
+	typeMismatchErrorIntOrDouble: function(actualType) {
 		return this.typeMismatchError0(actualType, 'int 型か double 型');
 	},
-	typeMismatchError0: function typeMismatchError0(actualType, expected) {
+	typeMismatchError0: function(actualType, expected) {
 		return new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[actualType]+' 型ではなく、'+expected+'の値を指定しなければいけません');
 	}
 };
