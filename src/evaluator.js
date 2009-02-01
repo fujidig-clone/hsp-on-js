@@ -1204,7 +1204,7 @@ Evaluator.prototype = {
 			}
 			break;
 		case 'l':
-			if(arg.getType() != VarType.LABEL) {
+			if(arg.getType() != VarType.LABEL || !arg.isUsing()) {
 				throw new HSPError(ErrorCode.LABEL_REQUIRED);
 			}
 			break;
