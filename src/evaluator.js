@@ -395,7 +395,7 @@ Evaluator.prototype = {
 			push('}');
 			push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args, this.args));');
 			push('this.args = args;');
-			push('this.pc = '+userDefFunc.label.pos+';');
+			push('this.pc = '+userDefFunc.label.getPos()+';');
 		}
 		function pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr) {
 			var argMax = mptypes.length;
@@ -546,6 +546,8 @@ Evaluator.prototype = {
 				return 'this.getArg('+node.id+')';
 			case NodeType.LITERAL:
 				return getLiteralExpr(node.val);
+			case NodeType.LABEL:
+				return getLiteralExpr(new LabelValue(node.getLabelPos()));
 			case NodeType.DEFAULT:
 				return 'throwHSPError('+ErrorCode.NO_DEFAULT+')';
 			case NodeType.OPERATE:
@@ -636,8 +638,8 @@ Evaluator.prototype = {
 		}
 		function getLabelParamNativeValueExpr(paramInfo) {
 			var node = paramInfo.node;
-			if(node.isLiteralNode() && node.val.getType() == VarType.LABEL) {
-				return '' + node.val.pos;
+			if(node.isLabelNode()) {
+				return '' + node.getLabelPos();
 			}
 			return 'this.scanArg('+getParamExpr(paramInfo)+', "l").toValue().pos';
 		}
@@ -659,69 +661,69 @@ Evaluator.prototype = {
 			return defaultVarName;
 		}
 		var insn2func = [];
-		insn2func[Instruction.Code.NOP] = function(insn, pc) {
+		insn2func[Insn.Code.NOP] = function(insn, pc) {
 		};
-		insn2func[Instruction.Code.PUSH_VAR] = function(insn, pc) {
+		insn2func[Insn.Code.PUSH_VAR] = function(insn, pc) {
 			var varData = insn.opts[0];
 			var indexParamInfos = insn.opts[1];
 			pushGettingVariableCode(varData, indexParamInfos);
 		};
-		insn2func[Instruction.Code.GET_VAR] = function(insn, pc) {
+		insn2func[Insn.Code.GET_VAR] = function(insn, pc) {
 			var varData = insn.opts[0];
 			var indexParamInfos = insn.opts[1];
 			pushGettingArrayValueCode(varData, indexParamInfos);
 		};
-		insn2func[Instruction.Code.POP] = function(insn, pc) {
+		insn2func[Insn.Code.POP] = function(insn, pc) {
 			push('stack.pop();');
 		};
-		insn2func[Instruction.Code.POP_N] = function(insn, pc) {
+		insn2func[Insn.Code.POP_N] = function(insn, pc) {
 			pushStackPopCode(insn.opts[0]);
 		};
-		insn2func[Instruction.Code.DUP] = function(insn, pc) {
+		insn2func[Insn.Code.DUP] = function(insn, pc) {
 			push('stack.push(stack[stack.length-1]);');
 		};
-		insn2func[Instruction.Code.GOTO] = function(insn, pc) {
-			push('this.pc = '+insn.opts[0].pos+';');
+		insn2func[Insn.Code.GOTO] = function(insn, pc) {
+			push('this.pc = '+insn.opts[0].getPos()+';');
 			push('continue;');
 		};
-		insn2func[Instruction.Code.IFNE] =
-		insn2func[Instruction.Code.IFEQ] = function(insn, pc) {
+		insn2func[Insn.Code.IFNE] =
+		insn2func[Insn.Code.IFEQ] = function(insn, pc) {
 			var label = insn.opts[0];
 			var paramInfo = insn.opts[1];
 			var expr = getParamExpr(paramInfo)+'.toIntValue()._value';
-			if(insn.code == Instruction.Code.IFEQ) {
+			if(insn.code == Insn.Code.IFEQ) {
 				expr = '!' + expr;
 			}
 			push('if('+expr+') {');
-			push('    this.pc = '+insn.opts[0].pos+';');
+			push('    this.pc = '+insn.opts[0].getPos()+';');
 			push('    continue;');
 			push('}');
 		};
-		insn2func[Instruction.Code.ASSIGN] = function(insn, pc) {
+		insn2func[Insn.Code.ASSIGN] = function(insn, pc) {
 			var varData = insn.opts[0];
 			var indexParamInfos = insn.opts[1];
 			var rhsParamInfos = insn.opts[2];
 			pushAssignCode(varData, indexParamInfos, rhsParamInfos);
 		};
-		insn2func[Instruction.Code.COMPOUND_ASSIGN] = function(insn, pc) {
+		insn2func[Insn.Code.COMPOUND_ASSIGN] = function(insn, pc) {
 			var calcCode = insn.opts[0];
 			var varData = insn.opts[1];
 			var indexParamInfos = insn.opts[2];
 			var rhsParamInfo = insn.opts[3];
 			pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo);
 		};
-		insn2func[Instruction.Code.INC] = function(insn, pc) {
+		insn2func[Insn.Code.INC] = function(insn, pc) {
 			var varData = insn.opts[0];
 			var indexParamInfos = insn.opts[1];
 			pushIncCode(varData, indexParamInfos);
 		};
-		insn2func[Instruction.Code.DEC] = function(insn, pc) {
+		insn2func[Insn.Code.DEC] = function(insn, pc) {
 			var varData = insn.opts[0];
 			var indexParamInfos = insn.opts[1];
 			pushDecCode(varData, indexParamInfos);
 		};
-		insn2func[Instruction.Code.CALL_BUILTIN_CMD] =
-		insn2func[Instruction.Code.CALL_BUILTIN_FUNC] = function(insn, pc) {
+		insn2func[Insn.Code.CALL_BUILTIN_CMD] =
+		insn2func[Insn.Code.CALL_BUILTIN_FUNC] = function(insn, pc) {
 			var type = insn.opts[0];
 			var subid = insn.opts[1];
 			var paramInfos = insn.opts[2];
@@ -739,20 +741,20 @@ Evaluator.prototype = {
 					push('args['+i+'] = '+getParamExpr(paramInfo)+';');
 				}
 			}
-			if(insn.code == Instruction.Code.CALL_BUILTIN_FUNC) {
+			if(insn.code == Insn.Code.CALL_BUILTIN_FUNC) {
 				push('stack.push(func.apply(this, args));');
 			} else {
 				push('func.apply(this, args);');
 			}
 		};
-		insn2func[Instruction.Code.CALL_USERDEF_CMD] =
-		insn2func[Instruction.Code.CALL_USERDEF_FUNC] = function(insn, pc) {
+		insn2func[Insn.Code.CALL_USERDEF_CMD] =
+		insn2func[Insn.Code.CALL_USERDEF_FUNC] = function(insn, pc) {
 			var userDefFunc = insn.opts[0];
 			var paramInfos = insn.opts[1];
 			pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
 			push('continue;');
 		};
-		insn2func[Instruction.Code.NEWMOD] = function(insn, pc) {
+		insn2func[Insn.Code.NEWMOD] = function(insn, pc) {
 			var varParamInfo = insn.opts[0];
 			var module = insn.opts[1];
 			var paramInfos = insn.opts[2];
@@ -779,7 +781,7 @@ Evaluator.prototype = {
 				push('continue;');
 			}
 		};
-		insn2func[Instruction.Code.RETURN] = function(insn, pc) {
+		insn2func[Insn.Code.RETURN] = function(insn, pc) {
 			var paramInfo = insn.opts[0];
 			push('if(this.frameStack.length == 0) {');
 			push('    throw new HSPError(ErrorCode.RETURN_WITHOUT_GOSUB);');
@@ -815,8 +817,8 @@ Evaluator.prototype = {
 			push('this.pc = frame.pc;');
 			push('continue;');
 		};
-		insn2func[Instruction.Code.REPEAT] = function(insn, pc) {
-			var pos = insn.opts[0].pos;
+		insn2func[Insn.Code.REPEAT] = function(insn, pc) {
+			var pos = insn.opts[0].getPos();
 			var paramInfos = insn.opts[1];
 			push('if(this.loopStack.length >= 31) {');
 			push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
@@ -839,7 +841,7 @@ Evaluator.prototype = {
 			push('end += begin;');
 			push('this.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
 		};
-		insn2func[Instruction.Code.LOOP] = function(insn, pc) {
+		insn2func[Insn.Code.LOOP] = function(insn, pc) {
 			push('if(this.loopStack.length == 0) {');
 			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 			push('}');
@@ -851,15 +853,15 @@ Evaluator.prototype = {
 			push('}');
 			push('this.loopStack.pop();');
 		};
-		insn2func[Instruction.Code.CNT] = function(insn, pc) {
+		insn2func[Insn.Code.CNT] = function(insn, pc) {
 			push('if(this.loopStack.length == 0) {');
 			push('    stack.push(new IntValue(0));');
 			push('} else {');
 			push('    stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));');
 			push('}');
 		};
-		insn2func[Instruction.Code.CONTINUE] = function(insn, pc) {
-			var pos = insn.opts[0].pos;
+		insn2func[Insn.Code.CONTINUE] = function(insn, pc) {
+			var pos = insn.opts[0].getPos();
 			var paramInfo = insn.opts[1];
 			push('if(this.loopStack.length == 0) {');
 			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
@@ -879,26 +881,26 @@ Evaluator.prototype = {
 			push('}');
 			push('continue;');
 		};
-		insn2func[Instruction.Code.BREAK] = function(insn, pc) {
+		insn2func[Insn.Code.BREAK] = function(insn, pc) {
 			var label = insn.opts[0];
 			push('if(this.loopStack.length == 0) {');
 			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 			push('}');
 			push('this.loopStack.pop();');
-			push('this.pc = '+label.pos+';');
+			push('this.pc = '+label.getPos()+';');
 			push('continue;');
 		};
-		insn2func[Instruction.Code.FOREACH] = function(insn, pc) {
+		insn2func[Insn.Code.FOREACH] = function(insn, pc) {
 			push('if(this.loopStack.length >= 31) {');
 			push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
 			push('}');
 			push('this.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
 		};
-		insn2func[Instruction.Code.EACHCHK] = function(insn, pc) {
+		insn2func[Insn.Code.EACHCHK] = function(insn, pc) {
 			push('if(this.loopStack.length == 0) {');
 			push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
 			push('}')
-			var pos = insn.opts[0].pos;
+			var pos = insn.opts[0].getPos();
 			var paramInfo = insn.opts[1];
 			push('var array = '+getNoSubscriptVariableExpr(paramInfo)+'.value;');
 			push('var data = this.loopStack[this.loopStack.length - 1];');
@@ -918,21 +920,21 @@ Evaluator.prototype = {
 			push('    continue;');
 			push('}');
 		};
-		insn2func[Instruction.Code.GOSUB] = function(insn, pc) {
+		insn2func[Insn.Code.GOSUB] = function(insn, pc) {
 			pushJumpingSubroutineCode(pc);
-			push('this.pc = '+insn.opts[0].pos+';');
+			push('this.pc = '+insn.opts[0].getPos()+';');
 			push('continue;');
 		};
-		insn2func[Instruction.Code.GOTO_EXPR] =
-		insn2func[Instruction.Code.GOSUB_EXPR] = function(insn, pc) {
+		insn2func[Insn.Code.GOTO_EXPR] =
+		insn2func[Insn.Code.GOSUB_EXPR] = function(insn, pc) {
 			var paramInfo = insn.opts[0];
-			if(insn.code == Instruction.Code.GOSUB_EXPR) {
+			if(insn.code == Insn.Code.GOSUB_EXPR) {
 				pushJumpingSubroutineCode(pc);
 			}
 			push('this.pc = '+getLabelParamNativeValueExpr(paramInfo)+';');
 			push('continue;');
 		};
-		insn2func[Instruction.Code.EXGOTO] = function(insn, pc) {
+		insn2func[Insn.Code.EXGOTO] = function(insn, pc) {
 			var paramInfos = insn.opts[0];
 			var counterParamInfo = paramInfos[0];
 			var stepParamInfo    = paramInfos[1];
@@ -967,7 +969,7 @@ Evaluator.prototype = {
 			push('    if(counter <= '+endExpr+') { this.pc = '+posExpr+'; continue; }');
 			push('}');
 		};
-		insn2func[Instruction.Code.ON] = function(insn, pc) {
+		insn2func[Insn.Code.ON] = function(insn, pc) {
 			var isGosub = insn.opts[0];
 			var labelParamInfos = insn.opts[1];
 			var indexParamInfo = insn.opts[2];
@@ -975,8 +977,8 @@ Evaluator.prototype = {
 			var labelExprs = [];
 			for(var i = 0; i < labelParamInfos.length; i ++) {
 				var paramInfo = labelParamInfos[i];
-				if(paramInfo.node.isLiteralNode() && paramInfo.node.val.getType() == VarType.LABEL) {
-					labelExprs[i] = '' + paramInfo.node.val.pos;
+				if(paramInfo.node.isLabelNode()) {
+					labelExprs[i] = '' + paramInfo.node.getLabelPos();
 				} else {
 					if(labelsIndex == null) {
 						push('var labels = [];');
@@ -1118,8 +1120,8 @@ Evaluator.prototype = {
 		return result;
 	},
 	getBuiltinFuncName: function(insn) {
-		if(insn.code != Instruction.Code.CALL_BUILTIN_CMD &&
-		   insn.code != Instruction.Code.CALL_BUILTIN_FUNC) {
+		if(insn.code != Insn.Code.CALL_BUILTIN_CMD &&
+		   insn.code != Insn.Code.CALL_BUILTIN_FUNC) {
 			return undefined;
 		}
 		var type = insn.opts[0];

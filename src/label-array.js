@@ -1,6 +1,6 @@
 function LabelArray() {
 	HSPArray.call(this);
-	this.values = [Label.EMPTY];
+	this.values = [LabelValue.EMPTY];
 }
 
 LabelArray.prototype = new HSPArray();
@@ -10,7 +10,7 @@ Utils.objectExtend(LabelArray.prototype, {
 		var isExpanded = this.expandLen(indices);
 		if(isExpanded) {
 			var newLen = this.allLength();
-			var empty = Label.EMPTY;
+			var empty = LabelValue.EMPTY;
 			for(var i = this.values.length; i < newLen; i ++) {
 				this.values[i] = empty;
 			}
@@ -21,7 +21,7 @@ Utils.objectExtend(LabelArray.prototype, {
 		var isExpanded = this.expandLen1D(index);
 		if(isExpanded) {
 			var newLen = this.l0;
-			var empty = Label.EMPTY;
+			var empty = LabelValue.EMPTY;
 			for(var i = this.values.length; i < newLen; i ++) {
 				this.values[i] = empty;
 			}

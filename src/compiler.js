@@ -66,58 +66,68 @@ var ProxyVarType = {
 
 Compiler.prototype = {
 	compile: function() {
-		var sequence = [];
+		var sequence = new ISeq;
 		while(this.tokensPos < this.ax.tokens.length) {
 			var token = this.ax.tokens[this.tokensPos];
 			if(!token.ex1) {
 				throw this.error();
 			}
-			var labelIDs = this.ax.labelsMap[token.pos];
-			if(labelIDs) {
-				for(var i = 0; i < labelIDs.length; i ++) {
-					var labelID = labelIDs[i];
-					this.labels[labelID].pos = sequence.length;
-				}
-			}
-			var labels = this.ifLabels[token.pos];
-			if(labels) {
-				for(var i = 0; i < labels.length; i ++) {
-					labels[i].pos = sequence.length;
-				}
-			}
-			switch(token.type) {
-			case Token.Type.VAR:
-			case Token.Type.STRUCT:
-				this.compileAssignment(sequence);
-				break;
-			case Token.Type.CMPCMD:
-				this.compileBranchCommand(sequence);
-				break;
-			case Token.Type.PROGCMD:
-				this.compileProgramCommand(sequence);
-				break;
-			case Token.Type.MODCMD:
-				this.compileUserDefCommand(sequence);
-				break;
-			case Token.Type.INTCMD:
-				this.compileBasicCommand(sequence);
-				break;
-			case Token.Type.EXTCMD:
-				this.compileGuiCommand(sequence);
-				break;
-			case Token.Type.DLLFUNC:
-			case Token.Type.DLLCTRL:
-				this.compileCommand(sequence);
-				break;
-			default:
-				throw this.error("命令コード " + token.type + " は解釈できません。");
+			this.pushLabels(sequence, token.pos);
+			this.compileStatement(sequence);
+		}
+		this.defineInsnIndex(sequence);
+		this.defineLabelPos(sequence);
+		var result = this.sequenceToArray(sequence);
+		this.deleteLink(sequence);
+		return result;
+	},
+	pushLabels: function(sequence, pos) {
+		var labelIDs = this.ax.labelsMap[pos];
+		if(labelIDs) {
+			for(var i = 0; i < labelIDs.length; i ++) {
+				var labelID = labelIDs[i];
+				sequence.push(this.labels[labelID]);
 			}
 		}
-		return sequence;
+		var labels = this.ifLabels[pos];
+		if(labels) {
+			for(var i = 0; i < labels.length; i ++) {
+				sequence.push(labels[i]);
+			}
+		}
+		delete this.ifLabels[pos];
+	},
+	defineInsnIndex: function(sequence) {
+		var index = 0;
+		sequence.forEachOnlyInsn(function(insn) {
+			insn.index = index++;
+		});
+	},
+	defineLabelPos: function(sequence) {
+		sequence.forEach(function(elem) {
+			if(elem.type != ISeqElem.Type.LABEL) return;
+			elem.definePos();
+		});
+	},
+	sequenceToArray: function(sequence) {
+		var result = [];
+		sequence.forEachOnlyInsn(function(insn) {
+			result.push(insn);
+		});
+		return result;
+	},
+	deleteLink: function(sequence) {
+		var elem = sequence.first();
+		while(elem) {
+			var next = elem.next;
+			elem.next = elem.prev = null;
+			elem = next;
+		}
+		ISeq.link(sequence.firstGuard, sequence.lastGuard);
 	},
 	pushNewInsn: function(sequence, code, opts, token) {
-		token || (token = this.ax.tokens[this.tokensPos]);
-		sequence.push(new Instruction(code, opts, token.fileName, token.lineNo));
+		if(!token) token = this.ax.tokens[this.tokensPos];
+		sequence.push(new Insn(code, opts, token.fileName, token.lineNo));
 	},
 	getFinfoIdByMinfoId: function(minfoId) {
 		var funcsInfo = this.ax.funcsInfo;
@@ -130,8 +140,38 @@ Compiler.prototype = {
 		return null;
 	},
 	error: function(message, token) {
-		token || (token = this.ax.tokens[this.tokensPos]);
+		if(!token) token = this.ax.tokens[this.tokensPos];
 		return new CompileError(message, token.fileName, token.lineNo);
+	},
+	compileStatement: function(sequence) {
+		var token = this.ax.tokens[this.tokensPos];
+		switch(token.type) {
+		case Token.Type.VAR:
+		case Token.Type.STRUCT:
+			this.compileAssignment(sequence);
+			break;
+		case Token.Type.CMPCMD:
+			this.compileBranchCommand(sequence);
+			break;
+		case Token.Type.PROGCMD:
+			this.compileProgramCommand(sequence);
+			break;
+		case Token.Type.MODCMD:
+			this.compileUserDefCommand(sequence);
+			break;
+		case Token.Type.INTCMD:
+			this.compileBasicCommand(sequence);
+			break;
+		case Token.Type.EXTCMD:
+			this.compileGuiCommand(sequence);
+			break;
+		case Token.Type.DLLFUNC:
+		case Token.Type.DLLCTRL:
+			this.compileCommand(sequence);
+			break;
+		default:
+			throw this.error("命令コード " + token.type + " は解釈できません。");
+		}
 	},
 	compileAssignment: function(sequence) {
 		var varToken = this.ax.tokens[this.tokensPos];
@@ -145,7 +185,7 @@ Compiler.prototype = {
 		if(this.ax.tokens[this.tokensPos].ex1 && (token.val == 0 || token.val == 1)) {
 			// インクリメント / デクリメント
 			var indexParamInfos = this.compileNodes(sequence, indexNodes);
-			this.pushNewInsn(sequence, Instruction.Code.INC + token.val, [varData, indexParamInfos], token);
+			this.pushNewInsn(sequence, Insn.Code.INC + token.val, [varData, indexParamInfos], token);
 			return;
 		}
 		var rhsParamInfos = this.compileParameters(sequence, true, true);
@@ -155,13 +195,13 @@ Compiler.prototype = {
 			if(rhsParamInfos.length != 1) {
 				throw this.error("複合代入のパラメータの数が間違っています。", token);
 			}
-			this.pushNewInsn(sequence, Instruction.Code.COMPOUND_ASSIGN, [token.val, varData, indexParamInfos, rhsParamInfos[0]], token);
+			this.pushNewInsn(sequence, Insn.Code.COMPOUND_ASSIGN, [token.val, varData, indexParamInfos, rhsParamInfos[0]], token);
 			return;
 		}
 		if(rhsParamInfos.length == 0) {
 			throw this.error("代入のパラメータの数が間違っています。", token);
 		}
-		this.pushNewInsn(sequence, Instruction.Code.ASSIGN, [varData, indexParamInfos, rhsParamInfos], token);
+		this.pushNewInsn(sequence, Insn.Code.ASSIGN, [varData, indexParamInfos, rhsParamInfos], token);
 	},
 	compileProgramCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos];
@@ -169,27 +209,27 @@ Compiler.prototype = {
 		case 0x00: // goto
 			var labelToken = this.ax.tokens[this.tokensPos + 1];
 			if(labelToken && labelToken.type == Token.Type.LABEL && !labelToken.ex2 && (!this.ax.tokens[this.tokensPos + 2] || this.ax.tokens[this.tokensPos + 2].ex1)) {
-				this.pushNewInsn(sequence, Instruction.Code.GOTO,
+				this.pushNewInsn(sequence, Insn.Code.GOTO,
 				                 [this.labels[labelToken.code]]);
 				this.tokensPos += 2;
 			} else {
 				this.tokensPos ++;
 				var paramInfos = this.compileParameters(sequence);
 				if(paramInfos.length != 1) throw this.error('goto の引数の数が違います', token);
-				this.pushNewInsn(sequence, Instruction.Code.GOTO_EXPR, [paramInfos[0]], token);
+				this.pushNewInsn(sequence, Insn.Code.GOTO_EXPR, [paramInfos[0]], token);
 			}
 			break;
 		case 0x01: // gosub
 			var labelToken = this.ax.tokens[this.tokensPos + 1];
 			if(labelToken && labelToken.type == Token.Type.LABEL && !labelToken.ex2 && (!this.ax.tokens[this.tokensPos + 2] || this.ax.tokens[this.tokensPos + 2].ex1)) {
-				this.pushNewInsn(sequence, Instruction.Code.GOSUB,
+				this.pushNewInsn(sequence, Insn.Code.GOSUB,
 				                 [this.labels[labelToken.code]]);
 				this.tokensPos += 2;
 			} else {
 				this.tokensPos ++;
 				var paramInfos = this.compileParameters(sequence);
 				if(paramInfos.length != 1) throw this.error('gosub の引数の数が違います', token);
-				this.pushNewInsn(sequence, Instruction.Code.GOSUB_EXPR, [paramInfos[0]], token);
+				this.pushNewInsn(sequence, Insn.Code.GOSUB_EXPR, [paramInfos[0]], token);
 			}
 			break;
 		case 0x02: // return
@@ -201,7 +241,7 @@ Compiler.prototype = {
 				var paramInfo = this.compileParameter(sequence, true);
 				if(this.getParametersNodesSub().length > 0) throw this.error('return の引数が多すぎます', token);
 			}
-			this.pushNewInsn(sequence, Instruction.Code.RETURN, [paramInfo], token);
+			this.pushNewInsn(sequence, Insn.Code.RETURN, [paramInfo], token);
 			break;
 		case 0x03: // break
 			this.tokensPos ++;
@@ -210,7 +250,7 @@ Compiler.prototype = {
 				throw this.error();
 			}
 			if(this.getParametersNodes().length > 0) throw this.error('break の引数が多すぎます', token);
-			this.pushNewInsn(sequence, Instruction.Code.BREAK,
+			this.pushNewInsn(sequence, Insn.Code.BREAK,
 			                 [this.labels[labelToken.code]], token);
 			break;
 		case 0x04: // repeat
@@ -221,13 +261,13 @@ Compiler.prototype = {
 			}
 			var paramInfos = this.compileParameters(sequence, false, false, paramInfos);
 			if(paramInfos.length > 2) throw this.error('repeat の引数が多すぎます', token);
-			this.pushNewInsn(sequence, Instruction.Code.REPEAT,
+			this.pushNewInsn(sequence, Insn.Code.REPEAT,
 			                 [this.labels[labelToken.code], paramInfos], token);
 			break;
 		case 0x05: // loop
 			this.tokensPos ++;
 			if(this.getParametersNodes().length > 0) throw this.error('loop の引数が多すぎます', token);
-			this.pushNewInsn(sequence, Instruction.Code.LOOP, [], token);
+			this.pushNewInsn(sequence, Insn.Code.LOOP, [], token);
 			break;
 		case 0x06: // continue
 			this.tokensPos ++;
@@ -237,7 +277,7 @@ Compiler.prototype = {
 			}
 			var paramInfos = this.compileParameters(sequence);
 			if(paramInfos.length > 1) throw this.error('continue の引数が多すぎます', token);
-			this.pushNewInsn(sequence, Instruction.Code.CONTINUE,
+			this.pushNewInsn(sequence, Insn.Code.CONTINUE,
 			                 [this.labels[labelToken.code], paramInfos[0]], token);
 			break;
 		case 0x0b: // foreach
@@ -247,7 +287,7 @@ Compiler.prototype = {
 				throw this.error();
 			}
 			if(this.getParametersNodes().length > 0) throw this.error();
-			this.pushNewInsn(sequence, Instruction.Code.FOREACH,
+			this.pushNewInsn(sequence, Insn.Code.FOREACH,
 			                 [this.labels[labelToken.code]], token);
 			break;
 		case 0x0c: // eachchk
@@ -258,7 +298,7 @@ Compiler.prototype = {
 			}
 			var paramInfos = this.compileParameters(sequence);
 			if(paramInfos.length != 1) throw this.error('foreach の引数の数が違います', token);
-			this.pushNewInsn(sequence, Instruction.Code.EACHCHK,
+			this.pushNewInsn(sequence, Insn.Code.EACHCHK,
 			                 [this.labels[labelToken.code], paramInfos[0]], token);
 			break;
 		case 0x12: // newmod
@@ -281,14 +321,14 @@ Compiler.prototype = {
 			} else {
 				argc = this.getParametersNodesSub().length;
 			}
-			this.pushNewInsn(sequence, Instruction.Code.NEWMOD,
+			this.pushNewInsn(sequence, Insn.Code.NEWMOD,
 				             [this.compileNode(sequence, varNode), module, paramInfos, argc], token);
 			break;
 		case 0x18: // exgoto
 			this.tokensPos ++;
 			var paramInfos = this.compileParameters(sequence, false, true);
 			if(paramInfos.length != 4) throw this.error('exgoto の引数の数が違います', token);
-			this.pushNewInsn(sequence, Instruction.Code.EXGOTO, [paramInfos], token);
+			this.pushNewInsn(sequence, Insn.Code.EXGOTO, [paramInfos], token);
 			break;
 		case 0x19: // on
 			this.tokensPos ++;
@@ -304,7 +344,7 @@ Compiler.prototype = {
 			var isGosub = jumpTypeToken.code == 1;
 			this.tokensPos ++;
 			var labelParamInfos = this.compileParametersSub(sequence);
-			this.pushNewInsn(sequence, Instruction.Code.ON, [isGosub, labelParamInfos, indexParamInfo], token);
+			this.pushNewInsn(sequence, Insn.Code.ON, [isGosub, labelParamInfos, indexParamInfo], token);
 			break;
 		default:
 			this.compileCommand(sequence);
@@ -321,7 +361,7 @@ Compiler.prototype = {
 			this.tokensPos ++;
 			var paramInfos = [this.compileOptionalJumpType(sequence)];
 			this.compileParameters(sequence, false, false, paramInfos);
-			this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
+			this.pushNewInsn(sequence, Insn.Code.CALL_BUILTIN_CMD,
 			                 [token.type, token.code, paramInfos], token);
 			break;
 		default:
@@ -335,7 +375,7 @@ Compiler.prototype = {
 			this.tokensPos ++;
 			var paramInfos = [this.compileOptionalJumpType(sequence)];
 			this.compileParameters(sequence, false, false, paramInfos);
-			this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
+			this.pushNewInsn(sequence, Insn.Code.CALL_BUILTIN_CMD,
 			                 [token.type, token.code, paramInfos], token);
 			break;
 		default:
@@ -345,7 +385,7 @@ Compiler.prototype = {
 	compileCommand: function(sequence) {
 		var token = this.ax.tokens[this.tokensPos++];
 		var paramInfos = this.compileParameters(sequence);
-		this.pushNewInsn(sequence, Instruction.Code.CALL_BUILTIN_CMD,
+		this.pushNewInsn(sequence, Insn.Code.CALL_BUILTIN_CMD,
 		                 [token.type, token.code, paramInfos], token);
 	},
 	compileBranchCommand: function(sequence) {
@@ -366,14 +406,14 @@ Compiler.prototype = {
 			if(node.isLiteralNode() &&
 			   (node.val.getType() == VarType.INT || node.val.getType() == VarType.DOUBLE)) {
 				if(!node.val._value) {
-					this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
+					this.pushNewInsn(sequence, Insn.Code.GOTO, [label], token);
 				}
 				return;
 			}
-			this.pushNewInsn(sequence, Instruction.Code.IFEQ, [label, paramInfo], token);
+			this.pushNewInsn(sequence, Insn.Code.IFEQ, [label, paramInfo], token);
 		} else {
 			if(nodes.length != 0) throw this.error("else の引数の数が間違っています。", token);
-			this.pushNewInsn(sequence, Instruction.Code.GOTO, [label], token);
+			this.pushNewInsn(sequence, Insn.Code.GOTO, [label], token);
 		}
 	},
 	compileParameters: function(sequence, cannotBeOmitted, notReceiveVar, result) {
@@ -414,7 +454,7 @@ Compiler.prototype = {
 					parent[propname] = new GetStackNode(node);
 					stackSize ++;
 					self.pushNewInsn(sequence,
-					                 node.onlyValue ? Instruction.Code.GET_VAR : Instruction.Code.PUSH_VAR,
+					                 node.onlyValue ? Insn.Code.GET_VAR : Insn.Code.PUSH_VAR,
 					                 [node.varData, self.compileNodes(sequence, node.indexNodes)],
 					                 node.token);
 				}
@@ -422,6 +462,8 @@ Compiler.prototype = {
 			case NodeType.ARG:
 				break;
 			case NodeType.LITERAL:
+				break;
+			case NodeType.LABEL:
 				break;
 			case NodeType.DEFAULT:
 				break;
@@ -434,7 +476,7 @@ Compiler.prototype = {
 				stackSize ++;
 				var paramInfos = self.compileNodes(sequence, node.paramNodes);
 				self.pushNewInsn(sequence,
-				                 Instruction.Code.CALL_USERDEF_FUNC,
+				                 Insn.Code.CALL_USERDEF_FUNC,
 				                 [node.userDefFunc, paramInfos],
 				                 node.token);
 				break;
@@ -443,11 +485,11 @@ Compiler.prototype = {
 				stackSize ++;
 				var paramInfos = self.compileNodes(sequence, node.paramNodes);
 				if(node.groupId == Token.Type.SYSVAR && node.subId == 0x04) {
-					self.pushNewInsn(sequence, Instruction.Code.CNT, [], node.token);
+					self.pushNewInsn(sequence, Insn.Code.CNT, [], node.token);
 					break;
 				}
 				self.pushNewInsn(sequence,
-				                 Instruction.Code.CALL_BUILTIN_FUNC,
+				                 Insn.Code.CALL_BUILTIN_FUNC,
 				                 [node.groupId, node.subId, paramInfos],
 				                 node.token);
 				break;
@@ -529,7 +571,7 @@ Compiler.prototype = {
 				this.tokensPos ++;
 				break;
 			case Token.Type.LABEL:
-				stack.push(new LiteralNode(this.labels[token.code]));
+				stack.push(new LabelNode(this.labels[token.code]));
 				this.tokensPos ++;
 				break;
 			case Token.Type.EXTSYSVAR:
@@ -697,7 +739,7 @@ Compiler.prototype = {
 		var token = this.ax.tokens[this.tokensPos++];
 		var userDefFunc = this.getUserDefFunc(token.code);
 		var paramInfos = this.compileNodes(sequence, this.getUserDefFuncallParamNodes(userDefFunc, false, true));
-		this.pushNewInsn(sequence, Instruction.Code.CALL_USERDEF_CMD,
+		this.pushNewInsn(sequence, Insn.Code.CALL_USERDEF_CMD,
 		                 [userDefFunc, paramInfos], token);
 	},
 	getUserDefFuncallParamNodes: function(userDefFunc, isCType, isHead) {

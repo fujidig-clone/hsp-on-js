@@ -24,7 +24,7 @@ main = function() {
 	if(showSequence) {
 		var fileName, lineNo;
 		sequence.forEach(function(insn, i) {
-			var out = Formatter.sprintfForJS('%5d %-20s %-30s ', i, Instruction.CodeNames[insn.code], insn.opts.map(String).join(', '));
+			var out = Formatter.sprintfForJS('%5d %-20s %-30s ', i, getInsnCodeName(insn.code), insn.opts.map(String).join(', '));
 			if(fileName != insn.fileName) {
 				fileName = insn.fileName;
 				lineNo = insn.lineNo;

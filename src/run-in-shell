@@ -61,7 +61,7 @@ else
     builtin-funcs.js
     vartype.js
     value.js
-    label.js
+    label-value.js
     str-value.js
     double-value.js
     int-value.js

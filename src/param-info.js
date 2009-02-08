@@ -20,6 +20,7 @@ Utils.objectExtend(Node.prototype, {
 	isVarNode:     function() { return false; },
 	isArgNode:     function() { return false; },
 	isLiteralNode: function() { return false; },
+	isLabelNode:   function() { return false; },
 	isDefaultNode: function() { return false; },
 	isOperateNode: function() { return false; },
 	isFuncallNode: function() { return false; },
@@ -33,11 +34,12 @@ var NodeType = {
 	VAR:     1,
 	ARG:     2,
 	LITERAL: 3,
-	DEFAULT: 4,
-	OPERATE: 5,
-	USERDEF_FUNCALL: 6,
-	BUILTIN_FUNCALL: 7,
-	GET_STACK: 8
+	LABEL:   4,
+	DEFAULT: 5,
+	OPERATE: 6,
+	USERDEF_FUNCALL: 7,
+	BUILTIN_FUNCALL: 8,
+	GET_STACK: 9
 };
 
 function VarNode(varData, indexNodes, onlyValue, token) {
@@ -87,6 +89,24 @@ Utils.objectExtend(LiteralNode.prototype, {
 	},
 	getValueType: function() {
 		return this.val.getType();
+	}
+});
+
+function LabelNode(lobj) {
+	this.lobj = lobj;
+}
+LabelNode.prototype = new Node;
+Utils.objectExtend(LabelNode.prototype, {
+	nodeType: NodeType.LABEL,
+	isLabelNode: function() { return true; },
+	toString: function() {
+		return '<LabelNode:'+this.lobj+'>';
+	},
+	getValueType: function() {
+		return VarType.LABEL;
+	},
+	getLabelPos: function() {
+		return this.lobj.getPos();
 	}
 });
 
