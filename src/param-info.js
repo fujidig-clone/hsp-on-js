@@ -205,6 +205,42 @@ Utils.objectExtend(GetStackNode.prototype, {
 	}
 });
 
+function traverseParamInfo(paramInfo, callback) {
+	function traverseNode(node) {
+		callback(node);
+		switch(node.nodeType) {
+		case NodeType.VAR:
+			traverseNodes(node.indexNodes);
+			break;
+		case NodeType.ARG:
+			break;
+		case NodeType.LITERAL:
+			break;
+		case NodeType.LABEL:
+			break;
+		case NodeType.DEFAULT:
+			break;
+		case NodeType.OPERATE:
+			traverseNode(node.rhsNode);
+			traverseNode(node.lhsNode);
+			break;
+		case NodeType.USERDEF_FUNCALL:
+		case NodeType.BUILTIN_FUNCALL:
+			traverseNodes(node.paramNodes);
+			break;
+		case NodeType.GET_STACK:
+			break;
+		default:
+			throw new Error('must not happen');
+		}
+	}
+	function traverseNodes(nodes, callback) {
+		for(var i = 0; i < nodes.length; i ++) {
+			traverseNode(nodes[i]);
+		}
+	}
+	traverseNode(paramInfo.node);
+}
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.ParamInfo = ParamInfo;
@@ -219,4 +255,5 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.UserDefFuncallNode = UserDefFuncallNode;
 	HSPonJS.BuiltinFuncallNode = BuiltinFuncallNode;
 	HSPonJS.GetStackNode = GetStackNode;
+	HSPonJS.traverseParamInfo = traverseParamInfo;
 }

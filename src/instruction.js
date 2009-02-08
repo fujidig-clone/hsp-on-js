@@ -47,17 +47,19 @@ ISeq.prototype = {
 		var elem = this.first();
 		var end = this.lastGuard;
 		while(elem != end) {
+			var next = elem.next;
 			callback(elem);
-			elem = elem.next;
+			elem = next;
 		}
 	},
 	forEachOnlyInsn: function(callback) {
 		var elem = this.first();
 		while(elem) {
+			var next = elem.next;
 			if(elem.type == ISeqElem.Type.INSN) {
 				callback(elem);
 			}
-			elem = elem.next;
+			elem = next;
 		}
 	},
 	getLength: function() {
@@ -67,6 +69,9 @@ ISeq.prototype = {
 	},
 	toString: function() {
 		return '<ISeq:len='+this.getLength()+'>';
+	},
+	firstInsn: function() {
+		return this.firstGuard.getNextInsn();
 	}
 };
 
@@ -164,7 +169,10 @@ Utils.objectExtend(Label.prototype, {
 		return this.pos_;
 	},
 	definePos: function() {
-		this.pos_ = this.getInsn().index;
+		var insn = this.getInsn();
+		if(insn) {
+			this.pos_ = insn.index;
+		}
 	},
 	type: ISeqElem.Type.LABEL
 });
@@ -210,7 +218,6 @@ var codeNames = [
 	'CALL_USERDEF_FUNC',
 	'NEWMOD',
 	'RETURN',
-	'DELMOD',
 	'REPEAT',
 	'LOOP',
 	'CNT',

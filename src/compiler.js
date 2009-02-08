@@ -75,6 +75,7 @@ Compiler.prototype = {
 			this.pushLabels(sequence, token.pos);
 			this.compileStatement(sequence);
 		}
+		this.removeDeadCode(sequence);
 		this.defineInsnIndex(sequence);
 		this.defineLabelPos(sequence);
 		var result = this.sequenceToArray(sequence);
@@ -124,6 +125,151 @@ Compiler.prototype = {
 			elem = next;
 		}
 		ISeq.link(sequence.firstGuard, sequence.lastGuard);
+	},
+	removeDeadCode: function(sequence) {
+		sequence.forEachOnlyInsn(function(insn) {
+			insn.alive = false;
+		});
+		var insns = [sequence.firstInsn()];
+		while(insns.length) {
+			var insn = insns.pop();
+			while(insn) {
+				if(insn.alive) break;
+				insn.alive = true;
+				var code = insn.code;
+				var opts = insn.opts;
+				if(code == Insn.Code.GOTO) {
+					insn = insn.opts[0].getInsn();
+					continue;
+				}
+				if(code == Insn.Code.CALL_BUILTIN_CMD &&
+				   opts[0] == Token.Type.PROGCMD &&
+				   (opts[1] == 0x02 ||  // return
+				    opts[1] == 0x10 ||  // end
+				    opts[1] == 0x11)) { // stop
+					break;
+				}
+				this.markInsnOpts(insns, code, opts);
+				insn = insn.getNextInsn();
+			}
+		}
+		sequence.forEachOnlyInsn(function(insn) {
+			if(!insn.alive) {
+				insn.remove();
+			}
+		});
+	},
+	markInsnOpts: function(insns, code, opts) {
+		switch(code) {
+		case Insn.Code.NOP:
+			break;
+		case Insn.Code.PUSH_VAR:
+		case Insn.Code.GET_VAR:
+			this.markParamInfos(insns, opts[1]);
+			break;
+		case Insn.Code.POP:
+		case Insn.Code.POP_N:
+		case Insn.Code.DUP:
+			break;
+		case Insn.Code.IFNE:
+		case Insn.Code.IFEQ:
+			this.markLabel(insns, opts[0]);
+			this.markParamInfo(insns, opts[1]);
+			break;
+		case Insn.Code.ASSIGN:
+			this.markParamInfos(insns, opts[1]);
+			this.markParamInfos(insns, opts[2]);
+			break;
+		case Insn.Code.COMPOUND_ASSIGN:
+			this.markParamInfos(insns, opts[2]);
+			this.markParamInfo(insns, opts[3]);
+			break;
+		case Insn.Code.INC:
+		case Insn.Code.DEC:
+			this.markParamInfos(insns, opts[1]);
+			break;
+		case Insn.Code.CALL_BUILTIN_CMD:
+		case Insn.Code.CALL_BUILTIN_FUNC:
+			this.markParamInfos(insns, opts[2]);
+			break;
+		case Insn.Code.CALL_USERDEF_CMD:
+		case Insn.Code.CALL_USERDEF_FUNC:
+			this.markLabel(insns, opts[0].label);
+			this.markParamInfos(insns, opts[1]);
+			break;
+		case Insn.Code.NEWMOD:
+			this.markParamInfo(insns, opts[0]);
+			this.markModule(insns, opts[1]);
+			if(opts[2]) {
+				this.markParamInfos(insns, opts[2]);
+			}
+			break;
+		case Insn.Code.RETURN:
+			if(opts[0]) {
+				this.markParamInfo(insns, opts[0]);
+			}
+			break;
+		case Insn.Code.REPEAT:
+			this.markLabel(insns, opts[0]);
+			this.markParamInfos(insns, opts[1]);
+			break;
+		case Insn.Code.LOOP:
+		case Insn.Code.CNT:
+			break;
+		case Insn.Code.CONTINUE:
+			this.markLabel(insns, opts[0]);
+			if(opts[1]) {
+				this.markParamInfo(insns, opts[1]);
+			}
+			break;
+		case Insn.Code.BREAK:
+			this.markLabel(insns, opts[0]);
+			break;
+		case Insn.Code.FOREACH:
+			break;
+		case Insn.Code.EACHCHK:
+			this.markLabel(insns, opts[0]);
+			this.markParamInfo(insns, opts[1]);
+			break;
+		case Insn.Code.GOSUB:
+			this.markLabel(insns, opts[0]);
+			break;
+		case Insn.Code.GOTO_EXPR:
+		case Insn.Code.GOSUB_EXPR:
+			this.markParamInfo(insns, opts[0]);
+			break;
+		case Insn.Code.EXGOTO:
+			this.markParamInfos(insns, opts[0]);
+			break;
+		case Insn.Code.ON:
+			this.markParamInfos(insns, opts[1]);
+			this.markParamInfo(insns, opts[2]);
+		default:
+			throw new Error('must not happen');
+		}
+	},
+	markLabel: function(insns, label) {
+		insns.push(label.getInsn());
+	},
+	markModule: function(insns, module) {
+		if(module.constructor) {
+			this.markLabel(insns, module.constructor.label);
+		}
+		if(module.destructor) {
+			this.markLabel(insns, module.destructor.label);
+		}
+	},
+	markParamInfo: function markParamInfo(insns, paramInfo) {
+		var self = this;
+		traverseParamInfo(paramInfo, function(node) {
+			if(!node.isLabelNode()) return;
+			self.markLabel(insns, node.lobj);
+		});
+	},
+	markParamInfos: function markParamInfos(insns, paramInfos) {
+		for(var i = 0; i < paramInfos.length; i ++) {
+			this.markParamInfo(insns, paramInfos[i]);
+		}
 	},
 	pushNewInsn: function(sequence, code, opts, token) {
 		if(!token) token = this.ax.tokens[this.tokensPos];
