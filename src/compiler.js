@@ -244,6 +244,7 @@ Compiler.prototype = {
 		case Insn.Code.ON:
 			this.markParamInfos(insns, opts[1]);
 			this.markParamInfo(insns, opts[2]);
+			break;
 		default:
 			throw new Error('must not happen');
 		}
