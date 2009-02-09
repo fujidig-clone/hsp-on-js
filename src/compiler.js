@@ -76,6 +76,7 @@ Compiler.prototype = {
 			this.compileStatement(sequence);
 		}
 		this.removeDeadCode(sequence);
+		this.peepholeOptimize(sequence);
 		this.defineInsnIndex(sequence);
 		this.defineLabelPos(sequence);
 		var result = this.sequenceToArray(sequence);
@@ -260,16 +261,49 @@ Compiler.prototype = {
 			this.markLabel(insns, module.destructor.label);
 		}
 	},
-	markParamInfo: function markParamInfo(insns, paramInfo) {
+	markParamInfo: function(insns, paramInfo) {
 		var self = this;
 		traverseParamInfo(paramInfo, function(node) {
 			if(!node.isLabelNode()) return;
 			self.markLabel(insns, node.lobj);
 		});
 	},
-	markParamInfos: function markParamInfos(insns, paramInfos) {
+	markParamInfos: function(insns, paramInfos) {
 		for(var i = 0; i < paramInfos.length; i ++) {
 			this.markParamInfo(insns, paramInfos[i]);
+		}
+	},
+	peepholeOptimize: function(sequence) {
+		var insn = sequence.firstInsn();
+		while(insn) {
+			var nextInsn = insn.getNextInsn();
+			var prevInsn = insn.getPrevInsn();
+			if(insn.code == Insn.Code.GOTO) {
+				var destInsn = insn.opts[0].getInsn();
+				if(destInsn == nextInsn) {
+					// GOTO命令でジャンプ先が次の命令の場合、削除する
+					insn.remove();
+				} else if(destInsn != insn &&
+				          destInsn.code == Insn.Code.GOTO &&
+				          insn.opts[0] != destInsn.opts[0]) {
+					// GOTO命令(a)のジャンプ先がGOTO命令(b)だったら、(a)のジャンプ先を(b)のジャンプ先に変更する
+					insn.opts[0] = destInsn.opts[0];
+					continue;
+				} else if(prevInsn &&
+				   (prevInsn.code == Insn.Code.IFEQ ||
+				    prevInsn.code == Insn.Code.IFNE) &&
+				   nextInsn == prevInsn.opts[0].getInsn()) {
+					// 「IFEQ L1; GOTO L2; L1: ...」 => 「IFNE L2」
+					if(prevInsn.code == Insn.Code.IFEQ) {
+						prevInsn.code = Insn.Code.IFNE
+					}else {
+						prevInsn.code = Insn.Code.IFEQ;
+					}
+					prevInsn.opts[0] = insn.opts[0];
+					insn.remove();
+				}
+			}
+			insn = nextInsn;
 		}
 	},
 	pushNewInsn: function(sequence, code, opts, token) {
