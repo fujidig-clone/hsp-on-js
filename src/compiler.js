@@ -303,6 +303,13 @@ Compiler.prototype = {
 					insn.remove();
 				}
 			}
+			if(insn.code == Insn.Code.IFEQ || insn.code == Insn.Code.IFNE) {
+				// 「IFEQ L1; ...; L1: GOTO L2」 => 「IFEQ L2」
+				var destInsn = insn.opts[0].getInsn();
+				if(destInsn.code == Insn.Code.GOTO) {
+					insn.opts[0] = destInsn.opts[0];
+				}
+			}
 			insn = nextInsn;
 		}
 	},
