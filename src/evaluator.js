@@ -4,7 +4,7 @@ function Evaluator(axdata, sequence, options) {
 	this.pc = 0;
 	this.sequence = sequence;
 	this.axdata = axdata;
-	this.variables = this.buildVariables();
+	this.variables = null;
 	this.loopStack = [];
 	this.frameStack = [];
 	this.args = null;
@@ -24,6 +24,7 @@ function Evaluator(axdata, sequence, options) {
 	
 	this.literals = [];
 	this.userDefFuncs = [];
+	this.staticVarTags = [];
 }
 
 Evaluator.defaultOptions = {
@@ -56,6 +57,7 @@ function throwHSPError(errorCode) {
 Evaluator.prototype = {
 	evaluate: function() {
 		this.mainLoop = this.createMainLoop();
+		this.variables = this.buildVariables();
 		try {
 			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
 		} catch(e) {
@@ -90,16 +92,14 @@ Evaluator.prototype = {
 		}
 	},
 	buildVariables: function() {
-		var axdata = this.axdata;
-		var varCount = axdata.max_val;
+		var varCount = this.staticVarTags.length;
 		var variables = new Array(varCount);
 		for(var i = 0; i < varCount; i ++) {
 			variables[i] = new Variable;
 		}
 		if(this.options.errorAtUseOfUninitializedVariable) {
-			var variableNames = axdata.variableNames;
 			for(var i = 0; i < varCount; i ++) {
-				variables[i].value = new UninitializedArray(variableNames[i]);
+				variables[i].value = new UninitializedArray(this.staticVarTags[i].name);
 			}
 		}
 		return variables;
@@ -469,6 +469,15 @@ Evaluator.prototype = {
 				push('indices['+i+'] = '+getStrictIntParamNativeValueExpr(indexParamInfos[i])+';');
 			}
 		}
+		function registerStaticVarTags(staticVarTag) {
+			if(typeof staticVarTag.id != 'undefined') {
+				return staticVarTag.id;
+			}
+			var id = staticVarTags.length;
+			staticVarTag.id = id;
+			staticVarTags[id] = staticVarTag;
+			return id;
+		}
 		function getVariableExpr(varData) {
 			if(isVariableAgentVarData(varData)) {
 				return getVariableAgentExpr(varData)+'.variable';
@@ -477,7 +486,7 @@ Evaluator.prototype = {
 			var id = varData.id;
 			switch(type) {
 			case ProxyVarType.STATIC:
-				return 'variables['+id+']';
+				return 'variables['+registerStaticVarTags(id)+']';
 			case ProxyVarType.MEMBER:
 				return 'this.getThismod().toValue().members['+id+']';
 			case ProxyVarType.ARG_ARRAY:
@@ -1018,6 +1027,7 @@ Evaluator.prototype = {
 		}
 		var literals = this.literals;
 		var userDefFuncs = this.userDefFuncs;
+		var staticVarTags = this.staticVarTags;
 		var lines = [];
 		var indent = 0;
 		var sequence = this.sequence;

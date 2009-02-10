@@ -1,12 +1,10 @@
 function Compiler(ax) {
 	this.ax = ax;
 	this.tokensPos = 0;
-	this.labels = new Array(ax.labels.length); // HSP のラベルIDに対応したラベル
-	for(var i = 0; i < ax.labels.length; i ++) {
-		this.labels[i] = new Label;
-	}
+	this.labels = this.makeLabels();
 	this.ifLabels = {};
 	this.userDefFuncs = [];
+	this.staticVarTags = this.makeStaticVarTags();
 }
 
 function CompileError(message, hspFileName, hspLineNumber) {
@@ -54,6 +52,14 @@ VariableData.prototype.toString = function() {
 	return '<VariableData: '+type+(outputId?'#'+this.id:'')+'>';
 };
 
+function StaticVariableTag(name) {
+	this.name = name;
+}
+
+StaticVariableTag.prototype.toString = function() {
+	return '<StaticVariableTag:'+this.name+'>';
+};
+
 var ProxyVarType = {
 	STATIC: 0,
 	THISMOD: 1,
@@ -98,6 +104,23 @@ Compiler.prototype = {
 			}
 		}
 		delete this.ifLabels[pos];
+	},
+	makeLabels: function() {
+		var len = this.ax.labels.length;
+		var labels = [];
+		for(var i = 0; i < len; i ++) {
+			labels[i] = new Label;
+		}
+		return labels;
+	},
+	makeStaticVarTags: function() {
+		var tags = [];
+		var len = this.ax.max_val;
+		var varNames = this.ax.variableNames;
+		for(var i = 0; i < len; i ++) {
+			tags[i] = new StaticVariableTag(varNames[i]);
+		}
+		return tags;
 	},
 	defineInsnIndex: function(sequence) {
 		var index = 0;
@@ -1012,7 +1035,7 @@ Compiler.prototype = {
 		var id;
 		if(token.type == Token.Type.VAR) {
 			type = ProxyVarType.STATIC;
-			id = token.code;
+			id = this.staticVarTags[token.code];
 		} else if(token.type == Token.Type.STRUCT) {
 			type = this.getProxyVarType();
 			if(mustBeVar && type == ProxyVarType.ARG_NOTVAR) {
