@@ -362,10 +362,19 @@ Evaluator.prototype = {
 		function pushDecCode(varData, indexParamInfos) {
 			pushIncDecCode('dec', varData, indexParamInfos);
 		}
-		function pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc, constructorThismodExpr) {
-			if(!userDefFuncs[userDefFunc.id]) {
-				userDefFuncs[userDefFunc.id] = userDefFunc;
+		function registerUserDefFuncs(userDefFunc) {
+			var id;
+			if(typeof userDefFunc.id != 'undefined') {
+				id = userDefFunc.id;
+			} else {
+				id = userDefFuncs.length;
+				userDefFuncs[id] = userDefFunc;
+				userDefFunc.id = id;
 			}
+			return id;
+		}
+		function pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc, constructorThismodExpr) {
+			registerUserDefFuncs(userDefFunc);
 			var paramMax = paramInfos.length;
 			var mptypes = userDefFunc.paramTypes;
 			var argMax = mptypes.length;
@@ -759,10 +768,7 @@ Evaluator.prototype = {
 			var module = insn.opts[1];
 			var paramInfos = insn.opts[2];
 			var argc = insn.opts[3];
-			if(!userDefFuncs[module.id]) {
-				userDefFuncs[module.id] = module;
-			}
-			var moduleExpr = 'userDefFuncs['+module.id+']';
+			var moduleExpr = 'userDefFuncs['+registerUserDefFuncs(module)+']';
 			var constructor = module.constructor;
 			if(!constructor && argc > 0) {
 				push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
