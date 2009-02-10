@@ -145,9 +145,11 @@ Compiler.prototype = {
 				}
 				if(code == Insn.Code.CALL_BUILTIN_CMD &&
 				   opts[0] == Token.Type.PROGCMD &&
-				   (opts[1] == 0x02 ||  // return
-				    opts[1] == 0x10 ||  // end
+				   (opts[1] == 0x10 ||  // end
 				    opts[1] == 0x11)) { // stop
+					break;
+				}
+				if(code == Insn.Code.RETURN) {
 					break;
 				}
 				this.markInsnOpts(insns, code, opts);
