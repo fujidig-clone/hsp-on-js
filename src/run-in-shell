@@ -81,6 +81,7 @@ else
     param-info.js
     calc-code.js
     compiler.js
+    mainloop-generator.js
     evaluator.js
   ]
 end

@@ -1111,5 +1111,6 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.CompileError = CompileError;
 	HSPonJS.VariableData = VariableData;
 	HSPonJS.ProxyVarType = ProxyVarType;
+	HSPonJS.StaticVariableTag = StaticVariableTag;
 }
 

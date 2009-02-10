@@ -45,6 +45,7 @@ variable-agent.js
 param-info.js
 calc-code.js
 compiler.js
+mainloop-generator.js
 evaluator.js
 foot.js
 ]

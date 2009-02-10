@@ -38,11 +38,13 @@ main = function() {
 		});
 	}
 
-	var evaluator = new Evaluator(axdata, sequence);
+	var generator = new MainLoopGenerator(sequence);
 	if(showMainLoop) {
-		print(evaluator.createMainLoopSrc());
+		print(generator.generateMainLoopSrc());
 	}
 	if(compileOnly) return null;
+
+	var evaluator = new Evaluator(sequence, generator.generate());
 	evaluator.evaluate();
 	return evaluator;
 };
