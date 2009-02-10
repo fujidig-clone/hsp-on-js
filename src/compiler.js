@@ -295,7 +295,7 @@ Compiler.prototype = {
 				   nextInsn == prevInsn.opts[0].getInsn()) {
 					// 「IFEQ L1; GOTO L2; L1: ...」 => 「IFNE L2」
 					if(prevInsn.code == Insn.Code.IFEQ) {
-						prevInsn.code = Insn.Code.IFNE
+						prevInsn.code = Insn.Code.IFNE;
 					}else {
 						prevInsn.code = Insn.Code.IFEQ;
 					}
