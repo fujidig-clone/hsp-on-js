@@ -53,14 +53,9 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Utils.objectExtend(nameSpace, HSPonJS);
 }
 
-BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function(val) {
-	this.scanArgs(arguments, '.?');
-	if(val) {
-		print(CP932.decode(val.toStrValue()._value));
-	} else {
-		print();
-	}
-};
+defineInlineBuiltinFunc('mes', [false], function(g, paramInfos) {
+	g.push('print(CP932.decode('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+'));');
+});
 
 Evaluator.prototype.onError = function(e) {
 	print(this.getErrorOutput(e));

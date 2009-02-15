@@ -127,6 +127,7 @@ Utils.objectExtend(VariableAgent0D.prototype, {
 		variable.value.assign(0, rhs);
 	},
 	expand: function() {
+		return this;
 	},
 	offset: 0,
 	existSubscript: false
@@ -166,6 +167,7 @@ Utils.objectExtend(VariableAgent1D.prototype, {
 	},
 	expand: function() {
 		this.variable.value.expand1D(this.offset);
+		return this;
 	},
 	existSubscript: true
 });
@@ -188,6 +190,7 @@ Utils.objectExtend(VariableAgentMD.prototype, {
 	},
 	expand: function() {
 		this.variable.expand(this.indices);
+		return this;
 	},
 	existSubscript: true
 });

@@ -16,14 +16,14 @@ binary-parser.js
 cp932.js
 utils.js
 vcrandom.js
+vartype.js
+calc-code.js
 formatter.js
 exception.js
 axdata.js
 instruction.js
 user-def-func.js
 builtin-func-names.js
-builtin-funcs.js
-vartype.js
 value.js
 label-value.js
 str-value.js
@@ -43,9 +43,9 @@ struct-array.js
 variable.js
 variable-agent.js
 param-info.js
-calc-code.js
 compiler.js
 mainloop-generator.js
+builtin-funcs.js
 evaluator.js
 foot.js
 ]

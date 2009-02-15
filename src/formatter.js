@@ -1,7 +1,6 @@
 var Formatter = {
-	sprintf: function(evaluator, format, args) {
+	sprintf: function(format, args) {
 		var argsIndex = 0;
-		format = format.toStrValue()._value;
 		var re = /%[- #+0-9.]*[\s\S]?/g;
 		var result = format.replace(re, function(str){
 			var pos = 1; // '%'.length
@@ -37,7 +36,9 @@ var Formatter = {
 				return '%';
 			}
 			var arg = args[argsIndex++];
-			evaluator.scanArg(arg, '.', false);
+			if(!arg) {
+				throw new HSPError(ErrorCode.NO_DEFAULT);
+			}
 			var convert = Formatter.ConvertTable[specifier];
 			if(!convert) return specifier;
 			return convert(arg, flags, width, prec);
@@ -45,7 +46,7 @@ var Formatter = {
 		if(argsIndex < args.length) {
 			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
 		}
-		return new StrValue(Utils.getCStr(result));
+		return Utils.getCStr(result);
 	},
 	sprintfForJS: function(format) {
 		var args = [];
@@ -62,8 +63,7 @@ var Formatter = {
 				args.push(arg);
 			}
 		}
-		var dummyEvaluator = {scanArg: function(){}};
-		return Formatter.sprintf(dummyEvaluator, new StrValue(format), args)._value;
+		return Formatter.sprintf(format, args);
 	},
 	addSpaces: function(str, flags, width) {
 		var spaces = Utils.strTimes(' ', Math.max(width - str.length, 0));

@@ -207,6 +207,17 @@ BuiltinFuncNames[Token.Type.DLLCTRL] = {
 	0x103: 'libptr'
 };
 
+var BuiltinFuncNameToIdTable = {};
+(function() {
+	for(var type in BuiltinFuncNames) {
+		var t = BuiltinFuncNames[type];
+		for(var subid in t) {
+			BuiltinFuncNameToIdTable[t[subid]] = [+type, +subid];
+		}
+	}
+})();
+
+
 /*
 a = gets nil; 0
 b = a.scan(/^\t"\$([0-9a-f]+) (\d+) (\w+)",$/).group_by{|s,t,n|t.to_i}
@@ -218,5 +229,6 @@ c.map{|t,x| "Names[Token.Type.%s] = {\n%s\n};" % [typenames[t], x.map{|id,_,name
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.BuiltinFuncNames = BuiltinFuncNames;
+	HSPonJS.BuiltinFuncNameToIdTable = BuiltinFuncNameToIdTable;
 }
 

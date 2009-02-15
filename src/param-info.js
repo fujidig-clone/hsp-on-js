@@ -7,9 +7,6 @@ Utils.objectExtend(ParamInfo.prototype, {
 	toString: function() {
 		return '<ParamInfo: '+this.node+'>';
 	},
-	isVar: function() {
-		return this.node.isVarNode() && !this.node.onlyValue;
-	},
 	getPureNode: function() {
 		return this.node.toPureNode();
 	}
@@ -26,6 +23,7 @@ Utils.objectExtend(Node.prototype, {
 	isFuncallNode: function() { return false; },
 	isUserDefFuncall: function() { return false; },
 	isBuiltinFuncall: function() { return false; },
+	isInlineExprBuiltinFuncall: function() { return false; },
 	isGetStackNode: function() { return false; },
 	toPureNode: function() { return this; }
 });
@@ -39,7 +37,8 @@ var NodeType = {
 	OPERATE: 6,
 	USERDEF_FUNCALL: 7,
 	BUILTIN_FUNCALL: 8,
-	GET_STACK: 9
+	INLINE_EXPR_BUILTIN_FUNCALL: 9,
+	GET_STACK: 10
 };
 
 function VarNode(varData, indexNodes, onlyValue, token) {
@@ -187,6 +186,24 @@ Utils.objectExtend(BuiltinFuncallNode.prototype, {
 	}
 });
 
+function InlineExprBuiltinFuncall(groupId, subId, builtinFuncInfo, paramInfos) {
+	this.groupId = groupId;
+	this.subId = subId;
+	this.builtinFuncInfo = builtinFuncInfo;
+	this.paramInfos = paramInfos;
+}
+InlineExprBuiltinFuncall.prototype = new FuncallNode;
+Utils.objectExtend(InlineExprBuiltinFuncall.prototype, {
+	nodeType: NodeType.INLINE_EXPR_BUILTIN_FUNCALL,
+	isInlineExprBuiltinFuncall: function() { return true; },
+	toString: function() {
+		return '<InlineExprBuiltinFuncall:'+this.groupId+', '+this.subId+', ['+this.paramNodes+']>';
+	},
+	getValueType: function() {
+		return this.builtinFuncInfo.returnValueType || 0;
+	}
+});
+
 function GetStackNode(originalNode) {
 	this.originalNode = originalNode;
 }
@@ -228,18 +245,29 @@ function traverseParamInfo(paramInfo, callback) {
 		case NodeType.BUILTIN_FUNCALL:
 			traverseNodes(node.paramNodes);
 			break;
+		case NodeType.INLINE_EXPR_BUILTIN_FUNCALL:
+			traverseParamInfos(node.paramInfos);
 		case NodeType.GET_STACK:
 			break;
 		default:
 			throw new Error('must not happen');
 		}
 	}
-	function traverseNodes(nodes, callback) {
+	function traverseNodes(nodes) {
 		for(var i = 0; i < nodes.length; i ++) {
 			traverseNode(nodes[i]);
 		}
 	}
+	function traverseParamInfos(paramInfos) {
+		for(var i = 0; i < paramInfos.length; i ++) {
+			traverseNode(paramInfos[i].node);
+		}
+	}
 	traverseNode(paramInfo.node);
+}
+
+function isDefaultParamInfo(paramInfo) {
+	return !paramInfo || paramInfo.node.isDefaultNode();
 }
 
 if(typeof HSPonJS != 'undefined') {
@@ -256,4 +284,5 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.BuiltinFuncallNode = BuiltinFuncallNode;
 	HSPonJS.GetStackNode = GetStackNode;
 	HSPonJS.traverseParamInfo = traverseParamInfo;
+	HSPonJS.isDefaultParamInfo = isDefaultParamInfo;
 }

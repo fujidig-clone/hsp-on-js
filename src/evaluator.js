@@ -5,8 +5,8 @@ function Evaluator(sequence, generateResult, options) {
 	this.sequence = sequence;
 	this.mainLoop = generateResult.mainLoop;
 	this.literals = generateResult.literals;
-	this.userDefFuncs = generateResult.userDefFuncs;
 	this.staticVarTags = generateResult.staticVarTags;
+	this.registeredObjects = generateResult.registeredObjects;
 	this.variables = null;
 	this.loopStack = [];
 	this.frameStack = [];
@@ -24,6 +24,7 @@ function Evaluator(sequence, generateResult, options) {
 	this.err = 0;
 	this.random = new VCRandom();
 	this.onerrorEvent = new Event();
+	this.startTime = 0;
 }
 
 Evaluator.defaultOptions = {
@@ -53,11 +54,107 @@ function throwHSPError(errorCode) {
 	throw new HSPError(errorCode);
 }
 
+function _assert(cond) {
+	if(!cond) throw new Error('assertion fault');
+}
+
+_assert(VarType.LABEL === 1);
+_assert(VarType.STR === 2);
+_assert(VarType.DOUBLE === 3);
+_assert(VarType.INT === 4);
+
+function checkTypeInt(val) {
+	if(val.getType() != 4) { // VarType.INT
+		throw typeMismatchError(val.getType(), 4);
+	}
+	return val;
+}
+
+function checkTypeDouble(val) {
+	if(val.getType() != 3) { // VarType.DOUBLE
+		throw typeMismatchError(val.getType(), 3);
+	}
+	return val;
+}
+
+function checkTypeNumber(val) {
+	var type = val.getType();
+	if(type != 4 && // VarType.INT
+	   type != 3) { // VarType.DOUBLE
+		throw typeMismatchErrorIntOrDouble(type);
+	}
+	return val;
+}
+
+function checkTypeStr(val) {
+	if(val.getType() != 2) { // VarType.STR
+		throw typeMismatchError(val.getType(), 2);
+	}
+	return val;
+}
+
+function checkTypeLabel(val) {
+	if(val.getType() != 1 || // VarType.LABEL
+	   !val.isUsing()) {
+		throw new HSPError(ErrorCode.LABEL_REQUIRED);
+	}
+	return val;
+}
+
+function scanArgs(args, format, requiredArgsCount) {
+	for(var i = 0; i < format.length; i ++) {
+		scanArg(args[i], format.charAt(i), i >= requiredArgsCount);
+	}
+	if(i < args.length) {
+		throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
+	}
+}
+
+function scanArg(arg, c, isOptionalArguments) {
+	if(arg == undefined) {
+		if(isOptionalArguments) {
+			return arg;
+		} else {
+			throw new HSPError(ErrorCode.NO_DEFAULT);
+		}
+	}
+	switch(c) {
+	case 'i':
+		checkTypeInt(arg);
+		break;
+	case 'd':
+		checkTypeDouble(arg);
+		break;
+	case 'n':
+		checkTypeNumber(arg);
+		break;
+	case 's':
+		checkTypeStr(arg);
+		break;
+	case 'l':
+		checkTypeLabel(arg);
+		break;
+	case '.':
+		break;
+	}
+	return arg;
+}
+function typeMismatchError(actualType, expectedType) {
+	return typeMismatchError0(actualType, VarTypeNames[expectedType]+' 型');
+}
+function typeMismatchErrorIntOrDouble(actualType) {
+	return typeMismatchError0(actualType, 'int 型か double 型');
+}
+function typeMismatchError0(actualType, expected) {
+	return new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[actualType]+' 型ではなく、'+expected+'の値を指定しなければいけません');
+}
+
 Evaluator.prototype = {
 	evaluate: function() {
 		this.variables = this.buildVariables();
+		this.startTime = +new Date;
 		try {
-			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
+			this.mainLoop();
 		} catch(e) {
 			this.disposeException(e);
 		}
@@ -66,7 +163,7 @@ Evaluator.prototype = {
 		try {
 			if(callback) callback();
 			this.pc ++;
-			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
+			this.mainLoop();
 		} catch(e) {
 			this.disposeException(e);
 		}
@@ -84,7 +181,7 @@ Evaluator.prototype = {
 				this.stack.length = 0;
 			}
 			this.pc = event.pos;
-			this.mainLoop(this.stack, this.literals, this.variables, this.userDefFuncs);
+			this.mainLoop();
 		} catch(e) {
 			this.disposeException(e);
 		}
@@ -237,120 +334,6 @@ Evaluator.prototype = {
 		var names = BuiltinFuncNames[type];
 		if(!names) return undefined;
 		return names[subid];
-	},
-	// 命令・関数パラメータの数とそれぞれの型をチェックし、問題がある場合はエラーを投げる
-	// フォーマット仕様
-	// i: int
-	// d: double
-	// n: int または double
-	// s: 文字列
-	// l: ラベル
-	// v: 変数（添字指定があると配列の自動拡張を行う）
-	// j: ジャンプタイプ (goto または gosub)
-	// a: 配列変数（添字指定があるとエラー）
-	// .: どれでも
-	// それぞれを大文字にするか、後ろに ? をつけると省略可能であることを示す
-	// 後ろに * をつけると同じルールで 0 個以上、最後まで続くことを示す
-	// 
-	// * の指定があっても問題がある場合はエラーを投げる。（次のルールには渡さない）
-	// 「'i*s' で int 型のパラメータが並んでいて最後に文字列型のパラメータがあることを調べる」のような使い方は*出来ない*。
-	scanArgs: function(args, format) {
-		var argsIndex = 0;
-		var formatIndex = 0;
-		while(formatIndex < format.length) {
-			var c = format.charAt(formatIndex++);
-			var repeat = false;
-			var isOptionalArguments = false;
-			if(format.charAt(formatIndex) == '?') {
-				formatIndex ++;
-				isOptionalArguments = true;
-			}
-			if(format.charAt(formatIndex) == '*') {
-				formatIndex ++;
-				repeat = true;
-			}
-			if(/[A-Z]/.test(c)) {
-				c = c.toLowerCase();
-				isOptionalArguments = true;
-			}
-			do {
-				var arg = args[argsIndex];
-				if(repeat && argsIndex >= args.length) break;
-				this.scanArg(arg, c, isOptionalArguments);
-				argsIndex ++;
-			} while(repeat);
-		}
-		if(argsIndex < args.length) {
-			throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
-		}
-	},
-	scanArg: function(arg, c, isOptionalArguments) {
-		if(arg == undefined) {
-			if(isOptionalArguments) {
-				return arg;
-			} else {
-				throw new HSPError(ErrorCode.NO_DEFAULT);
-			}
-		}
-		switch(c) {
-		case 'i':
-			if(arg.getType() != VarType.INT) {
-				throw this.typeMismatchError(arg.getType(), VarType.INT);
-			}
-			break;
-		case 'd':
-			if(arg.getType() != VarType.DOUBLE) {
-				throw this.typeMismatchError(arg.getType(), VarType.DOUBLE);
-			}
-			break;
-		case 'n':
-			if(arg.getType() != VarType.INT && arg.getType() != VarType.DOUBLE) {
-				throw this.typeMismatchErrorIntOrDouble(arg.getType());
-			}
-			break;
-		case 's':
-			if(arg.getType() != VarType.STR) {
-				throw this.typeMismatchError(arg.getType(), VarType.STR);
-			}
-			break;
-		case 'l':
-			if(arg.getType() != VarType.LABEL || !arg.isUsing()) {
-				throw new HSPError(ErrorCode.LABEL_REQUIRED);
-			}
-			break;
-		case 'v':
-			if(!(arg instanceof VariableAgent)) {
-				throw new HSPError(ErrorCode.VARIABLE_REQUIRED);
-			}
-			arg.expand();
-			break;
-		case 'j':
-			if(!(arg instanceof JumpType)) {
-				throw new HSPError(ErrorCode.SYNTAX, 'goto/gosub が指定されていません');
-			}
-			break;
-		case 'a':
-			if(!(arg instanceof VariableAgent)) {
-				throw new HSPError(ErrorCode.VARIABLE_REQUIRED);
-			}
-			// オフィシャル HSP だと添字が 0 のときも許容している
-			if(arg.existSubscript) {
-				throw new HSPError(ErrorCode.BAD_ARRAY_EXPRESSION);
-			}
-			break;
-		case '.':
-			break;
-		}
-		return arg;
-	},
-	typeMismatchError: function(actualType, expectedType) {
-		return this.typeMismatchError0(actualType, VarTypeNames[expectedType]+' 型');
-	},
-	typeMismatchErrorIntOrDouble: function(actualType) {
-		return this.typeMismatchError0(actualType, 'int 型か double 型');
-	},
-	typeMismatchError0: function(actualType, expected) {
-		return new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[actualType]+' 型ではなく、'+expected+'の値を指定しなければいけません');
 	}
 };
 
@@ -360,6 +343,13 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Frame = Frame;
 	HSPonJS.Event = Event;
 	HSPonJS.throwHSPError = throwHSPError;
+	HSPonJS.checkTypeInt = checkTypeInt;
+	HSPonJS.checkTypeDouble = checkTypeDouble;
+	HSPonJS.checkTypeNumber = checkTypeNumber;
+	HSPonJS.checkTypeStr = checkTypeStr;
+	HSPonJS.checkTypeLabel = checkTypeLabel;
+	HSPonJS.scanArgs = scanArgs;
+	HSPonJS.scanArg = scanArg;
 }
 
 

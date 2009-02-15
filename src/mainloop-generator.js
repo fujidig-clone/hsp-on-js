@@ -1,35 +1,48 @@
 function MainLoopGenerator(sequence) {
 	this.sequence_ = sequence;
 	this.literals_ = [];
-	this.userDefFuncs_ = [];
 	this.staticVarTags_ = [];
+	this.registeredObjects_ = [];
 	this.lines_ = [];
 	this.indent_ = 0;
 }
 
-MainLoopGenerator.Result = function(mainLoop, literals, userDefFuncs, staticVarTags) {
+MainLoopGenerator.Result = function(mainLoop, literals, staticVarTags, registeredObjects) {
 	this.mainLoop = mainLoop;
 	this.literals = literals;
-	this.userDefFuncs = userDefFuncs;
 	this.staticVarTags = staticVarTags;
+	this.registeredObjects = registeredObjects;
 }
+
+function _defaultExpr(expr) {
+	if(expr != null) {
+		return expr;
+	}
+	return 'throwHSPError('+ErrorCode.NO_DEFAULT+')';
+}
+
+var _isDefault = isDefaultParamInfo;
 
 MainLoopGenerator.prototype = {
 	generate: function() {
 		var mainLoop = this.generateMainLoop();
-		return new MainLoopGenerator.Result(mainLoop, this.literals_, this.userDefFuncs_, this.staticVarTags_);
+		return new MainLoopGenerator.Result(mainLoop, this.literals_, this.staticVarTags_, this.registeredObjects_);
 	},
 	generateMainLoop: function() {
 		var src = '';
 		for(var prop in HSPonJS) {
 			src += 'var '+prop+' = HSPonJS.'+prop+';\n';
 		}
-		src += 'return function(stack, literals, variables, userDefFuncs) {\n';
+		src += 'return function() {\n';
 		src += this.generateMainLoopSrc() + '\n};';
 		return Function(src)();
 	},
 	generateMainLoopSrc: function() {
 		var sequence = this.sequence_;
+		this.push('var stack = this.stack;');
+		this.push('var literals = this.literals;');
+		this.push('var variables = this.variables;');
+		this.push('var registeredObjects = this.registeredObjects;');
 		this.push('for(;;) {');
 		this.incIndent();
 		this.push('switch(this.pc) {');
@@ -110,9 +123,6 @@ MainLoopGenerator.prototype = {
 			break;
 		case Insn.Code.LOOP:
 			this.pushCode_LOOP(insn, pc);
-			break;
-		case Insn.Code.CNT:
-			this.pushCode_CNT(insn, pc);
 			break;
 		case Insn.Code.CONTINUE:
 			this.pushCode_CONTINUE(insn, pc, opts[0], opts[1]);
@@ -197,14 +207,13 @@ MainLoopGenerator.prototype = {
 		this.pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
 	},
 	pushCode_NEWMOD: function(insn, pc, varParamInfo, module, paramInfos, argc) {
-		var moduleExpr = 'userDefFuncs['+this.registerUserDefFuncs(module)+']';
+		var moduleExpr = this.getRegisteredObjectExpr(module);
 		var constructor = module.constructor;
 		if(!constructor && argc > 0) {
 			this.push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);')
 			return;
 		}
-		var variableExpr = this.getNoSubscriptVariableExpr(varParamInfo);
-		if(!variableExpr) return;
+		var variableExpr = this.getNoSubscriptVariableParamExpr(varParamInfo);
 		this.push('var variable = '+variableExpr+';');
 		this.push('if(variable.getType() != '+VarType.STRUCT+') {');
 		this.push('    variable.value = new StructArray();');
@@ -331,14 +340,14 @@ MainLoopGenerator.prototype = {
 		this.push('if(this.loopStack.length == 0) {');
 		this.push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
 		this.push('}')
-		this.push('var array = '+this.getNoSubscriptVariableExpr(paramInfo)+'.value;');
+		this.push('var array = '+this.getNoSubscriptVariableParamExpr(paramInfo)+'.value;');
 		this.push('var data = this.loopStack[this.loopStack.length - 1];');
 		this.push('if(data.cnt >= array.getL0()) {')
 		this.push('    this.loopStack.pop();');
 		this.push('    this.pc = '+pos+';');
 		this.push('    continue;');
 		this.push('}');
-		this.push('if(array.at(data.cnt).isUsing() == false) {'); // label å^ Ç‚ struct å^ÇÃ empty ÇîÚÇŒÇ∑
+		this.push('if(array.at(data.cnt).isUsing() == false) {'); // label Âûã „ÇÑ struct Âûã„ÅÆ empty „ÇíÈ£õ„Å∞„Åô
 		this.push('    data.cnt ++;');
 		this.push('    if(data.cnt >= data.end) {');
 		this.push('        this.loopStack.pop();');
@@ -434,25 +443,12 @@ MainLoopGenerator.prototype = {
 		this.push('}');
 	},
 	pushCallBuiltinFuncCode: function(type, subid, paramInfos, ctype) {
-		this.push('var func = BuiltinFuncs['+type+']['+subid+'];');
-		this.push('if(!func) throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
-		this.push('var args = [];');
-		for(var i = 0; i < paramInfos.length; i ++) {
-			var paramInfo = paramInfos[i];
-			var node = paramInfo.node;
-			if(node.isDefaultNode()) {
-				this.push('args['+i+'] = void 0;');
-			} else if(node.isVarNode() && !node.onlyValue) {
-				this.push('args['+i+'] = '+this.getNewVariableAgentExpr(node.varData)+';');
-			} else {
-				this.push('args['+i+'] = '+this.getParamExpr(paramInfo)+';');
-			}
+		var info = BuiltinFuncInfos[type][subid];
+		if(info && info.func) {
+			this.pushBuiltinFuncInlineCode(info, paramInfos);
+			return;
 		}
-		if(ctype) {
-			this.push('stack.push(func.apply(this, args));');
-		} else {
-			this.push('func.apply(this, args);');
-		}
+		this.push('throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
 	},
 	pushJumpingSubroutineCode: function(pc) {
 		this.push('if(this.frameStack.length >= 256) {');
@@ -468,7 +464,7 @@ MainLoopGenerator.prototype = {
 	},
 	pushGettingVariableCode: function(varData, indexParamInfos) {
 		var result;
-		if(this.isVariableAgentVarData(varData)) {
+		if(varData.isVariableAgentVarData()) {
 			result = this.getVariableAgentExpr(varData);
 		} else {
 			var variableExpr = this.getVariableExpr(varData);
@@ -486,7 +482,7 @@ MainLoopGenerator.prototype = {
 		this.push('stack.push('+result+');');
 	},
 	pushAssignCode: function(varData, indexParamInfos, rhsParamInfos) {
-		if(this.isVariableAgentVarData(varData)) {
+		if(varData.isVariableAgentVarData()) {
 			this.pushVariableAgentAssignCode(varData, rhsParamInfos);
 		} else {
 			this.push('var variable = '+this.getVariableExpr(varData)+';');
@@ -589,7 +585,7 @@ MainLoopGenerator.prototype = {
 		}
 	},
 	pushCompoundAssignCode: function(calcCode, varData, indexParamInfos, rhsParamInfo) {
-		if(this.isVariableAgentVarData(varData)) {
+		if(varData.isVariableAgentVarData()) {
 			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
 			this.push('agent.assign(agent.'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
 			return;
@@ -642,10 +638,9 @@ MainLoopGenerator.prototype = {
 		}
 	},
 	pushIncDecCode: function(methodName, varData, indexParamInfos) {
-		if(this.isVariableAgentVarData(varData)) {
+		if(varData.isVariableAgentVarData()) {
 			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
-			this.push('agent.expand();');
-			this.push('agent.'+methodName+'();');
+			this.push('agent.expand().'+methodName+'();');
 			return;
 		}
 		this.push('var array = '+this.getVariableExpr(varData)+'.value;');
@@ -669,11 +664,11 @@ MainLoopGenerator.prototype = {
 		this.pushIncDecCode('dec', varData, indexParamInfos);
 	},
 	pushCallingUserdefFuncCode: function(userDefFunc, paramInfos, pc, constructorThismodExpr) {
-		this.registerUserDefFuncs(userDefFunc);
+		var userDefFuncExpr = this.getRegisteredObjectExpr(userDefFunc);
 		var paramMax = paramInfos.length;
 		var mptypes = userDefFunc.paramTypes;
 		var argMax = mptypes.length;
-		var recvArgMax = 0; // local ÇèúÇ¢ÇΩâºà¯êîÇÃêî
+		var recvArgMax = 0; // local „ÇíÈô§„ÅÑ„Åü‰ªÆÂºïÊï∞„ÅÆÊï∞
 		for(var i = 0; i < argMax; i ++) {
 			var mptype = mptypes[i];
 			var paramInfo = paramInfos[recvArgMax];
@@ -697,7 +692,7 @@ MainLoopGenerator.prototype = {
 		this.push('if(this.frameStack.length >= 256) {');
 		this.push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 		this.push('}');
-		this.push('this.frameStack.push(new Frame('+(pc + 1)+', userDefFuncs['+userDefFunc.id+'], args, this.args));');
+		this.push('this.frameStack.push(new Frame('+(pc + 1)+', '+userDefFuncExpr+', args, this.args));');
 		this.push('this.args = args;');
 		this.push('this.pc = '+userDefFunc.label.getPos()+';');
 		this.push('continue;');
@@ -727,9 +722,7 @@ MainLoopGenerator.prototype = {
 				if(node.isVarNode()) {
 					this.push('args['+i+'] = '+this.getVariableExpr(node.varData)+';');
 				} else {
-					this.push('var arg = '+this.getParamExpr(paramInfo)+';');
-					this.push('arg.expand();');
-					this.push('args['+i+'] = arg.variable;');
+					this.push('args['+i+'] = '+this.getParamExpr(paramInfo)+'.expand().variable;');
 				}
 				break;
 			case MPType.SINGLEVAR:
@@ -738,9 +731,7 @@ MainLoopGenerator.prototype = {
 				if(node.isVarNode()) {
 					this.push('args['+i+'] = '+this.getNewVariableAgentExpr(node.varData)+';');
 				} else if(node.isGetStackNode() && node.originalNode.isVarNode()) {
-					this.push('var arg = '+this.getParamExpr(paramInfo)+';');
-					this.push('arg.expand();');
-					this.push('args['+i+'] = arg;');
+					this.push('args['+i+'] = '+this.getParamExpr(paramInfo)+'.expand();');
 				} else {
 					this.push('var arg = new VariableAgent0D(new Variable);');
 					this.push('arg.assign('+this.getParamExpr(paramInfo)+');');
@@ -754,7 +745,7 @@ MainLoopGenerator.prototype = {
 				this.push('args['+i+'] = '+constructorThismodExpr+';');
 				continue;
 			default:
-				throw new Error('ñ¢ëŒâûÇÃÉpÉâÉÅÅ[É^É^ÉCÉv: '+mptype);
+				throw new Error('Êú™ÂØæÂøú„ÅÆ„Éë„É©„É°„Éº„Çø„Çø„Ç§„Éó: '+mptype);
 			}
 			origArgsCount ++;
 		}
@@ -765,46 +756,8 @@ MainLoopGenerator.prototype = {
 			this.push('indices['+i+'] = '+this.getStrictIntParamNativeValueExpr(indexParamInfos[i])+';');
 		}
 	},
-	getVariableExpr: function(varData) {
-		if(this.isVariableAgentVarData(varData)) {
-			return this.getVariableAgentExpr(varData)+'.variable';
-		}
-		var type = varData.proxyVarType;
-		var id = varData.id;
-		switch(type) {
-		case ProxyVarType.STATIC:
-			return 'variables['+this.registerStaticVarTags(id)+']';
-		case ProxyVarType.MEMBER:
-			return 'this.getThismod().toValue().members['+id+']';
-		case ProxyVarType.ARG_ARRAY:
-		case ProxyVarType.ARG_LOCAL:
-			return 'this.getArg('+id+')';
-		default:
-			throw new Error('must not happen');
-		}
-	},
-	isVariableAgentVarData: function(varData) {
-		var type = varData.proxyVarType;
-		return type == ProxyVarType.THISMOD || type == ProxyVarType.ARG_VAR;
-	},
-	getNewVariableAgentExpr: function(varData) {
-		if(this.isVariableAgentVarData(varData)) {
-			return this.getVariableAgentExpr(varData);
-		}
-		return 'new VariableAgent0D('+this.getVariableExpr(varData)+')';
-	},
-	getVariableAgentExpr: function(varData) {
-		switch(varData.proxyVarType) {
-		case ProxyVarType.THISMOD:
-			return 'this.getThismod()';
-		case ProxyVarType.ARG_VAR:
-			return 'this.getArg('+varData.id+')';
-		default:
-			throw new Error('must not happen');
-		}
-	},
 	getArrayAndOffsetExpr: function(varData, indexParamInfos) {
-		if(this.isVariableAgentVarData(varData)) {
+		if(varData.isVariableAgentVarData()) {
 			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
 			return ['agent.variable.value', 'agent.getOffset()'];
 		}
@@ -829,7 +782,56 @@ MainLoopGenerator.prototype = {
 		}
 		return [arrayExpr, offsetExpr];
 	},
-	getIntParamExpr: function(paramInfo) {
+	getNoSubscriptVariableParamExpr: function(paramInfo) {
+		if(isDefaultParamInfo(paramInfo)) {
+			return 'throwHSPError('+ErrorCode.VARIABLE_REQUIRED+')';
+		}
+		var node = paramInfo.node.toPureNode();
+		if(!node.isVarNode() || node.onlyValue) {
+			return 'throwHSPError('+ErrorCode.VARIABLE_REQUIRED+')';
+		}
+		if(node.indexNodes.length > 0) {
+			// Ê∑ª„ÅàÂ≠óÊåáÂÆö„Åå„ÅÇ„Å£„Å¶„Çπ„Çø„ÉÉ„ÇØ‰∏ä„Å´ VariableAgent „ÅåÁ©ç„Åæ„Çå„Å¶„ÅÑ„Å¶„ÇÇ„Ç®„É©„Éº„ÅßËêΩ„Å®„Åô„ÅÆ„Åß pop „Åô„ÇãÂøÖË¶Å„ÅØ„Å™„ÅÑ
+			return 'throwHSPError('+ErrorCode.BAD_ARRAY_EXPRESSION+')';
+		}
+		var varData = node.varData;
+		if(node.varData.isVariableAgentVarData()) {
+			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
+			this.push('if(agent.existSubscript) {')
+			this.push('    throw new HSPError(ErrorCode.BAD_ARRAY_EXPRESSION);');
+			this.push('}');
+			return 'agent.variable';
+		}
+		return this.getVariableExpr(varData);
+	},
+	getVariableParamExpr: function(paramInfo) {
+		if(isDefaultParamInfo(paramInfo)) {
+			return 'throwHSPError('+ErrorCode.VARIABLE_REQUIRED+')';
+		}
+		var node = paramInfo.node;
+		if(node.isVarNode()) {
+			return this.getVariableExpr(node.varData);
+		} else if(node.isGetStackNode() && node.originalNode.isVarNode()) {
+			return this.getParamExpr(paramInfo)+'.expand().variable';
+		} else {
+			return 'throwHSPError('+ErrorCode.VARIABLE_REQUIRED+')';
+		}
+	},
+	getVariableAgentParamExpr: function(paramInfo) {
+		if(isDefaultParamInfo(paramInfo)) {
+			return 'throwHSPError('+ErrorCode.VARIABLE_REQUIRED+')';
+		}
+		var node = paramInfo.node;
+		if(node.isVarNode()) {
+			return this.getNewVariableAgentExpr(node.varData);
+		} else if(node.isGetStackNode() && node.originalNode.isVarNode()) {
+			return this.getParamExpr(paramInfo)+'.expand()';
+		} else {
+			return 'throwHSPError('+ErrorCode.VARIABLE_REQUIRED+')';
+		}
+	},
+	getIntParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.getValueType() == VarType.INT) {
 			return this.getParamExpr(paramInfo);
@@ -840,9 +842,10 @@ MainLoopGenerator.prototype = {
 		if(node.getValueType() == VarType.DOUBLE) {
 			return this.getParamExpr(paramInfo)+'.toIntValue()';
 		}
-		return 'this.scanArg('+this.getParamExpr(paramInfo)+', "n").toIntValue()';
+		return 'checkTypeNumber('+this.getParamExpr(paramInfo)+').toIntValue()';
 	},
-	getDoubleParamExpr: function(paramInfo) {
+	getDoubleParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.getValueType() == VarType.DOUBLE) {
 			return this.getParamExpr(paramInfo);
@@ -853,16 +856,18 @@ MainLoopGenerator.prototype = {
 		if(node.getValueType() == VarType.INT) {
 			return this.getParamExpr(paramInfo)+'.toDoubleValue()';
 		}
-		return 'this.scanArg('+this.getParamExpr(paramInfo)+', "n").toDoubleValue()';
+		return 'checkTypeNumber('+this.getParamExpr(paramInfo)+').toDoubleValue()';
 	},
-	getStrParamExpr: function(paramInfo) {
+	getStrParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.getValueType() == VarType.STR) {
 			return this.getParamExpr(paramInfo);
 		}
-		return 'this.scanArg('+this.getParamExpr(paramInfo)+', "s").toStrValue()';
+		return 'checkTypeStr('+this.getParamExpr(paramInfo)+')';
 	},
-	getIntParamNativeValueExpr: function(paramInfo) {
+	getIntParamNativeValueExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.isLiteralNode() && 
 		   (node.val.getType() == VarType.INT || node.val.getType() == VarType.DOUBLE)) {
@@ -874,9 +879,10 @@ MainLoopGenerator.prototype = {
 		if(node.getValueType() == VarType.DOUBLE) {
 			return '('+this.getParamExpr(paramInfo)+'._value|0)';
 		}
-		return 'this.scanArg('+this.getParamExpr(paramInfo)+', "n").toIntValue()._value';
+		return '(checkTypeNumber('+this.getParamExpr(paramInfo)+')._value|0)';
 	},
-	getStrictIntParamNativeValueExpr: function(paramInfo) {
+	getStrictIntParamNativeValueExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.isLiteralNode() && node.val.getType() == VarType.INT) {
 			return '' + node.val._value;
@@ -884,16 +890,141 @@ MainLoopGenerator.prototype = {
 		if(node.getValueType() == VarType.INT) {
 			return this.getParamExpr(paramInfo)+'._value';
 		}
-		return 'this.scanArg('+this.getParamExpr(paramInfo)+', "i").toIntValue()._value';
+		return 'checkTypeInt('+this.getParamExpr(paramInfo)+')._value';
 	},
-	getLabelParamNativeValueExpr: function(paramInfo) {
+	getDoubleParamNativeValueExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		var type = node.getValueType();
+		if(node.isLiteralNode() && (type == VarType.INT || type == VarType.DOUBLE)) {
+			return Utils.numToSource(node.val._value);
+		}
+		if(type == VarType.INT || type == VarType.DOUBLE) {
+			return this.getParamExpr(paramInfo)+'._value';
+		}
+		return 'checkTypeNumber('+this.getParamExpr(paramInfo)+')._value';
+	},
+	getStrParamNativeValueExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode() && node.getValueType() == VarType.STR) {
+			return Utils.strToSource(node.val._value);
+		}
+		return this.getStrParamExpr(paramInfo)+'._value';
+	},
+	getLabelParamNativeValueExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.isLabelNode()) {
 			return '' + node.getLabelPos();
 		}
-		return 'this.scanArg('+this.getParamExpr(paramInfo)+', "l").toValue().pos';
+		return 'checkTypeLabel('+this.getParamExpr(paramInfo)+').pos';
+	},
+	getIntConvertedParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode()) {
+			try {
+				return this.getParamExpr(new ParamInfo(new LiteralNode(node.val.toIntValue())));
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		return this.getParamExpr(paramInfo)+'.toIntValue()';
+	},
+	getDoubleConvertedParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode()) {
+			try {
+				return this.getParamExpr(new ParamInfo(new LiteralNode(node.val.toDoubleValue())));
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		return this.getParamExpr(paramInfo)+'.toDoubleValue()';
+	},
+	getStrConvertedParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode()) {
+			try {
+				return this.getParamExpr(new ParamInfo(new LiteralNode(node.val.toStrValue())));
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		return this.getParamExpr(paramInfo)+'.toStrValue()';
+	},
+	getIntConvertedNativeValueParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode()) {
+			try {
+				return '' + node.val.toIntValue()._value;
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		if(node.getValueType() == VarType.INT) {
+			return this.getParamExpr(paramInfo)+'._value';
+		}
+		if(node.getValueType() == VarType.DOUBLE) {
+			return '('+this.getParamExpr(paramInfo)+'._value|0)';
+		}
+		return this.getParamExpr(paramInfo)+'.toIntValue()._value';
+	},
+	getDoubleConvertedNativeValueParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode()) {
+			try {
+				return Utils.numToSource(node.val.toDoubleValue()._value);
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		if(node.getValueType() == VarType.INT) {
+			return this.getParamExpr(paramInfo)+'._value';
+		}
+		if(node.getValueType() == VarType.DOUBLE) {
+			return this.getParamExpr(paramInfo)+'._value';
+		}
+		return this.getParamExpr(paramInfo)+'.toDoubleValue()._value';
+	},
+	getStrConvertedNativeValueParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.isLiteralNode()) {
+			try {
+				return Utils.strToSource(node.val.toStrValue()._value);
+			} catch(e) {
+				if(!(e instanceof HSPError)) throw e;
+			}
+		}
+		if(node.getValueType() == VarType.STR) {
+			return this.getParamExpr(paramInfo)+'._value';
+		}
+		if(node.getValueType() == VarType.INT) {
+			return '("" + '+this.getParamExpr(paramInfo)+'._value)';
+		}
+		return this.getParamExpr(paramInfo)+'.toStrValue()._value';
+	},
+	getParamIntLiteralValue: function(paramInfo) {
+		if(!paramInfo) return null;
+		var node = paramInfo.node;
+		if(!node.isLiteralNode()) return null;
+		var value = node.val;
+		var type = value.getType();
+		if(type == VarType.INT || type == VarType.DOUBLE) {
+			return value._value | 0;
+		}
+		return null;
 	},
 	getParamExpr: function(paramInfo) {
+		if(!paramInfo) {
+			return 'throwHSPError('+ErrorCode.NO_DEFAULT+')';
+		}
 		var result = this.getParamExpr0(paramInfo.node);
 		return result;
 	},
@@ -903,7 +1034,7 @@ MainLoopGenerator.prototype = {
 			if(node.indexNodes.length > 0) {
 				throw new Error('must not happen');
 			}
-			if(this.isVariableAgentVarData(node.varData)) {
+			if(node.varData.isVariableAgentVarData()) {
 				return this.getVariableAgentExpr(node.varData)+'.toValue()';
 			}
 			return this.getVariableExpr(node.varData)+'.value.at(0)';
@@ -917,32 +1048,61 @@ MainLoopGenerator.prototype = {
 			return 'throwHSPError('+ErrorCode.NO_DEFAULT+')';
 		case NodeType.OPERATE:
 			return '('+this.getParamExpr0(node.lhsNode)+').'+getCalcCodeName(node.calcCode)+'('+this.getParamExpr0(node.rhsNode)+')';
+		case NodeType.INLINE_EXPR_BUILTIN_FUNCALL:
+			var info = node.builtinFuncInfo;
+			return this.pushBuiltinFuncInlineCode(info, node.paramInfos);
 		case NodeType.GET_STACK:
 			return 'stack.pop()';
 		default:
 			throw new Error('must not happen');
 		}
 	},
-	getNoSubscriptVariableExpr: function(paramInfo) {
-		var node = paramInfo.node.toPureNode();
-		if(!node.isVarNode() || node.onlyValue) {
-			this.push('throw new HSPError(ErrorCode.VARIABLE_REQUIRED);');
-			return null;
+	pushBuiltinFuncInlineCode: function(builtinFuncInfo, paramInfos) {
+		var len = paramInfos.length;
+		var argsMax = builtinFuncInfo.argsMax;
+		if(argsMax != null && argsMax < len) {
+			this.push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);');
+			return void 0;
 		}
-		if(node.indexNodes.length > 0) {
-			// ìYÇ¶éöéwíËÇ™Ç†Ç¡ÇƒÉXÉ^ÉbÉNè„Ç… VariableAgent Ç™êœÇ‹ÇÍÇƒÇ¢ÇƒÇ‡ÉGÉâÅ[Ç≈óéÇ∆Ç∑ÇÃÇ≈ pop Ç∑ÇÈïKóvÇÕÇ»Ç¢
-			this.push('throw new HSPError(ErrorCode.BAD_ARRAY_EXPRESSION);');
-			return null;
+		paramInfos = paramInfos.concat();
+		for(var i = len; i < argsMax; i++) {
+			paramInfos[i] = null;
 		}
-		var varData = node.varData;
-		if(this.isVariableAgentVarData(varData)) {
-			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
-			this.push('if(agent.existSubscript) {')
-			this.push('    throw new HSPError(ErrorCode.BAD_ARRAY_EXPRESSION);');
-			this.push('}');
-			return 'agent.variable';
+		return builtinFuncInfo.func(this, paramInfos);
+	},
+	getNewVariableAgentExpr: function(varData) {
+		if(varData.isVariableAgentVarData()) {
+			return this.getVariableAgentExpr(varData);
 		}
-		return this.getVariableExpr(varData);
+		return 'new VariableAgent0D('+this.getVariableExpr(varData)+')';
+	},
+	getVariableExpr: function(varData) {
+		if(varData.isVariableAgentVarData()) {
+			return this.getVariableAgentExpr(varData)+'.variable';
+		}
+		var type = varData.proxyVarType;
+		var id = varData.id;
+		switch(type) {
+		case ProxyVarType.STATIC:
+			return 'variables['+this.registerStaticVarTags(id)+']';
+		case ProxyVarType.MEMBER:
+			return 'this.getThismod().toValue().members['+id+']';
+		case ProxyVarType.ARG_ARRAY:
+		case ProxyVarType.ARG_LOCAL:
+			return 'this.getArg('+id+')';
+		default:
+			throw new Error('must not happen');
+		}
+	},
+	getVariableAgentExpr: function(varData) {
+		switch(varData.proxyVarType) {
+		case ProxyVarType.THISMOD:
+			return 'this.getThismod()';
+		case ProxyVarType.ARG_VAR:
+			return 'this.getArg('+varData.id+')';
+		default:
+			throw new Error('must not happen');
+		}
 	},
 	getLiteralExpr: function(literal) {
 		var literals = this.literals_;
@@ -960,15 +1120,19 @@ MainLoopGenerator.prototype = {
 		staticVarTags[id] = staticVarTag;
 		return id;
 	},
-	registerUserDefFuncs: function(userDefFunc) {
-		if(typeof userDefFunc.id != 'undefined') {
-			return userDefFunc.id;
+	getRegisteredObjectExpr: function(object, tag) {
+		var propname = '_hsponjs_mainloop_registered_id';
+		var id;
+		if(!tag) tag = object;
+		if(propname in tag) {
+			id = tag[propname];
+		} else {
+			var list = this.registeredObjects_;
+			id = list.length;
+			list[id] = object;
+			tag[propname] = id;
 		}
-		var userDefFuncs = this.userDefFuncs_;
-		var id = userDefFuncs.length;
-		userDefFuncs[id] = userDefFunc;
-		userDefFunc.id = id;
-		return id;
+		return 'registeredObjects['+id+']';
 	},
 	pushStackPopCode: function(size) {
 		if(size == 0) {
@@ -981,7 +1145,7 @@ MainLoopGenerator.prototype = {
 	},
 	toSimpleExpr: function(expr, defaultVarName) {
 		if(/^(?:[$A-Za-z][$0-9A-Za-z]*|-?[0-9]+)$/.test(expr)) {
-			// íPàÍÇÃïœêîÇ©êÆêîÉäÉeÉâÉãÇ»ÇÁÇªÇÃÇ‹Ç‹
+			// Âçò‰∏Ä„ÅÆÂ§âÊï∞„ÅãÊï¥Êï∞„É™„ÉÜ„É©„É´„Å™„Çâ„Åù„ÅÆ„Åæ„Åæ
 			return expr;
 		}
 		this.push('var '+defaultVarName+' = '+expr+';');

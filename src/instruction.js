@@ -220,7 +220,6 @@ var codeNames = [
 	'RETURN',
 	'REPEAT',
 	'LOOP',
-	'CNT',
 	'CONTINUE',
 	'BREAK',
 	'FOREACH',

@@ -1,569 +1,830 @@
-var BuiltinFuncs = [];
+var BuiltinFuncInfos = [];
+
 (function(){
 	for(var i = 0; i < 18; i ++) {
-		BuiltinFuncs[i] = {};
+		BuiltinFuncInfos[i] = [];
 	}
 })();
 
-BuiltinFuncs[Token.Type.PROGCMD] = {
-	0x07: function(n) { // wait
-		this.scanArgs(arguments, 'N');
-		var msec = (n ? n.toIntValue()._value : 100) * 10;
-		throw new WaitException(msec);
+function BuiltinFuncInfo() {
+	this.func = null;
+	this.isInlineExpr = false;
+	this.receiveVarList = null;
+	this.defaultReceiveVar = true;
+	this.argsMax = null;
+	this.returnValueType = null;
+	this.compileTimeFunc = null;
+}
+
+BuiltinFuncInfo.prototype = {
+	notReceiveVar: function(n) {
+		if(this.receiveVarList && 0 <= n && n <= this.receiveVarList.length) {
+			return !this.receiveVarList[n];
+		}
+		return !this.defaultReceiveVar;
 	},
-	0x08: function(n) { // await
-		this.scanArgs(arguments, 'N');
-		var msec = n ? n.toIntValue()._value : 0;
-		if(this.lastWaitTime) {
-			throw new WaitException(this.lastWaitTime + msec - new Date);
+	reset: function() {
+		BuiltinFuncInfo.call(this);
+	}
+};
+
+function builtinFunc(name) {
+	var typeAndSubid = BuiltinFuncNameToIdTable[name];
+	if(!typeAndSubid) throw new Error("unknown builtin func name: `"+name+"'");
+	var type = typeAndSubid[0], subid = typeAndSubid[1];
+	var infos = BuiltinFuncInfos[type];
+	var info = infos[subid];
+	if(info) return info;
+	return infos[subid] = new BuiltinFuncInfo;
+}
+
+function defineInlineBuiltinFunc(name, receiveVarList, func) {
+	var info = builtinFunc(name);
+	info.reset();
+	info.func = func;
+	info.isExprCallback = returnFalse;
+	info.receiveVarList = receiveVarList;
+	info.argsMax = receiveVarList.length;
+}
+
+function defineInlineExprBuiltinFunc(name, receiveVarList, returnValueType, func) {
+	var info = builtinFunc(name);
+	info.reset();
+	info.func = func;
+	info.isInlineExpr = true;
+	info.isExprCallback = returnTrue;
+	info.receiveVarList = receiveVarList;
+	info.argsMax = receiveVarList.length;
+	info.returnValueType = returnValueType;
+}
+
+function defineCompileTimeBuiltinFunc(name, func) {
+	var info = builtinFunc(name);
+	info.compileTimeFunc = func;
+}
+
+function defineSysVar(name, returnValueType, expr) {
+	defineInlineExprBuiltinFunc(name, [], returnValueType, function(){ return expr; });
+}
+
+defineInlineBuiltinFunc('wait', [false], function(g, paramInfos) {
+	g.push('throw new WaitException('+g.getIntParamNativeValueExpr(paramInfos[0], 100)+' * 10);');
+});
+
+defineInlineBuiltinFunc('await', [false], function(g, paramInfos) {
+	g.push('if(this.lastWaitTime) {');
+	g.push('    throw new WaitException(this.lastWaitTime + '+g.getIntParamNativeValueExpr(paramInfos[0], 0)+' - new Date);');
+	g.push('} else {');
+	g.push('    throw new WaitException('+g.getIntParamNativeValueExpr(paramInfos[0], 0)+');');
+	g.push('}');
+});
+
+defineInlineBuiltinFunc('dim', [true, false, false, false, false], function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	var l0Expr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+	var l1Expr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+	var l2Expr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+	var l3Expr = g.getIntParamNativeValueExpr(paramInfos[4], 0);
+	g.push(variableExpr+'.dim('+VarType.INT+', '+l0Expr+', '+l1Expr+', '+l2Expr+', '+l3Expr+');');
+});
+
+defineInlineBuiltinFunc('sdim', [true, false, false, false, false, false], function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	var strLenExpr = g.getIntParamNativeValueExpr(paramInfos[1], 64);
+	var l0Expr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+	var l1Expr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+	var l2Expr = g.getIntParamNativeValueExpr(paramInfos[4], 0);
+	var l3Expr = g.getIntParamNativeValueExpr(paramInfos[5], 0);
+	g.push('('+variableExpr+'.value = new StrArray).strDim('+strLenExpr+', '+l0Expr+', '+l1Expr+', '+l2Expr+', '+l3Expr+');');
+});
+
+defineInlineBuiltinFunc('dimtype', [true, false, false, false, false, false], function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	var typeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+	var l0Expr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+	var l1Expr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+	var l2Expr = g.getIntParamNativeValueExpr(paramInfos[4], 0);
+	var l3Expr = g.getIntParamNativeValueExpr(paramInfos[5], 0);
+	g.push(variableExpr+'.dim('+typeExpr+', '+l0Expr+', '+l1Expr+', '+l2Expr+', '+l3Expr+');');
+});
+
+defineInlineBuiltinFunc('dup', [true, true], function(g, paramInfos) {
+	var destVarExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	var srcVarAgentExpr = g.getVariableAgentParamExpr(paramInfos[1]);
+	g.push(destVarExpr+'.value = '+srcVarAgentExpr+'.ref();');
+});
+
+defineInlineBuiltinFunc('end', [false], function(g, paramInfos) {
+	g.push('throw new EndException('+g.getIntParamNativeValueExpr(paramInfos[0], 0)+');');
+});
+
+defineInlineBuiltinFunc('stop', [false], function(g, paramInfos) {
+	g.push('throw new StopException;');
+});
+
+defineInlineBuiltinFunc('delmod', [true], function(g, paramInfos) {
+	g.push('var agent = '+g.getVariableAgentParamExpr(paramInfos[0])+';');
+	g.push('if(agent.getType() != '+VarType.STRUCT+') {');
+	g.push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+	g.push('}');
+	g.push('agent.assign(StructValue.EMPTY);');
+});
+
+defineInlineBuiltinFunc('mref', [true, false], function(g, paramInfos) {
+	g.push('var variable = '+g.getNoSubscriptVariableParamExpr(paramInfos[0])+';');
+	g.push('switch('+g.getIntParamNativeValueExpr(paramInfos[1], 0)+') {');
+	g.push('case 64:');
+	g.push('    variable.value = this.stat;');
+	g.push('    break;');
+	g.push('case 65:');
+	g.push('    variable.value = this.refstr;');
+	g.push('    break;');
+	g.push('default:');
+	g.push('    throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
+	g.push('}');
+});
+
+defineSysVar('system', VarType.INT, 'new IntValue(0)');
+defineSysVar('stat', VarType.INT, 'this.stat.at(0)');
+defineSysVar('cnt', VarType.INT, 'new IntValue(this.loopStack.length ? this.loopStack[this.loopStack.length - 1].cnt : 0)');
+defineSysVar('err', VarType.INT, 'new IntValue(this.err)');
+defineSysVar('strsize', VarType.INT, 'new IntValue(this.strsize)');
+defineSysVar('looplev', VarType.INT, 'new IntValue(this.loopStack.length)');
+defineSysVar('sublev', VarType.INT, 'new IntValue(this.frameStack.length)');
+defineSysVar('iparam', VarType.INT, 'new IntValue(this.iparam)');
+defineSysVar('wparam', VarType.INT, 'new IntValue(this.wparam)');
+defineSysVar('lparam', VarType.INT, 'new IntValue(this.lparam)');
+defineSysVar('refstr', VarType.STR, 'this.refstr.at(0)');
+defineSysVar('refdval', VarType.DOUBLE, 'this.refdval.at(0)');
+
+defineInlineBuiltinFunc('onerror', [false, false], function(g, paramInfos) {
+	var jumpType = getJumpType(paramInfos[0]);
+	if(jumpType == JumpType.GOSUB) {
+		g.push('throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
+		return;
+	}
+	var paramInfo = paramInfos[1];
+	if(!paramInfo) {
+		g.push('throw new HSPError(ErrorCode.NO_DEFAULT);');
+		return;
+	}
+	var node = paramInfo.node;
+	var type = node.getValueType();
+	if(type == VarType.INT || type == VarType.DOUBLE) {
+		setEnabled();
+		return;
+	}
+	if(type == VarType.LABEL) {
+		setPos();
+		return;
+	}
+	
+	if(jumpType) {
+		setPos();
+	} else {
+		g.push('var val = '+g.getParamExpr(paramInfo)+';');
+		g.push('switch(val.getType()) {');
+		g.push('case '+VarType.LABEL+':');
+		setPos();
+		g.push('break;');
+		g.push('case '+VarType.DOUBLE+':');
+		g.push('case '+VarType.INT+':');
+		setEnabled();
+		g.push('break;');
+		g.push('default:');
+		g.push('throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+		g.push('}');
+	}
+	
+	function getJumpType(paramInfo) {
+		var node = paramInfo.node;
+		if(node.isLiteralNode() && (node.val == JumpType.GOTO || node.val == JumpType.GOSUB)) {
+			return node.val;
+		} else if(node.isDefaultNode()) {
+			return null;
 		} else {
-			throw new WaitException(msec);
-		}
-	},
-	0x09: function(v, l0, l1, l2, l3) { // dim
-		this.scanArgs(arguments, 'aNNNN');
-		l0 = l0 ? l0.toIntValue()._value : 0;
-		l1 = l1 ? l1.toIntValue()._value : 0;
-		l2 = l2 ? l2.toIntValue()._value : 0;
-		l3 = l3 ? l3.toIntValue()._value : 0;
-		v.variable.dim(VarType.INT, l0, l1, l2, l3);
-	},
-	0x0a: function(v, strLength, l0, l1, l2, l3) { // sdim
-		this.scanArgs(arguments, 'aNNNNN');
-		strLength = strLength ? strLength.toIntValue()._value : 64;
-		l0 = l0 ? l0.toIntValue()._value : 0;
-		l1 = l1 ? l1.toIntValue()._value : 0;
-		l2 = l2 ? l2.toIntValue()._value : 0;
-		l3 = l3 ? l3.toIntValue()._value : 0;
-		var ary = new StrArray();
-		ary.strDim(strLength, l0, l1, l2, l3);
-		v.variable.value = ary;
-	},
-	0x0d: function(v, type, l0, l1, l2, l3) { // dimtype
-		this.scanArgs(arguments, 'anNNNN');
-		type = type.toIntValue()._value;
-		l0 = l0 ? l0.toIntValue()._value : 0;
-		l1 = l1 ? l1.toIntValue()._value : 0;
-		l2 = l2 ? l2.toIntValue()._value : 0;
-		l3 = l3 ? l3.toIntValue()._value : 0;
-		v.variable.dim(type, l0, l1, l2, l3);
-	},
-	0x0e: function(dest, src) { // dup
-		this.scanArgs(arguments, 'av');
-		dest.variable.value = src.ref();
-	},
-	0x10: function(status) { // end
-		this.scanArgs(arguments, 'N');
-		throw new EndException(status ? status.toIntValue()._value : 0);
-	},
-	0x11: function() { // stop
-		this.scanArgs(arguments, '');
-		throw new StopException;
-	},
-	0x14: function(v) { // delmod
-		this.scanArgs(arguments, 'v');
-		if(v.getType() != VarType.STRUCT) {
-		    throw new HSPError(ErrorCode.TYPE_MISMATCH);
-		}
-		v.assign(StructValue.EMPTY);
-	},
-	0x16: function(v, id) { // mref
-		this.scanArgs(arguments, 'aN');
-		id = id ? id.toIntValue()._value : 0;
-		switch(id) {
-		case 64:
-			v.variable.value = this.stat;
-			break;
-		case 65:
-			v.variable.value = this.refstr;
-			break;
-		default:
-			throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);
+			throw new Error('must not happen');
 		}
 	}
-};
-
-BuiltinFuncs[Token.Type.SYSVAR] = {
-	0x00: function() { // system
-		return new IntValue(0);
-	},
-	0x03: function() { // stat
-		return this.stat.at(0);
-	},
-	0x04: function() { // err
-		return new IntValue(this.err);
-	},
-	0x06: function() { // strsize
-		return new IntValue(this.strsize);
-	},
-	0x07: function() { // looplev
-		return new IntValue(this.loopStack.length);
-	},
-	0x08: function() { // sublev
-		return new IntValue(this.frameStack.length);
-	},
-	0x09: function() { // iparam
-		return new IntValue(this.iparam);
-	},
-	0x0a: function() { // wparam
-		return new IntValue(this.wparam);
-	},
-	0x0b: function() { // lparam
-		return new IntValue(this.lparam);
-	},
-	0x0c: function() { // refstr
-		return this.refstr.at(0);
-	},
-	0x0d: function() { // refdval
-		return this.refdval.at(0);
+	function setPos() {
+		g.push('this.onerrorEvent.pos = '+g.getLabelParamNativeValueExpr(paramInfo)+';');
+		g.push('this.onerrorEvent.enabled = true;');
 	}
-};
+	function setEnabled() {
+		if(jumpType) {
+			g.push('throw new HSPError(ErrorCode.LABEL_REQUIRED);');
+		} else {
+			g.push('this.onerrorEvent.enabled = '+g.getIntParamNativeValueExpr(paramInfo)+' != 0;');
+		}
+	}
+});
 
-BuiltinFuncs[Token.Type.INTCMD] = {
-	0x01: function(jumpType, val) { // onerror
-		this.scanArgs(arguments, 'j.');
-		if(jumpType == JumpType.GOSUB) {
-			throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);
+defineInlineBuiltinFunc('exist', [false], function(g, paramInfos) {
+	var successCallbackExpr = 'function(data) { this.strsize = data.length; }';
+	var errorCallbackExpr = 'function() { this.strsize = -1; }';
+	g.push('this.fileRead('+g.getStrParamNativeValueExpr(path)+', '+successCallbackExpr+', '+errorCallbackExpr+')');
+});
+
+defineInlineBuiltinFunc('bload', [false, true], function(g, paramInfos) {
+	// FIXME 第三引数のサイズ、第四引数のオフセットに対応
+	var funcExpr = g.getRegisteredObjectExpr(bload_internal);
+	g.push(funcExpr+'(this, '+g.getStrParamNativeValueExpr(paramInfos[0])+', '+g.getVariableAgentParamExpr(paramInfos[1])+');');
+});
+function bload_internal(evaluator, path, v) {
+	evaluator.fileRead(
+		path,
+		function(data) {
+			var size = v.getByteSize();
+			v.setbytes(0, CP932.encode(data).substr(0, size));
+		},
+		function() {
+			throw new HSPError(ErrorCode.FILE_IO);
+		});
+}
+
+function getArrayOrAgentExpr(g, paramInfo) {
+	var node = paramInfo && paramInfo.node;
+	if(paramInfo && node.isVarNode() && !node.varData.isVariableAgentVarData()) {
+		return [g.getVariableExpr(node.varData)+'.value', true];
+	} else {
+		var expr = g.getVariableAgentParamExpr(paramInfo);
+		return [expr, false];
+	}
+}
+
+defineInlineBuiltinFunc('poke', [true, false, false], function(g, paramInfos) {
+	var r = getArrayOrAgentExpr(g, paramInfos[0]);
+	var arrayExpr = r[0];
+	if(paramInfos[0].stackSize) {
+		g.push('var agent = '+arrayExpr+';');
+		arrayExpr = 'agent';
+	}
+	var arrayIndexArg = r[1] ? '0, ' : '';
+	var valueParamInfo = paramInfos[2];
+	var type = valueParamInfo ? valueParamInfo.node.getValueType() : 0;
+	var offsetExpr = g.getIntParamNativeValueExpr(paramInfos[1]);
+	if(type == VarType.INT) {
+		g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+', '+g.getIntParamNativeValueExpr(valueParamInfo)+');');
+		return;
+	}
+	if(paramInfos[1].stackSize) {
+		g.push('var offset = '+offsetExpr+';');
+		offsetExpr = 'offset';
+	}
+	if(type == VarType.STR) {
+		g.push('var val = '+g.getStrParamNativeValueExpr(valueParamInfo)+';');
+		g.push(arrayExpr+'.setbytes('+arrayIndexArg+offsetExpr+', val + "\\0");');
+		g.push('this.strsize = val.length;');
+		return;
+	}
+	g.push('var val = '+g.getParamExpr(valueParamInfo)+';');
+	g.push('switch(val.getType()) {');
+	g.push('case '+VarType.STR+':');
+	g.push('    '+arrayExpr+'.setbytes('+arrayIndexArg+offsetExpr+', val._value + "\\0");');
+	g.push('    this.strsize = val._value.length;');
+	g.push('    break;');
+	g.push('case '+VarType.INT+':');
+	g.push('    '+arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+', val._value);');
+	g.push('    break;');
+	g.push('default:');
+	g.push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
+	g.push('}');
+});
+
+defineInlineBuiltinFunc('wpoke', [true, false, false], function(g, paramInfos) {
+	var r = getArrayOrAgentExpr(g, paramInfos[0]);
+	var arrayExpr = g.toSimpleExpr(r[0], r[1] ? 'array' : 'agent');
+	var arrayIndexArg = r[1] ? '0, ' : '';
+	var offsetExpr = g.toSimpleExpr(g.getIntParamNativeValueExpr(paramInfos[1], 0), 'offset');
+	var valExpr = g.toSimpleExpr(g.getIntParamNativeValueExpr(paramInfos[2], 0), 'val');
+	g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+', '+valExpr+');');
+	g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+' + 1, '+valExpr+' >> 8);');
+});
+
+defineInlineBuiltinFunc('lpoke', [true, false, false], function(g, paramInfos) {
+	var r = getArrayOrAgentExpr(g, paramInfos[0]);
+	var arrayExpr = g.toSimpleExpr(r[0], r[1] ? 'array' : 'agent');
+	var arrayIndexArg = r[1] ? '0, ' : '';
+	var offsetExpr = g.toSimpleExpr(g.getIntParamNativeValueExpr(paramInfos[1], 0), 'offset');
+	var valExpr = g.toSimpleExpr(g.getIntParamNativeValueExpr(paramInfos[2], 0), 'val');
+	g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+', '+valExpr+');');
+	g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+' + 1, '+valExpr+' >> 8);');
+	g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+' + 2, '+valExpr+' >> 16);');
+	g.push(arrayExpr+'.setbyte('+arrayIndexArg+offsetExpr+' + 3, '+valExpr+' >> 24);');
+});
+
+defineInlineBuiltinFunc('getstr', [true, false, false, false, false], function(g, paramInfos) {
+	var destExpr = g.getVariableAgentParamExpr(paramInfos[0]);
+	var srcExpr = g.getVariableAgentParamExpr(paramInfos[1]);
+	var indexExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+	var separatorExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0)+' & 0xff';
+	var lengthExpr = g.getIntParamNativeValueExpr(paramInfos[4], 1024);
+	g.push(g.getRegisteredObjectExpr(getstr_internal)+'(this, '+destExpr+', '+srcExpr+', '+indexExpr+', '+separatorExpr+', '+lengthExpr+');');
+});
+
+function getstr_internal(evaluator, dest, src, index, separator, length) {
+	var result = "";
+	var i = 0;
+	var c;
+	while(i < length) {
+		c = src.getbyte(index + i);
+		if(c == 0) break;
+		i ++;
+		if(c == separator) {
+			break;
 		}
-		var t = val.getType();
-		switch(t) {
-		case VarType.LABEL:
-			this.onerrorEvent.enabled = true;
-			this.onerrorEvent.pos = val.toValue().pos;
+		if(c == 13) {
+			if(src.getbyte(index + i) == 10) i ++;
 			break;
-		case VarType.DOUBLE:
-		case VarType.INT:
-			this.onerrorEvent.enabled = val.toIntValue()._value != 0;
-			break;
-		default:
-			throw new HSPError(ErrorCode.TYPE_MISMATCH);
 		}
-	},
-	0x11: function(path) { // exist
-		this.scanArgs(arguments, 's');
-		path = path.toStrValue()._value;
-		this.fileRead(path,
-		              function(data) { this.strsize = data.length; },
-		              function() { this.strsize = -1; });
-	},
-	0x16: function(path, v) { // bload
-		// FIXME 第三引数のサイズ、第四引数のオフセットに対応
-		this.scanArgs(arguments, 'sv');
-		path = path.toStrValue()._value;
-		this.fileRead(
-			path,
-			function(data) {
-				var size = v.getByteSize();
-				v.setbytes(0, CP932.encode(data).substr(0, size));
-			},
-			function() {
-				throw new HSPError(ErrorCode.FILE_IO);
-			});
-	},
-	0x1a: function(v, offset, val) { // poke
-		this.scanArgs(arguments, 'vN.?');
-		offset = offset ? offset.toIntValue()._value : 0;
-		val = val ? val.toValue() : new IntValue(0);
-		switch(val.getType()) {
-		case VarType.INT:
-			v.setbyte(offset, val._value);
-			break;
-		case VarType.STR:
-			v.setbytes(offset, val._value + "\0");
-			this.strsize = val._value.length;
-			break;
-		default:
-			throw new HSPError(ErrorCode.TYPE_MISMATCH);
-		}
-	},
-	0x1b: function(v, offset, val) { // wpoke
-		this.scanArgs(arguments, 'vNN');
-		offset = offset ? offset.toIntValue()._value : 0;
-		val = val ? val.toIntValue()._value : 0;
-		v.setbyte(offset, val);
-		v.setbyte(offset + 1, val >> 8);
-	},
-	0x1c: function(v, offset, val) { // lpoke
-		this.scanArgs(arguments, 'vNN');
-		offset = offset ? offset.toIntValue()._value : 0;
-		val = val ? val.toIntValue()._value : 0;
-		v.setbyte(offset, val);
-		v.setbyte(offset + 1, val >> 8);
-		v.setbyte(offset + 2, val >> 16);
-		v.setbyte(offset + 3, val >> 24);
-	},
-	0x1d: function(v, src, index, separator, length) { // getstr
-		this.scanArgs(arguments, 'vvNNN');
-		index = index ? index.toIntValue()._value : 0;
-		separator = separator ? separator.toIntValue()._value & 0xff : 0;
-		length = length ? length.toIntValue()._value : 1024;
-		var result = "";
-		var i = 0;
-		var c;
-		while(i < length) {
-			c = src.getbyte(index + i);
-			if(c == 0) break;
+		result += String.fromCharCode(c);
+		if((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC)) {
+			if(i >= length) break;
+			var c2 = src.getbyte(index + i);
+			if(c2 == 0) break;
+			result += String.fromCharCode(c2);
 			i ++;
-			if(c == separator) {
-				break;
-			}
-			if(c == 13) {
-				if(src.getbyte(index + i) == 10) i ++;
-				break;
-			}
-			result += String.fromCharCode(c);
-			if((0x81 <= c && c <= 0x9F) || (0xE0 <= c && c <= 0xFC)) {
-				if(i >= length) break;
-				var c2 = src.getbyte(index + i);
-				if(c2 == 0) break;
-				result += String.fromCharCode(c2);
-				i ++;
-			}
 		}
-		v.assign(new StrValue(result));
-		this.strsize = i;
-		this.stat.assign(0, new IntValue(c));
-	},
-	0x1f: function(v, size) { // memexpand
-		this.scanArgs(arguments, 'vN');
-		size = size ? size.toIntValue()._value : 0;
-		v.expandByteSize(size);
-	},
-	0x20: function(destVar, srcVar, length, destOffset, srcOffset) { // memcpy
-		this.scanArgs(arguments, 'vvNNN');
-		length = length ? length.toIntValue()._value : 0;
-		destOffset = destOffset ? destOffset.toIntValue()._value : 0;
-		srcOffset = srcOffset ? srcOffset.toIntValue()._value : 0;
-		destVar.setbytes(destOffset, srcVar.getbytes(srcOffset, length));
-	},
-	0x21: function(v, val, length, offset) { // memset
-		this.scanArgs(arguments, 'vNNN');
-		val = val ? val.toIntValue()._value : 0;
-		length = length ? length.toIntValue()._value : 0;
-		offset = offset ? offset.toIntValue()._value : 0;
-		v.setbytes(offset, Utils.strTimes(String.fromCharCode(val), length));
-	},
-	0x22: function(v) { // notesel
-		this.scanArgs(arguments, 'v');
-		if(v.getType() != VarType.STR) {
-			v.assign(StrValue.EMPTY_STR);
-		}
-		this.selectNote(v);
-	},
-	0x23: function(line, lineNumber, overwrite) { // noteadd
-		this.scanArgs(arguments, 'sNN');
-		line = line.toStrValue();
-		lineNumber = lineNumber ? lineNumber.toIntValue()._value : -1;
-		overwrite = (overwrite ? overwrite.toIntValue()._value : 0) != 0;
-		var note = this.getNote();
-		var index = note.getValue().lineIndex(lineNumber);
-		if(index == null) {
-			if(lineNumber >= 0) return;
-			var str = note.getValue()._value;
-			index = str.length;
-			if(index != 0) {
-				var c = str.charCodeAt(index - 1);
-				if(c != 0x0d && c != 0x0a) {
-					note.assign(new StrValue(str + "\r\n"));
-					index += 2;
-				}
-			}
-		}
-		if(!overwrite) {
-			note.splice(index, 0, line._value + "\r\n");
-			return;
-		}
-		var length = note.getValue().lineLength(index);
-		note.splice(index, length, line._value);
-	},
-	0x24: function(lineNumber) { // notedel
-		this.scanArgs(arguments, 'N');
-		lineNumber = lineNumber ? lineNumber.toIntValue()._value : 0;
-		var note = this.getNote();
-		var val = note.getValue();
-		var index = val.lineIndex(lineNumber);
-		if(index == null) return;
-		var length = val.lineLengthIncludeCR(index);
-		note.splice(index, length, '');
-	},
-	0x25: function(path) { // noteload
-		// FIXME 第二引数のサイズ上限に対応
-		this.scanArgs(arguments, 's');
-		path = path.toStrValue()._value;
-		var note = this.getNote();
-		this.fileRead(
-			path,
-			function(data) {
-				data = CP932.encode(data) + "\0";
-				note.expandByteSize(data.length);
-				note.setbytes(0, data);
-			},
-			function() {
-				throw new HSPError(ErrorCode.FILE_IO);
-			});
-	},
-	0x27: function(seed) { // randomize
-		this.scanArgs(arguments, 'N');
-		this.random.srand(seed ? seed.toIntValue()._value : +new Date);
-	},
-	0x28: function() { // noteunsel
-		this.scanArgs(arguments, '');
-		this.undoNote();
-	},
-	0x29: function(dest, lineNumber) { // noteget
-		this.scanArgs(arguments, 'vN');
-		lineNumber = lineNumber ? lineNumber.toIntValue()._value : 0;
-		var val = this.getNote().getValue();
-		var str = val._value;
-		var index = val.lineIndex(lineNumber);
-		if(index == null) {
-			dest.assign(StrValue.EMPTY_STR);
-			return;
-		}
-		var length = val.lineLength(index);
-		dest.assign(new StrValue(str.substr(index, length)));
 	}
-};
+	dest.assign(new StrValue(result));
+	evaluator.strsize = i;
+	evaluator.stat.assign(0, new IntValue(c));
+}
 
-BuiltinFuncs[Token.Type.INTFUNC] = {
-	0x000: function(val) { // int
-		this.scanArgs(arguments, '.');
-		return val.toIntValue();
-	},
-	0x001: function(n) { // rnd
-		this.scanArgs(arguments, 'n');
-		n = n.toIntValue()._value;
-		if(n == 0) {
-			throw new HSPError(ErrorCode.DIVIDED_BY_ZERO);
-		}
-		return new IntValue(this.random.rand() % n);
-	},
-	0x002: function(s) { // strlen
-		this.scanArgs(arguments, 's');
-		return new IntValue(s.toStrValue()._value.length);
-	},
-	0x003: function(v) { // length
-		this.scanArgs(arguments, 'a');
-		return new IntValue(v.variable.getL0());
-	},
-	0x004: function(v) { // length2
-		this.scanArgs(arguments, 'a');
-		return new IntValue(v.variable.getL1());
-	},
-	0x005: function(v) { // length3
-		this.scanArgs(arguments, 'a');
-		return new IntValue(v.variable.getL2());
-	},
-	0x006: function(v) { // length4
-		this.scanArgs(arguments, 'a');
-		return new IntValue(v.variable.getL3());
-	},
-	0x007: function(v) { // vartype
-		this.scanArgs(arguments, '.');
-		if(v instanceof VariableAgent) {
-			this.scanArgs(arguments, 'v');
-			return new IntValue(v.variable.getType());
-		}
-		this.scanArgs(arguments, 's');
-		var name = v.toStrValue()._value;
-		for(var i = 0; i < VarTypeNames.length; i ++) {
-			if(name == VarTypeNames[i]) {
-				return new IntValue(i);
+defineInlineBuiltinFunc('memexpand', [true, false], function(g, paramInfos) {
+	g.push(g.getVariableAgentParamExpr(paramInfos[0])+'.expandByteSize('+g.getIntParamNativeValueExpr(paramInfos[1], 0)+');');
+});
+
+function toSimpleExprIfUsedStack(g, varName, paramInfo, expr) {
+	if(paramInfo && paramInfo.stackSize) {
+		return g.toSimpleExpr(expr, varName);
+	} else {
+		return expr;
+	}
+}
+
+defineInlineBuiltinFunc('memcpy', [true, true, false, false, false], function(g, paramInfos) {
+	var destExpr       = g.getVariableAgentParamExpr (paramInfos[0]);
+	var srcExpr        = g.getVariableAgentParamExpr (paramInfos[1]);
+	var lengthExpr     = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+	var destOffsetExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+	var srcOffsetExpr  = g.getIntParamNativeValueExpr(paramInfos[4], 0);
+	g.push(g.getRegisteredObjectExpr(memcpy_internal)+'('+destExpr+', '+srcExpr+', '+lengthExpr+', '+destOffsetExpr+', '+srcOffsetExpr+');');
+});
+
+function memcpy_internal(dest, src, length, destOffset, srcOffset) {
+	dest.setbytes(destOffset, src.getbytes(srcOffset, length));
+}
+
+defineInlineBuiltinFunc('memset', [true, false, false, false], function(g, paramInfos) {
+	var agentExpr  = g.getVariableAgentParamExpr (paramInfos[0]);
+	var valExpr    = g.getIntParamNativeValueExpr(paramInfos[1], 0) + ' & 0xff';
+	var lengthExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+	var offsetExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+	g.push(g.getRegisteredObjectExpr(memcpy_internal)+'('+agentExpr+', '+valExpr+', '+lengthExpr+', '+offsetExpr+');');
+});
+
+function memset_internal(agent, val, length, offset) {
+	agent.setbytes(offset, Utils.strTimes(String.fromCharCode(val), length));
+}
+
+defineInlineBuiltinFunc('notesel', [true], function(g, paramInfos) {
+	g.push('var agent = '+g.getVariableAgentParamExpr(paramInfos[0])+';');
+	g.push('if(agent.getType() != VarType.STR) {');
+	g.push('    agent.assign(StrValue.EMPTY_STR);');
+	g.push('}');
+	g.push('this.selectNote(agent);');
+});
+
+defineInlineBuiltinFunc('noteadd', [false, false, false], function(g, paramInfos) {
+	g.push(g.getRegisteredObjectExpr(noteadd_internal)+'(this.getNote(), '+g.getStrParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+' != 0);');
+});
+
+function noteadd_internal(note, line, lineNumber, overwrite) {
+	var index = note.getValue().lineIndex(lineNumber);
+	if(index == null) {
+		if(lineNumber >= 0) return;
+		var str = note.getValue()._value;
+		index = str.length;
+		if(index != 0) {
+			var c = str.charCodeAt(index - 1);
+			if(c != 0x0d && c != 0x0a) {
+				note.assign(new StrValue(str + "\r\n"));
+				index += 2;
 			}
 		}
-		throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '指定された名前の変数型は存在しません');
-	},
-	0x008: function(n) { // gettime
-		this.scanArgs(arguments, 'n');
-		var date = new Date;
-		switch(n.toIntValue()._value) {
-		case -1:
-			// DLL 関数呼び出しエミュレートを実装して timeGetTime が使えるようになるまでのつなぎ
-			return new DoubleValue(+date);
-		case 0:
-			return new IntValue(date.getFullYear());
-		case 1:
-			return new IntValue(date.getMonth() + 1);
-		case 2:
-			return new IntValue(date.getDay());
-		case 3:
-			return new IntValue(date.getDate());
-		case 4:
-			return new IntValue(date.getHours());
-		case 5:
-			return new IntValue(date.getMinutes());
-		case 6:
-			return new IntValue(date.getSeconds());
-		case 7:
-			return new IntValue(date.getMilliseconds());
-		default:
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
-		}
-	},
-	0x009: function(v, n) { // peek
-		this.scanArgs(arguments, 'vN');
-		n = n ? n.toIntValue()._value : 0;
-		if(n < 0) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
-		}
-		return new IntValue(v.getbyte(n));
-	},
-	0x00a: function(v, n) { // wpeek
-		this.scanArgs(arguments, 'vN');
-		n = n ? n.toIntValue()._value : 0;
-		if(n < 0) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
-		}
-		return new IntValue(v.getbyte(n) | v.getbyte(n + 1) << 8);
-	},
-	0x00b: function(v, n) { // lpeek
-		this.scanArgs(arguments, 'vN');
-		n = n ? n.toIntValue()._value : 0;
-		if(n < 0) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
-		}
-		return new IntValue(v.getbyte(n) | v.getbyte(n + 1) << 8 | v.getbyte(n + 2) << 16 | v.getbyte(n + 3) << 24);
-	},
-	0x00d: function(v) { // varuse
-		this.scanArgs(arguments, 'v');
-		var using = v.isUsing();
-		if(using == null) {
-			throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[v.getType()] + ' 型は varuse をサポートしていません');
-		}
-		return new IntValue(using);
-	},
-	0x00e: function(n) { // noteinfo
-		this.scanArgs(arguments, 'N');
-		n = n ? n.toIntValue()._value : 0;
-		switch(n) {
-		case 0: // notemax
-			var lines = this.getNote().getValue()._value.split(/\r\n|[\r\n]/);
-			var len = lines.length;
-			if(!lines[len-1]) len --;
-			return new IntValue(len);
-		case 1: // notesize
-			return new IntValue(this.getNote().getValue()._value.length);
-		default:
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
-		}
-	},
-	0x00f: function(str, fromIndex, pattern) { // instr
-		this.scanArgs(arguments, 'sNs');
-		fromIndex = fromIndex ? fromIndex.toIntValue()._value : 0;
-		pattern = pattern.toStrValue()._value;
-		var index = str.toStrValue().indexOf(pattern, fromIndex);
-		if(index >= 0) index -= fromIndex;
-		return new IntValue(index);
-	},
-	0x010: function(val) { // abs
-		this.scanArgs(arguments, 'n');
-		return new IntValue(Math.abs(val.toIntValue()._value));
-	},
-	0x011: function(val, min, max) { // limit
-		this.scanArgs(arguments, 'nnn');
-		val = val.toIntValue()._value;
-		min = min.toIntValue()._value;
-		max = max.toIntValue()._value;
-		return new IntValue(Math.min(Math.max(min, val), max));
-	},
-	0x100: function(val) { // str
-		this.scanArgs(arguments, '.');
-		return val.toStrValue();
-	},
-	0x101: function(str, index, length) { // strmid
-		this.scanArgs(arguments, 'snn');
-		str = str.toStrValue()._value;
-		index = index.toIntValue()._value;
-		length = length.toIntValue()._value;
-		if(index < 0) {
-			index = str.length - length;
-			if(index < 0) index = 0;
-		}
-		return new StrValue(str.substr(index, length));
-	},
-	0x103: function(format) { // strf
-		var args = Array.prototype.slice.call(arguments, 1);
-		this.scanArgs(arguments, 's.*');
-		return Formatter.sprintf(this, format, args);
-	},
-	0x104: function(path, flags) { // getpath
-		this.scanArgs(arguments, 'sn');
-		path = path.toStrValue()._value;
-		flags = flags.toIntValue()._value;
-		if(flags & 16) {
-			var re = /((?:[\x81-\x9f\xe0-\xfc][\s\S]|[^A-Z])*)([A-Z]*)/g;
-			path = path.replace(re, function(s,a,b) {
-				return a + b.toLowerCase();
-			});
-		}
-		var dir = /^(?:\w:)?(?:(?:[^\x81-\x9f\xe0-\xfc]|[\x81-\x9f\xe0-\xfc][\s\S])*[\/\\])?/.exec(path)[0];
-		var ext = /(?:\.[^.\/\\]*)?$/.exec(path)[0];
-		var basename = path.slice(dir.length, path.length - ext.length);
-		if(flags & 8) {
-			path = basename + ext;
-		} else if(flags & 32) {
-			path = dir;
-		}
-		var result = path;
-		switch(flags & 7) {
-		case 1:
-			result = path.slice(0, path.length - ext.length);
-			break;
-		case 2:
-			result = ext;
-			break;
-		}
-		return new StrValue(result);
-	},
-	0x180: function(val) { // sin
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.sin(val.toDoubleValue()._value));
-	},
-	0x181: function(val) { // cos
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.cos(val.toDoubleValue()._value));
-	},
-	0x182: function(val) { // tan
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.tan(val.toDoubleValue()._value));
-	},
-	0x183: function(y, x) { // atan
-		this.scanArgs(arguments, 'nN');
-		y = y.toDoubleValue()._value;
-		x = x ? x.toDoubleValue()._value : 1.0;
-		return new DoubleValue(Math.atan2(y, x));
-	},
-	0x184: function(val) { // sqrt
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.sqrt(val.toDoubleValue()._value));
-	},
-	0x185: function(val) { // double
-		this.scanArgs(arguments, '.');
-		return val.toDoubleValue();
-	},
-	0x186: function(val) { // absf
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.abs(val.toDoubleValue()._value));
-	},
-	0x187: function(val) { // expf
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.exp(val.toDoubleValue()._value));
-	},
-	0x188: function(val) { // logf
-		this.scanArgs(arguments, 'n');
-		return new DoubleValue(Math.log(val.toDoubleValue()._value));
-	},
-	0x189: function(val, min, max) { // limitf
-		this.scanArgs(arguments, 'nnn');
-		val = val.toDoubleValue()._value;
-		min = min.toDoubleValue()._value;
-		max = max.toDoubleValue()._value;
-		return new DoubleValue(Math.min(Math.max(min, val), max));
 	}
-};
+	if(!overwrite) {
+		note.splice(index, 0, line._value + "\r\n");
+		return;
+	}
+	var length = note.getValue().lineLength(index);
+	note.splice(index, length, line._value);
+}
+
+defineInlineBuiltinFunc('notedel', [false], function(g, paramInfos) {
+	g.push(g.getRegisteredObjectExpr(notedel_internal)+'(this.getNote(), '+g.getIntParamNativeValueExpr(paramInfos[0], 0)+');');
+});
+
+function notedel_internal(note, lineNumber) {
+	var val = note.getValue();
+	var index = val.lineIndex(lineNumber);
+	if(index == null) return;
+	var length = val.lineLengthIncludeCR(index);
+	note.splice(index, length, '');
+}
+
+defineInlineBuiltinFunc('noteload', [false], function(g, paramInfos) {
+	g.push(g.getRegisteredObjectExpr(notedel_internal)+'(this, '+g.getStrParamNativeValueExpr(paramInfos[0])+');');
+});
+
+function noteload_internal(evaluator, path) {
+	var note = evaluator.getNote();
+	evaluator.fileRead(
+		path,
+		function(data) {
+			data = CP932.encode(data) + "\0";
+			note.expandByteSize(data.length);
+			note.setbytes(0, data);
+		},
+		function() {
+			throw new HSPError(ErrorCode.FILE_IO);
+		});
+}
+
+defineInlineBuiltinFunc('randomize', [false], function(g, paramInfos) {
+	g.push('this.random.srand('+g.getIntParamNativeValueExpr(paramInfos[0], 'new Date()|0')+');');
+});
+
+defineInlineBuiltinFunc('noteunsel', [], function(g, paramInfos) {
+	g.push('this.undoNote();');
+});
+
+defineInlineBuiltinFunc('noteget', [true, false], function(g, paramInfos) {
+	g.push(g.getRegisteredObjectExpr(noteget_internal)+'(this.getNote().getValue(), '+g.getVariableAgentParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1])+');');
+});
+
+function noteget_internal(val, dest, lineNumber) {
+	var str = val._value;
+	var index = val.lineIndex(lineNumber);
+	if(index == null) {
+		dest.assign(StrValue.EMPTY_STR);
+		return;
+	}
+	var length = val.lineLength(index);
+	dest.assign(new StrValue(str.substr(index, length)));
+}
+
+defineInlineExprBuiltinFunc('int', [false], VarType.INT, function(g, paramInfos) {
+	return g.getIntConvertedParamExpr(paramInfos[0]);
+});
+
+defineCompileTimeBuiltinFunc('int', function(val) {
+	scanArgs(arguments, '.', 1);
+	return val.toIntValue();
+});
+
+defineInlineExprBuiltinFunc('rnd', [false], VarType.INT, function(g, paramInfos) {
+	var paramInfo = paramInfos[0];
+	var value = g.getParamIntLiteralValue(paramInfo);
+	if(value != null && value != 0) {
+		return 'new IntValue(this.random.rand() % '+value+')';
+	}
+	return g.getRegisteredObjectExpr(rnd_internal)+'(this, '+g.getIntParamNativeValueExpr(paramInfos[0])+')';
+});
+function rnd_internal(evaluator, n) {
+	if(n == 0) {
+		throw new HSPError(ErrorCode.DIVIDED_BY_ZERO);
+	}
+	return new IntValue(evaluator.random.rand() % n);
+}
+
+defineInlineExprBuiltinFunc('strlen', [false], VarType.INT, function(g, paramInfos) {
+	return 'new IntValue('+g.getStrParamNativeValueExpr(paramInfos[0])+'.length)';
+});
+
+defineCompileTimeBuiltinFunc('strlen', function(str) {
+	scanArgs(arguments, 's', 1);
+	return new IntValue(str._value.length);
+});
+
+defineInlineExprBuiltinFunc('length', [true], VarType.INT, function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	return 'new IntValue('+variableExpr+'.getL0())';
+});
+
+defineInlineExprBuiltinFunc('length2', [true], VarType.INT, function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	return 'new IntValue('+variableExpr+'.getL1())';
+});
+
+defineInlineExprBuiltinFunc('length3', [true], VarType.INT, function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	return 'new IntValue('+variableExpr+'.getL2())';
+});
+
+defineInlineExprBuiltinFunc('length4', [true], VarType.INT, function(g, paramInfos) {
+	var variableExpr = g.getNoSubscriptVariableParamExpr(paramInfos[0]);
+	return 'new IntValue('+variableExpr+'.getL3())';
+});
+
+defineInlineExprBuiltinFunc('vartype', [true], VarType.INT, function(g, paramInfos) {
+	if(paramInfos[0] && paramInfos[0].getPureNode().isVarNode()) {
+		return 'new IntValue('+g.getVariableParamExpr(paramInfos[0])+'.getType())';
+	} else {
+		return g.getRegisteredObjectExpr(vartype_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+')';
+	}
+}); 
+function vartype_internal(name) {
+	for(var i = 0; i < VarTypeNames.length; i ++) {
+		if(VarTypeNames[i] == name) {
+			return new IntValue(i);
+		}
+	}
+	throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '指定された名前の変数型は存在しません');
+}
+
+defineCompileTimeBuiltinFunc('vartype', function(name) {
+	scanArgs(arguments, 's', 1);
+	return vartype_internal(name._value);
+});
+
+(function() {
+	var internalFunc = createInternalFunc();
+	defineInlineExprBuiltinFunc('gettime', [false], VarType.INT, function(g, paramInfos) {
+		if(ommitable(paramInfos[0])) {
+			return getExpr(paramInfos[0].node.val._value, 'new Date()');
+		} else {
+			return g.getRegisteredObjectExpr(internalFunc)+'('+g.getIntParamNativeValueExpr(paramInfos[0])+')';
+		}
+	});
+
+	function ommitable(paramInfo) {
+		if(!paramInfo) return false;
+		var node = paramInfo.node;
+		if(!node.isLiteralNode()) return false;
+		var val = node.val;
+		return val.getType() == VarType.INT && -1 <= val._value && val._value <= 7;
+	}
+	function createInternalFunc() {
+		var code = '';
+		code += 'var IntValue = HSPonJS.IntValue;\n';
+		code += 'return function(n) {\n';
+		code += 'var date = new Date;\n';
+		code += 'switch(n) {\n';
+		for(var i = -1; i <= 7; i ++) {
+			code += 'case '+i+':\n';
+			code += '    return '+getExpr(i, 'date')+';\n';
+		}
+		code += 'default:\n';
+		code += '    throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);\n';
+		code += '}\n'
+		code += '};';
+		return new Function(code)();
+	}
+	function getExpr(n, dateExpr) {
+		switch(n) {
+		case -1:
+			return 'new IntValue('+dateExpr+' - this.startTime)';
+		case 0:
+			return 'new IntValue('+dateExpr+'.getFullYear())';
+		case 1:
+			return 'new IntValue('+dateExpr+'.getMonth() + 1)';
+		case 2:
+			return 'new IntValue('+dateExpr+'.getDay())';
+		case 3:
+			return 'new IntValue('+dateExpr+'.getDate())';
+		case 4:
+			return 'new IntValue('+dateExpr+'.getHours())';
+		case 5:
+			return 'new IntValue('+dateExpr+'.getMinutes())';
+		case 6:
+			return 'new IntValue('+dateExpr+'.getSeconds())';
+		case 7:
+			return 'new IntValue('+dateExpr+'.getMilliseconds())';
+		default:
+			throw new Error('must not happen');
+		}
+	}
+})();
+
+defineInlineExprBuiltinFunc('peek', [true, false], VarType.INT, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(peek_internal)+'('+g.getVariableAgentParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+')';
+});
+
+function peek_internal(v, n) {
+	if(n < 0) {
+		throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+	}
+	return new IntValue(v.getbyte(n));
+}
+
+defineInlineExprBuiltinFunc('wpeek', [true, false], VarType.INT, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(wpeek_internal)+'('+g.getVariableAgentParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+')';
+});
+
+function wpeek_internal(v, n) {
+	if(n < 0) {
+		throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+	}
+	return new IntValue(v.getbyte(n) | v.getbyte(n + 1) << 8);
+}
+
+defineInlineExprBuiltinFunc('lpeek', [true, false], VarType.INT, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(lpeek_internal)+'('+g.getVariableAgentParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+')';
+});
+
+function lpeek_internal(v, n) {
+	if(n < 0) {
+		throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+	}
+	return new IntValue(v.getbyte(n) | v.getbyte(n + 1) << 8 | v.getbyte(n + 2) << 16 | v.getbyte(n + 3) << 24);
+}
+
+defineInlineExprBuiltinFunc('varuse', [false], VarType.INT, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(varuse_internal)+'('+g.getParamExpr(paramInfos[0])+')';
+});
+
+function varuse_internal(v) {
+	var using = v.isUsing();
+	if(using == null) {
+		throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[v.getType()] + ' 型は varuse をサポートしていません');
+	}
+	return new IntValue(using);
+}
+
+defineInlineExprBuiltinFunc('noteinfo', [false], VarType.INT, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(noteinfo_internal)+'('+g.getIntParamNativeValueExpr(paramInfos[0])+')';
+});
+
+function noteinfo_internal(evaluator, n) {
+	switch(n) {
+	case 0: // notemax
+		var lines = this.getNote().getValue()._value.split(/\r\n|[\r\n]/);
+		var len = lines.length;
+		if(!lines[len-1]) len --;
+		return new IntValue(len);
+	case 1: // notesize
+		return new IntValue(this.getNote().getValue()._value.length);
+	default:
+		throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+	}
+}
+
+defineInlineExprBuiltinFunc('instr', [false, false, false], VarType.INT, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(instr_internal)+'('+g.getStrParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+', '+g.getStrParamExpr(paramInfos[2])+')';
+});
+
+function instr_internal(str, fromIndex, pattern) {
+	var index = str.toStrValue().indexOf(pattern, fromIndex);
+	if(index >= 0) index -= fromIndex;
+	return new IntValue(index);
+}
+
+defineInlineExprBuiltinFunc('abs', [false], VarType.INT, function(g, paramInfos) {
+	return 'new IntValue(Math.abs('+g.getIntParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('limit', [false, false, false], VarType.INT, function(g, paramInfos) {
+	return 'new IntValue('+g.getRegisteredObjectExpr(limit_internal)+'('+g.getIntParamNativeValueExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1])+', '+g.getIntParamNativeValueExpr(paramInfos[2])+'))';
+});
+
+function limit_internal(val, min, max) {
+	if(val > max) {
+		return max;
+	}
+	if(val < min) {
+		return min;
+	}
+	return val;
+}
+
+defineInlineExprBuiltinFunc('str', [false], VarType.STR, function(g, paramInfos) {
+	return g.getStrConvertedParamExpr(paramInfos[0]);
+});
+
+defineCompileTimeBuiltinFunc('str', function(val) {
+	scanArgs(arguments, '.', 1);
+	return val.toStrValue();
+});
+
+defineInlineExprBuiltinFunc('strmid', [false, false, false], VarType.STR, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(strmid_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1])+', '+g.getStrParamNativeValueExpr(paramInfos[2])+')';
+});
+
+function strmid_internal(str, index, length) {
+	if(index < 0) {
+		index = str.length - length;
+		if(index < 0) index = 0;
+	}
+	return new StrValue(str.substr(index, length));
+}
+
+defineInlineExprBuiltinFunc('strf', [], VarType.STR, function(g, paramInfos) {
+	var args = '';
+	for(var i = 1; i < paramInfos.length; i ++) {
+		if (i != 1) args += ',';
+		args += g.getParamExpr(paramInfos[i]);
+	}
+	return 'new StrValue(Formatter.sprintf('+g.getStrParamNativeValueExpr(paramInfos[0])+', ['+args+']))';
+});
+builtinFunc('strf').argsMax = null;
+builtinFunc('strf').defaultReceiveVar = false;
+
+defineInlineExprBuiltinFunc('getpath', [false], VarType.STR, function(g, paramInfos) {
+	return g.getRegisteredObjectExpr(getpath_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1])+')';
+});
+
+function getpath_internal(path, flags) {
+	if(flags & 16) {
+		var re = /((?:[\x81-\x9f\xe0-\xfc][\s\S]|[^A-Z])*)([A-Z]*)/g;
+		path = path.replace(re, function(s,a,b) {
+			return a + b.toLowerCase();
+		});
+	}
+	var dir = /^(?:\w:)?(?:(?:[^\x81-\x9f\xe0-\xfc]|[\x81-\x9f\xe0-\xfc][\s\S])*[\/\\])?/.exec(path)[0];
+	var ext = /(?:\.[^.\/\\]*)?$/.exec(path)[0];
+	var basename = path.slice(dir.length, path.length - ext.length);
+	if(flags & 8) {
+		path = basename + ext;
+	} else if(flags & 32) {
+		path = dir;
+	}
+	var result = path;
+	switch(flags & 7) {
+	case 1:
+		result = path.slice(0, path.length - ext.length);
+		break;
+	case 2:
+		result = ext;
+		break;
+	}
+	return new StrValue(result);
+}
+
+defineInlineExprBuiltinFunc('sin', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.sin('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('cos', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.cos('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('tan', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.tan('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('atan', [false, false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.atan2('+g.getDoubleParamNativeValueExpr(paramInfos[0])+', '+g.getDoubleParamNativeValueExpr(paramInfos[1], 1)+'))';
+});
+
+defineInlineExprBuiltinFunc('sqrt', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.sqrt('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('double', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return g.getDoubleConvertedParamExpr(paramInfos[0]);
+});
+
+defineCompileTimeBuiltinFunc('double', function(val) {
+	scanArgs(arguments, '.', 1);
+	return val.toDoubleValue();
+});
+
+defineInlineExprBuiltinFunc('absf', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.abs('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('expf', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.exp('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('logf', [false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new DoubleValue(Math.log('+g.getDoubleParamNativeValueExpr(paramInfos[0])+'))';
+});
+
+defineInlineExprBuiltinFunc('limitf', [false, false, false], VarType.DOUBLE, function(g, paramInfos) {
+	return 'new IntValue('+g.getRegisteredObjectExpr(limitf_internal)+'('+g.getDoubleParamNativeValueExpr(paramInfos[0])+', '+g.getDoubleParamNativeValueExpr(paramInfos[1])+', '+g.getDoubleParamNativeValueExpr(paramInfos[2])+'))';
+});
+
+function limitf_internal(val, min, max) {
+	if(val > max) {
+		return max;
+	}
+	if(val < min) {
+		return min;
+	}
+	return val;
+}
 
 if(typeof HSPonJS != 'undefined') {
-	HSPonJS.BuiltinFuncs = BuiltinFuncs;
+	HSPonJS.BuiltinFuncInfos = BuiltinFuncInfos;
+	HSPonJS.BuiltinFuncInfo = BuiltinFuncInfo;
+	HSPonJS.builtinFunc = builtinFunc;
+	HSPonJS.defineInlineBuiltinFunc = defineInlineBuiltinFunc;
+	HSPonJS.defineInlineExprBuiltinFunc = defineInlineExprBuiltinFunc;
+	HSPonJS.defineCompileTimeBuiltinFunc = defineCompileTimeBuiltinFunc;
+	HSPonJS.defineSysVar = defineSysVar;
 }
 
 
