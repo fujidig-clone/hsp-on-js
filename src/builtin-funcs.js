@@ -31,7 +31,8 @@ BuiltinFuncInfo.prototype = {
 function builtinFunc(name) {
 	var typeAndSubid = BuiltinFuncNameToIdTable[name];
 	if(!typeAndSubid) throw new Error("unknown builtin func name: `"+name+"'");
-	var type = typeAndSubid[0], subid = typeAndSubid[1];
+	var type = getTypeByTypeAndSubid(typeAndSubid);
+	var subid = getSubidByTypeAndSubid(typeAndSubid);
 	var infos = BuiltinFuncInfos[type];
 	var info = infos[subid];
 	if(info) return info;

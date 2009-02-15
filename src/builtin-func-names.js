@@ -212,10 +212,18 @@ var BuiltinFuncNameToIdTable = {};
 	for(var type in BuiltinFuncNames) {
 		var t = BuiltinFuncNames[type];
 		for(var subid in t) {
-			BuiltinFuncNameToIdTable[t[subid]] = [+type, +subid];
+			BuiltinFuncNameToIdTable[t[subid]] = subid << 13 | type;
 		}
 	}
 })();
+
+function getTypeByTypeAndSubid(typeAndSubid) {
+	return typeAndSubid & 0x1fff;
+}
+
+function getSubidByTypeAndSubid(typeAndSubid) {
+	return typeAndSubid >> 13;
+}
 
 
 /*
