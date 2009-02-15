@@ -22,11 +22,7 @@ function BinaryParser(data, index, length) {
 	
 	p.prototype = {
 		readChar: function() {
-			this.checkBuffer(this.offset + 1);
-			var result = this.buffer[this.buffer.length - this.offset - 1];
-			if(result & 0x80) result -= 0x100;
-			++ this.offset;
-			return result;
+			return this.readUChar() << 24 >> 24;
 		},
 		readUChar: function() {
 			this.checkBuffer(this.offset + 1);
@@ -35,12 +31,7 @@ function BinaryParser(data, index, length) {
 			return result;
 		},
 		readShort: function() {
-			this.checkBuffer(this.offset + 2);
-			var result = this.buffer[this.buffer.length - this.offset - 1];
-			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
-			if(result & 0x8000) result -= 0x10000;
-			this.offset += 2;
-			return result;
+			return this.readUShort() << 16 >> 16;
 		},
 		readUShort: function() {
 			this.checkBuffer(this.offset + 2);
@@ -50,13 +41,7 @@ function BinaryParser(data, index, length) {
 			return result;
 		},
 		readInt24: function() {
-			this.checkBuffer(this.offset + 3);
-			var result = this.buffer[this.buffer.length - this.offset - 1];
-			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
-			result |= this.buffer[this.buffer.length - this.offset - 3] << 16;
-			if(result & 0x800000) result -= 0x1000000;
-			this.offset += 3;
-			return result;
+			return this.readUInt24() << 8 >> 8;
 		},
 		readUInt24: function() {
 			this.checkBuffer(this.offset + 3);
@@ -76,13 +61,7 @@ function BinaryParser(data, index, length) {
 			return result;
 		},
 		readUInt: function() {
-			this.checkBuffer(this.offset + 4);
-			var result = this.buffer[this.buffer.length - this.offset - 1];
-			result |= this.buffer[this.buffer.length - this.offset - 2] << 8;
-			result |= this.buffer[this.buffer.length - this.offset - 3] << 16;
-			result += this.buffer[this.buffer.length - this.offset - 4] * 0x1000000;
-			this.offset += 4;
-			return result;
+			return this.readInt() >>> 0;
 		},
 		readDouble: function() {
 			return this.decodeFloat(52, 11, 8);

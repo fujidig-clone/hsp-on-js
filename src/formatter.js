@@ -91,7 +91,7 @@ var Formatter = {
 	},
 	convertInt: function(val, flags, width, prec, signed, radix, pre) {
 		if(!signed) {
-			if(val & 0x80000000) val += 0x100000000;
+			val >>>= 0;
 		}
 		var isNegative = val < 0;
 		val = Math.abs(val);
