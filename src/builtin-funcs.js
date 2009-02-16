@@ -147,10 +147,10 @@ defineInlineBuiltinFunc('mref', [true, false], function(g, paramInfos) {
 
 defineSysVar('system', VarType.INT, 'new IntValue(0)');
 defineSysVar('stat', VarType.INT, 'this.stat.at(0)');
-defineSysVar('cnt', VarType.INT, 'new IntValue(this.loopStack.length ? this.loopStack[this.loopStack.length - 1].cnt : 0)');
+defineSysVar('cnt', VarType.INT, 'new IntValue(this.cnt)');
 defineSysVar('err', VarType.INT, 'new IntValue(this.err)');
 defineSysVar('strsize', VarType.INT, 'new IntValue(this.strsize)');
-defineSysVar('looplev', VarType.INT, 'new IntValue(this.loopStack.length)');
+defineSysVar('looplev', VarType.INT, 'new IntValue(this.looplev)');
 defineSysVar('sublev', VarType.INT, 'new IntValue(this.frameStack.length)');
 defineSysVar('iparam', VarType.INT, 'new IntValue(this.iparam)');
 defineSysVar('wparam', VarType.INT, 'new IntValue(this.wparam)');

@@ -8,7 +8,13 @@ function Evaluator(sequence, generateResult, options) {
 	this.staticVarTags = generateResult.staticVarTags;
 	this.registeredObjects = generateResult.registeredObjects;
 	this.variables = null;
-	this.loopStack = [];
+	this.cnt = 0;
+	this.cntStack = [];
+	this.cntEnd = 0;
+	this.cntEndStack = [];
+	this.loopStartPos = 0;
+	this.loopStartPosStack = [];
+	this.looplev = 0;
 	this.frameStack = [];
 	this.args = null;
 	this.oldNotes = [];
@@ -30,12 +36,6 @@ function Evaluator(sequence, generateResult, options) {
 Evaluator.defaultOptions = {
 	errorAtUseOfUninitializedVariable: false
 };
-
-function LoopData(cnt, end, pc) {
-	this.cnt = cnt;
-	this.end = end;
-	this.pc = pc;
-}
 
 function Frame(pc, userDefFunc, args, prevArgs) {
 	this.pc = pc;
@@ -176,7 +176,7 @@ Evaluator.prototype = {
 				}
 				this.frameStack.push(new Frame(this.pc + 1, null, this.args));
 			} else {
-				this.loopStack.length = 0;
+				this.looplev = 0;
 				this.frameStack.length = 0;
 				this.stack.length = 0;
 			}
@@ -339,7 +339,6 @@ Evaluator.prototype = {
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Evaluator = Evaluator;
-	HSPonJS.LoopData = LoopData;
 	HSPonJS.Frame = Frame;
 	HSPonJS.Event = Event;
 	HSPonJS.throwHSPError = throwHSPError;

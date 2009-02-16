@@ -262,98 +262,90 @@ MainLoopGenerator.prototype = {
 		this.push('continue;');
 	},
 	pushCode_REPEAT: function(insn, pc, label, paramInfos) {
-		this.push('if(this.loopStack.length >= 31) {');
-		this.push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
-		this.push('}');
+		this.pushStartLoopCode();
 		if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
-			this.push('var end = '+this.getIntParamNativeValueExpr(paramInfos[0])+';');
-			this.push('if(end < 0) end = Infinity;');
+			this.push('this.cntEnd = '+this.getIntParamNativeValueExpr(paramInfos[0])+';');
+			this.push('if(this.cntEnd < 0) this.cntEnd = Infinity;');
 		} else {
-			this.push('var end = Infinity;');
+			this.push('this.cntEnd = Infinity;');
 		}
 		if(paramInfos.length == 2) {
-			this.push('var begin = '+this.getIntParamNativeValueExpr(paramInfos[1])+';');
+			this.push('this.cnt = '+this.getIntParamNativeValueExpr(paramInfos[1])+';');
 		} else {
-			this.push('var begin = 0;');
+			this.push('this.cnt = 0;');
 		}
-		this.push('if(end == 0) {');
+		this.push('if(this.cntEnd == 0) {');
 		this.push('    this.pc = '+label.getPos()+';');
 		this.push('    continue;');
 		this.push('}');
-		this.push('end += begin;');
-		this.push('this.loopStack.push(new LoopData(begin, end, '+(pc + 1)+'));');
+		this.push('this.cntEnd += this.cnt;');
+		this.push('this.loopStartPos = '+(pc + 1)+';');
+		this.push('this.looplev ++;');
 	},
 	pushCode_LOOP: function(insn, pc) {
-		this.push('if(this.loopStack.length == 0) {');
+		this.push('if(this.looplev == 0) {');
 		this.push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 		this.push('}');
-		this.push('var data = this.loopStack[this.loopStack.length - 1];');
-		this.push('data.cnt ++;');
-		this.push('if(data.cnt < data.end) {');
-		this.push('    this.pc = data.pc;');
+		this.push('this.cnt ++;');
+		this.push('if(this.cnt < this.cntEnd) {');
+		this.push('    this.pc = this.loopStartPos;');
 		this.push('    continue;');
 		this.push('}');
-		this.push('this.loopStack.pop();');
-	},
-	pushCode_CNT: function(insn, pc) {
-		this.push('if(this.loopStack.length == 0) {');
-		this.push('    stack.push(new IntValue(0));');
-		this.push('} else {');
-		this.push('    stack.push(new IntValue(this.loopStack[this.loopStack.length - 1].cnt));');
-		this.push('}');
+		this.pushEndLoopCode();
 	},
 	pushCode_CONTINUE: function(insn, pc, label, paramInfo) {
-		this.push('if(this.loopStack.length == 0) {');
+		this.push('if(this.looplev == 0) {');
 		this.push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 		this.push('}');
-		this.push('var data = this.loopStack[this.loopStack.length - 1];');
 		var newCntExpr;
 		if(paramInfo) {
-			newCntExpr = '(data.cnt = '+this.getIntParamNativeValueExpr(paramInfo)+')';
+			newCntExpr = '(this.cnt = '+this.getIntParamNativeValueExpr(paramInfo)+')';
 		} else {
-			newCntExpr = '++data.cnt';
+			newCntExpr = '++this.cnt';
 		}
-		this.push('if('+newCntExpr+' >= data.end) {');
-		this.push('    this.loopStack.pop();');
-		this.push('    this.pc = '+label.getPos()+';');
+		this.push('if('+newCntExpr+' >= this.cntEnd) {');
+		this.incIndent();
+		this.pushEndLoopCode();
+		this.push('this.pc = '+label.getPos()+';');
+		this.decIndent();
 		this.push('} else {');
-		this.push('    this.pc = data.pc;');
+		this.push('    this.pc = this.loopStartPos;');
 		this.push('}');
 		this.push('continue;');
 	},
 	pushCode_BREAK: function(insn, pc, label) {
-		this.push('if(this.loopStack.length == 0) {');
+		this.push('if(this.looplev == 0) {');
 		this.push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 		this.push('}');
-		this.push('this.loopStack.pop();');
+		this.pushEndLoopCode();
 		this.push('this.pc = '+label.getPos()+';');
 		this.push('continue;');
 	},
 	pushCode_FOREACH: function(insn, pc) {
-		this.push('if(this.loopStack.length >= 31) {');
-		this.push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
-		this.push('}');
-		this.push('this.loopStack.push(new LoopData(0, Infinity, '+(pc + 1)+'));');
+		this.pushStartLoopCode();
+		this.push('this.cnt = 0;');
+		this.push('this.cntEnd = Infinity;');
+		this.push('this.loopStartPos = '+(pc + 1)+';');
+		this.push('this.looplev ++;');
 	},
 	pushCode_EACHCHK: function(insn, pc, label, paramInfo) {
 		var pos = label.getPos();
-		this.push('if(this.loopStack.length == 0) {');
+		this.push('if(this.looplev == 0) {');
 		this.push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);')
 		this.push('}')
 		this.push('var array = '+this.getNoSubscriptVariableParamExpr(paramInfo)+'.value;');
-		this.push('var data = this.loopStack[this.loopStack.length - 1];');
-		this.push('if(data.cnt >= array.getL0()) {')
-		this.push('    this.loopStack.pop();');
+		this.push('if(this.cnt >= array.getL0()) {')
+		this.pushEndLoopCode();
 		this.push('    this.pc = '+pos+';');
 		this.push('    continue;');
 		this.push('}');
-		this.push('if(array.at(data.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
-		this.push('    data.cnt ++;');
-		this.push('    if(data.cnt >= data.end) {');
-		this.push('        this.loopStack.pop();');
+		this.push('if(array.at(this.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
+		this.push('    this.cnt ++;');
+		this.push('    if(this.cnt >= this.cntEnd) {');
+		this.pushEndLoopCode();
 		this.push('        this.pc = '+pos+';');
 		this.push('    } else {');
-		this.push('        this.pc = data.pc;');
+		this.push('        this.pc = this.loopStartPos;');
 		this.push('    }');
 		this.push('    continue;');
 		this.push('}');
@@ -441,6 +433,20 @@ MainLoopGenerator.prototype = {
 		this.push('    this.pc = '+label.getPos()+';');
 		this.push('    continue;');
 		this.push('}');
+	},
+	pushStartLoopCode: function() {
+		this.push('if(this.looplev >= 31) {');
+		this.push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
+		this.push('}');
+		this.push('this.cntStack[this.looplev] = this.cnt;');
+		this.push('this.cntEndStack[this.looplev] = this.cntEnd;');
+		this.push('this.loopStartPosStack[this.looplev] = this.loopStartPos;');
+	},
+	pushEndLoopCode: function() {
+		this.push('this.looplev --;');
+		this.push('this.cnt = this.cntStack[this.looplev];');
+		this.push('this.cntEnd = this.cntEndStack[this.looplev];');
+		this.push('this.loopStartPos = this.loopStartPosStack[this.looplev];');
 	},
 	pushCallBuiltinFuncCode: function(type, subid, paramInfos, ctype) {
 		var info = BuiltinFuncInfos[type][subid];
