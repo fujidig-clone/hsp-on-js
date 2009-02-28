@@ -3,9 +3,14 @@ function MainLoopGenerator(sequence) {
 	this.literals_ = [];
 	this.staticVarTags_ = [];
 	this.registeredObjects_ = [];
+	this.registeredObjectTags_ = [];
 	this.lines_ = [];
 	this.indent_ = 0;
+	this.id = MainLoopGenerator.count++;
+	this.registerPropName = '_hsponjs_mainloop_registered_id_' + this.id;
 }
+
+MainLoopGenerator.count = 0;
 
 MainLoopGenerator.Result = function(mainLoop, literals, staticVarTags, registeredObjects) {
 	this.mainLoop = mainLoop;
@@ -25,8 +30,12 @@ var _isDefault = isDefaultParamInfo;
 
 MainLoopGenerator.prototype = {
 	generate: function() {
-		var mainLoop = this.generateMainLoop();
-		return new MainLoopGenerator.Result(mainLoop, this.literals_, this.staticVarTags_, this.registeredObjects_);
+		try {
+			var mainLoop = this.generateMainLoop();
+			return new MainLoopGenerator.Result(mainLoop, this.literals_, this.staticVarTags_, this.registeredObjects_);
+		} finally {
+			this.removeRegisteredObjectsPropName();
+		}
 	},
 	generateMainLoop: function() {
 		var src = '';
@@ -1127,7 +1136,7 @@ MainLoopGenerator.prototype = {
 		return id;
 	},
 	getRegisteredObjectExpr: function(object, tag) {
-		var propname = '_hsponjs_mainloop_registered_id';
+		var propname = this.registerPropName;
 		var id;
 		if(!tag) tag = object;
 		if(propname in tag) {
@@ -1136,9 +1145,17 @@ MainLoopGenerator.prototype = {
 			var list = this.registeredObjects_;
 			id = list.length;
 			list[id] = object;
+			this.registeredObjectTags_[id] = tag;
 			tag[propname] = id;
 		}
 		return 'registeredObjects['+id+']';
+	},
+	removeRegisteredObjectsPropName: function() {
+		var propname = this.registerPropName;
+		var objects = this.registeredObjectTags_;
+		for(var i = 0; i < objects.length; i ++) {
+			delete objects[i][propname];
+		}
 	},
 	pushStackPopCode: function(size) {
 		if(size == 0) {

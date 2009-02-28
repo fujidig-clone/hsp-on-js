@@ -149,6 +149,14 @@ function typeMismatchError0(actualType, expected) {
 	return new HSPError(ErrorCode.TYPE_MISMATCH, 'パラメータの型が違います。'+VarTypeNames[actualType]+' 型ではなく、'+expected+'の値を指定しなければいけません');
 }
 
+function compileAndCreateEvaluator(ax) {
+	var axdata = new AXData(ax);
+	var compiler = new Compiler(axdata);
+	var sequence = compiler.compile();
+	var generator = new MainLoopGenerator(sequence);
+	return new Evaluator(sequence, generator.generate());
+}
+
 Evaluator.prototype = {
 	evaluate: function() {
 		this.variables = this.buildVariables();
@@ -349,6 +357,7 @@ if(typeof HSPonJS != 'undefined') {
 	HSPonJS.checkTypeLabel = checkTypeLabel;
 	HSPonJS.scanArgs = scanArgs;
 	HSPonJS.scanArg = scanArg;
+	HSPonJS.compileAndCreateEvaluator = compileAndCreateEvaluator;
 }
 
 

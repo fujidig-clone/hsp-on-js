@@ -382,7 +382,7 @@ defineInlineBuiltinFunc('memset', [true, false, false, false], function(g, param
 	var valExpr    = g.getIntParamNativeValueExpr(paramInfos[1], 0) + ' & 0xff';
 	var lengthExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
 	var offsetExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
-	g.push(g.getRegisteredObjectExpr(memcpy_internal)+'('+agentExpr+', '+valExpr+', '+lengthExpr+', '+offsetExpr+');');
+	g.push(g.getRegisteredObjectExpr(memset_internal)+'('+agentExpr+', '+valExpr+', '+lengthExpr+', '+offsetExpr+');');
 });
 
 function memset_internal(agent, val, length, offset) {
@@ -436,7 +436,7 @@ function notedel_internal(note, lineNumber) {
 }
 
 defineInlineBuiltinFunc('noteload', [false], function(g, paramInfos) {
-	g.push(g.getRegisteredObjectExpr(notedel_internal)+'(this, '+g.getStrParamNativeValueExpr(paramInfos[0])+');');
+	g.push(g.getRegisteredObjectExpr(noteload_internal)+'(this, '+g.getStrParamNativeValueExpr(paramInfos[0])+');');
 });
 
 function noteload_internal(evaluator, path) {
@@ -673,7 +673,7 @@ function noteinfo_internal(evaluator, n) {
 }
 
 defineInlineExprBuiltinFunc('instr', [false, false, false], VarType.INT, function(g, paramInfos) {
-	return g.getRegisteredObjectExpr(instr_internal)+'('+g.getStrParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+', '+g.getStrParamExpr(paramInfos[2])+')';
+	return g.getRegisteredObjectExpr(instr_internal)+'('+g.getStrParamExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1], 0)+', '+g.getStrParamNativeValueExpr(paramInfos[2])+')';
 });
 
 function instr_internal(str, fromIndex, pattern) {
@@ -710,7 +710,7 @@ defineCompileTimeBuiltinFunc('str', function(val) {
 });
 
 defineInlineExprBuiltinFunc('strmid', [false, false, false], VarType.STR, function(g, paramInfos) {
-	return g.getRegisteredObjectExpr(strmid_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1])+', '+g.getStrParamNativeValueExpr(paramInfos[2])+')';
+	return g.getRegisteredObjectExpr(strmid_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+', '+g.getIntParamNativeValueExpr(paramInfos[1])+', '+g.getIntParamNativeValueExpr(paramInfos[2])+')';
 });
 
 function strmid_internal(str, index, length) {
