@@ -383,7 +383,7 @@ with(HSPonJS) {
 		onInternalError: function(e) {
 			var insn = this.sequence[this.pc];
 			var msg = 'JavaScript Error!\n';
-			msg += e.name+': '+e.message+'\n';
+			msg += e+'\n';
 			msg += e.fileName+':'+e.lineNumber+'\n';
 			msg += 'pc = '+this.pc+'\n';
 			if(insn) {
@@ -422,405 +422,476 @@ with(HSPonJS) {
 				});
 		}
 	});
-	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTCMD], {
-		0x03: function(message, type, option) { // dialog
-			this.scanArgs(arguments, '.?NSN');
-			message = message ? CP932.decode(message.toStrValue()._value) : "";
-			type = type ? type.toIntValue()._value : 0;
-			option = option ? CP932.decode(option.toStrValue()._value) : "";
-			if(type & ~0xf) return;
-			if(type & 2) {
-				this.stat.assign(0, new IntValue(window.confirm(message) ? 6 : 7));
-			} else {
-				window.alert(message);
-				this.stat.assign(0, new IntValue(1));
-			}
-		},
-		0x0c: function(x, y) { // pset
-			this.scanArgs(arguments, 'NN');
-			x = x ? x.toIntValue()._value : this.currentScreen.currentX;
-			y = y ? y.toIntValue()._value : this.currentScreen.currentY;
-			this.currentScreen.ctx.fillRect(x, y, 1, 1);
-		},
-		0x0d: function(x, y) { // pget
-			this.scanArgs(arguments, 'NN');
-			x = x ? x.toIntValue()._value : this.currentScreen.currentX;
-			y = y ? y.toIntValue()._value : this.currentScreen.currentY;
-			var ctx = this.currentScreen.ctx;
-			var r, g, b;
-			if(x < 0 || x >= ctx.canvas.width || y < 0 || y >= ctx.canvas.height) {
-				r = g = b = 255;
-			} else {
-				var data = ctx.getImageData(x, y, 1, 1).data;
-				r = data[0], g = data[1], b = data[2];
-			}
-			this.currentScreen.selectColor(r, g, b);
-		},
-		0x0f: function(text) { // mes
-			this.scanArgs(arguments, '.?');
-			text = text ? CP932.decode(text.toStrValue()._value) : "";
-			this.currentScreen.drawText(text);
-		},
-		0x11: function(x, y) { // pos
-			this.scanArgs(arguments, 'NN');
-			if(x) this.currentScreen.currentX = x.toIntValue()._value;
-			if(y) this.currentScreen.currentY = y.toIntValue()._value;
-		},
-		0x12: function(x1, y1, x2, y2, fill_p) { // circle
-			this.scanArgs(arguments, 'NNNNN');
-			x1 = x1 ? x1.toIntValue()._value : 0;
-			y1 = y1 ? y1.toIntValue()._value : 0;
-			x2 = x2 ? x2.toIntValue()._value : this.currentScreen.width;
-			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.height;
-			fill_p = fill_p ? fill_p.toIntValue()._value : 1;
 
-			this.currentScreen.drawEllipse(x1, y1, x2, y2, fill_p);
-		},
-		0x13: function(color) { // cls
-			this.scanArgs(arguments, 'N');
-			color = color ? color.toIntValue()._value : 0;
-			this.currentScreen.clear(color);
-		},
-		0x14: function(name, size, style) { // font
-			this.scanArgs(arguments, 'sNN');
-			name = CP932.decode(name.toStrValue()._value);
-			size = size ? size.toIntValue()._value : 18;
-			style = style ? style.toIntValue()._value : 0;
-			this.currentScreen.setFont(name, size, style);
-		},
-		0x17: function(path, mode) { // picload
-			this.scanArgs(arguments, 'sN');
-			path = CP932.decode(path.toStrValue()._value);
-			mode = mode ? mode.toIntValue()._value : 0;
-			var image = new Image;
-			image.src = path;
-			var self = this;
-			image.onload = function() {
-				if(self.quited) return;
-				self.locked = false;
-				self.removeCallbackOnQuit(callback);
-				var screen = self.currentScreen;
-				if(mode == 0) {
-					screen.changeToNewCanvas(image.width, image.height);
-				}
-				screen.ctx.drawImage(image, screen.currentX, screen.currentY);
-				self.resume();
-			};
-			image.onerror = function() {
-				if(self.quited) return;
-				self.locked = false;
-				self.removeCallbackOnQuit(callback);
-				self.resume(function() { throw new HSPError(ErrorCode.PICTURE_MISSING); });
-			};
-			this.locked = true;
-			var callback = function() {
-				delete image.onload;
-				delete image.onerror;
-			};
-			this.addCallbackOnQuit(callback);
-			throw new VoidException;
-		},
-		0x18: function(r, g, b) { // color
-			this.scanArgs(arguments, 'NNN');
-			r = r ? r.toIntValue()._value & 255 : 0;
-			g = g ? g.toIntValue()._value & 255 : 0;
-			b = b ? b.toIntValue()._value & 255 : 0;
-			this.currentScreen.selectColor(r, g, b);
-		},
-		0x1b: function() { // redraw
-			this.scanArgs(arguments, 'NNNNN');
-			// 何もしない
-		},
-		0x1d: function(screenId) { // gsel
-			this.scanArgs(arguments, 'N');
-			screenId = screenId ? screenId.toIntValue()._value : 0;
-			var screen = this.getScreen(screenId);
-			this.currentScreen = screen;
-			this.currentScreenId = screenId;
-		},
-		0x1e: function(srcScreenId, srcX, srcY, width, height) { // gcopy
-			this.scanArgs(arguments, 'NNNNN');
-			var screen = this.currentScreen;
-			srcScreenId = srcScreenId ? srcScreenId.toIntValue()._value : 0;
-			var srcScreen = this.getScreen(srcScreenId);
-			srcX = srcX ? srcX.toIntValue()._value : 0;
-			srcY = srcY ? srcY.toIntValue()._value : 0;
-			width = width ? width.toIntValue()._value : screen.copyWidth;
-			height = height ? height.toIntValue()._value : screen.copyHeight;
+	defineInlineBuiltinFunc('dialog', [false, false, false, false], function(g, paramInfos) {
+		var messageExpr = g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""');
+		var typeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var optionExpr = g.getStrParamNativeValueExpr(paramInfos[2], '""');
+		var reservedExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+		g.push(g.getRegisteredObjectExpr(dialog_internal)+'('+messageExpr+', '+typeExpr+', '+optionExpr+', '+reservedExpr+');');
+	});
 
-			var destOffsetX = 0, destOffsetY = 0;
-			if(srcX > srcScreen.width) srcX = srcScreen.width;
-			if(srcY > srcScreen.height) srcY = srcScreen.height;
+	var dialog_internal = function (message, type, option, reserved) {
+		if(type & ~0xf) return;
+		if(type & 2) {
+			this.stat.assign(0, new IntValue(window.confirm(message) ? 6 : 7));
+		} else {
+			window.alert(message);
+			this.stat.assign(0, new IntValue(1));
+		}
+	};
+
+	defineInlineBuiltinFunc('pset', [false, false], function(g, paramInfos) {
+		var xExpr = g.getIntParamNativeValueExpr(paramInfos[0], 'this.currentScreen.currentX');
+		var yExpr = g.getIntParamNativeValueExpr(paramInfos[1], 'this.currentScreen.currentY');
+		g.push('this.currentScreen.ctx.fillRect('+xExpr+', '+yExpr+', 1, 1);');
+	});
+
+	defineInlineBuiltinFunc('pget', [false, false], function(g, paramInfos) {
+		var xExpr = g.getIntParamNativeValueExpr(paramInfos[0], 'this.currentScreen.currentX');
+		var yExpr = g.getIntParamNativeValueExpr(paramInfos[1], 'this.currentScreen.currentY');
+		g.push(g.getRegisteredObjectExpr(pget_internal)+'(this.currentScreen, '+xExpr+', '+yExpr+');');
+	});
+
+	var pget_internal = function(screen, x, y) {
+		var r, g, b;
+		var ctx = screen.ctx;
+		if(x < 0 || x >= ctx.canvas.width || y < 0 || y >= ctx.canvas.height) {
+			r = g = b = 255;
+		} else {
+			var data = ctx.getImageData(x, y, 1, 1).data;
+			r = data[0], g = data[1], b = data[2];
+		}
+		screen.selectColor(r, g, b);
+	};
+	
+	defineInlineBuiltinFunc('mes', [false], function(g, paramInfos) {
+		g.push('this.currentScreen.drawText('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+');');
+	});
+
+	defineInlineBuiltinFunc('pos', [false, false], function(g, paramInfos) {
+		if(!isDefaultParamInfo(paramInfos[0])) {
+			g.push('this.currentScreen.currentX = '+g.getIntParamNativeValueExpr(paramInfos[0])+';');
+		}
+		if(!isDefaultParamInfo(paramInfos[1])) {
+			g.push('this.currentScreen.currentY = '+g.getIntParamNativeValueExpr(paramInfos[1])+';');
+		}
+	});
+
+	defineInlineBuiltinFunc('circle', [false, false, false, false, false], function(g, paramInfos) {
+		var x1Expr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var y1Expr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var x2Expr = g.getIntParamNativeValueExpr(paramInfos[2], 'this.currentScreen.width');
+		var y2Expr = g.getIntParamNativeValueExpr(paramInfos[3], 'this.currentScreen.height');
+		var fillPExpr = g.getIntParamNativeValueExpr(paramInfos[4], '1');
+		g.push('this.currentScreen.drawEllipse('+x1Expr+', '+y1Expr+', '+x2Expr+', '+y2Expr+', '+fillPExpr+');');
+	});
+
+	defineInlineBuiltinFunc('cls', [false], function(g, paramInfos) {
+		g.push('this.currentScreen.clear('+g.getIntParamNativeValueExpr(paramInfos[0], 0)+');');
+	});
+
+	defineInlineBuiltinFunc('font', [false, false, false], function(g, paramInfos) {
+		var nameExpr = g.getStrParamNativeValueExpr(paramInfos[0]);
+		var sizeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 18);
+		var styleExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+		g.push('this.currentScreen.setFont('+nameExpr+', '+sizeExpr+', '+styleExpr+');');
+	});
+
+	defineInlineBuiltinFunc('picload', [false, false], function(g, paramInfos) {
+		var pathExpr = g.getStrParamNativeValueExpr(paramInfos[0]);
+		var modeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		g.push(g.getRegisteredObjectExpr(picload_internal)+'(this, '+pathExpr+', '+modeExpr+');');
+	});
+
+	var picload_internal = function(e, path, mode) {
+		var image = new Image;
+		image.src = path;
+		image.onload = function() {
+			if(e.quited) return;
+			e.locked = false;
+			e.removeCallbackOnQuit(callback);
+			var screen = e.currentScreen;
+			if(mode == 0) {
+				screen.changeToNewCanvas(image.width, image.height);
+			}
+			screen.ctx.drawImage(image, screen.currentX, screen.currentY);
+			e.resume();
+		};
+		image.onerror = function() {
+			if(e.quited) return;
+			e.locked = false;
+			e.removeCallbackOnQuit(callback);
+			e.resume(function() { throw new HSPError(ErrorCode.PICTURE_MISSING); });
+		};
+		e.locked = true;
+		var callback = function() {
+			delete image.onload;
+			delete image.onerror;
+		};
+		e.addCallbackOnQuit(callback);
+		
+		throw new VoidException;
+	};
+
+	defineInlineBuiltinFunc('color', [false, false, false], function(g, paramInfos) {
+		var RExpr = g.getIntParamNativeValueExpr(paramInfos[0], 0) + ' & 255';
+		var GExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0) + ' & 255';
+		var BExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0) + ' & 255';
+		g.push('this.currentScreen.selectColor('+RExpr+', '+GExpr+', '+BExpr+');');
+	});
+
+	defineInlineBuiltinFunc('redraw', [false, false, false, false, false], function(g, paramInfos) {
+		function evalParam(i) {
+			g.push('('+g.getIntParamNativeValueExpr(paramInfos[i], 0)+');');
+		}
+		evalParam(0);
+		evalParam(1);
+		evalParam(2);
+		evalParam(3);
+		evalParam(4);
+		// 何もしない
+	});
+
+	defineInlineBuiltinFunc('gsel', [false], function(g, paramInfos) {
+		g.push(g.getRegisteredObjectExpr(gsel_internal)+'(this, '+g.getIntParamNativeValueExpr(paramInfos[0], 0)+');');
+	});
+
+	var gsel_internal = function(e, id) {
+		var screen = e.getScreen(id);
+		e.currentScreen = screen;
+		e.currentScreenId = id;
+	};
+
+	defineInlineBuiltinFunc('gcopy', [false, false, false, false, false], function(g, paramInfos) {
+		var srcScreenIdExpr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var srcXExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var srcYExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+		var widthExpr = g.getIntParamNativeValueExpr(paramInfos[3], 'this.currentScreen.copyWidth');
+		var heightExpr = g.getIntParamNativeValueExpr(paramInfos[4], 'this.currentScreen.copyHeight');
+		var screenExpr = 'this.currentScreen';
+		var srcScreenExpr = 'this.getScreen('+srcScreenIdExpr+')';
+		var funcExpr = g.getRegisteredObjectExpr(gcopy_internal);
+		g.push(funcExpr+'('+screenExpr+', '+srcScreenExpr+', '+srcXExpr+', '+srcYExpr+', '+widthExpr+', '+heightExpr+');');
+	});
+
+	var gcopy_internal = function(screen, srcScreen, srcX, srcY, width, height) {
+		var destOffsetX = 0, destOffsetY = 0;
+		if(srcX > srcScreen.width) srcX = srcScreen.width;
+		if(srcY > srcScreen.height) srcY = srcScreen.height;
+		if(srcX < 0) {
+			destOffsetX = -srcX;
+			width -= destOffsetX;
+			srcX = 0;
+		}
+		if(srcY < 0) {
+			destOffsetY = -srcY;
+			height -= destOffsetY;
+			srcY = 0;
+		}
+		if(width > srcScreen.width - srcX) width = srcScreen.width - srcX;
+		if(height > srcScreen.height - srcY) height = srcScreen.height - srcY;
+		if(width < 0) width = 0;
+		if(height < 0) height = 0;
+
+		var ctx = screen.ctx;
+		ctx.save();
+		switch(screen.copyMode) {
+		case 3: // gmode_alpha
+			ctx.globalAlpha = screen.copyAlpha / 256;
+			break;
+		case 5: // gmode_add
+			ctx.globalAlpha = screen.copyAlpha / 256;
+			ctx.globalCompositeOperation = 'lighter';
+			break;
+		}
+		ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
+		              screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
+		ctx.restore();
+	};
+
+	defineInlineBuiltinFunc('gzoom', [false, false, false, false, false, false, false, false], function(g, paramInfos) {
+		var destWidthExpr = g.getIntParamNativeValueExpr(paramInfos[0], 'this.currentScreen.width');
+		var destHeightExpr = g.getIntParamNativeValueExpr(paramInfos[1], 'this.currentScreen.height');
+		var srcScreenIdExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+		var srcXExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+		var srcYExpr = g.getIntParamNativeValueExpr(paramInfos[4], 0);
+		var srcWidthExpr = g.getIntParamNativeValueExpr(paramInfos[5], 'screen.copyWidth');
+		var srcHeightExpr = g.getIntParamNativeValueExpr(paramInfos[6], 'screen.copyHeight');
+		var modeExpr = g.getIntParamNativeValueExpr(paramInfos[7], 0);
+		var screenExpr = 'this.currentScreen';
+		var srcScreenExpr = 'this.getScreen('+srcScreenIdExpr+')';
+		var funcExpr = g.getRegisteredObjectExpr(gzoom_internal);
+		g.push(funcExpr+'('+screenExpr+', '+srcScreenExpr+', '+destWidthExpr+', '+destHeightExpr+', '+
+		       srcXExpr+', '+srcYExpr+', '+srcWidthExpr+', '+srcHeightExpr+', '+modeExpr+');');
+	});
+	
+	var gzoom_internal = function(screen, srcScreen, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight, mode) {
+		if(srcWidth == 0 || srcHeight == 0) return;
+		
+		var signX = 1, signY = 1; // 反転させるとき -1
+		var destOffsetX = 0, destOffsetY = 0;
+		if(srcWidth < 0) {
+			srcWidth *= -1;
+			srcX -= srcWidth;
 			if(srcX < 0) {
-				destOffsetX = -srcX;
-				width -= destOffsetX;
-				srcX = 0;
-			}
-			if(srcY < 0) {
-				destOffsetY = -srcY;
-				height -= destOffsetY;
-				srcY = 0;
-			}
-			if(width > srcScreen.width - srcX) width = srcScreen.width - srcX;
-			if(height > srcScreen.height - srcY) height = srcScreen.height - srcY;
-			if(width < 0) width = 0;
-			if(height < 0) height = 0;
-
-			var ctx = screen.ctx;
-			ctx.save();
-			switch(screen.copyMode) {
-			case 3: // gmode_alpha
-				ctx.globalAlpha = screen.copyAlpha / 256;
-				break;
-			case 5: // gmode_add
-				ctx.globalAlpha = screen.copyAlpha / 256;
-				ctx.globalCompositeOperation = 'lighter';
-				break;
-			}
-			ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, width, height,
-			              screen.currentX + destOffsetX, screen.currentY + destOffsetY, width, height);
-			ctx.restore();
-		},
-		0x1f: function(destWidth, destHeight, srcScreenId, srcX, srcY, srcWidth, srcHeight, mode) { // gzoom
-			this.scanArgs(arguments, 'NNNNNNNN');
-			var screen = this.currentScreen;
-			destWidth = destWidth ? destWidth.toIntValue()._value : screen.width;
-			destHeight = destHeight ? destHeight.toIntValue()._value : screen.height;
-			srcScreenId = srcScreenId ? srcScreenId.toIntValue()._value : 0;
-			srcX = srcX ? srcX.toIntValue()._value : 0;
-			srcY = srcY ? srcY.toIntValue()._value : 0;
-			srcWidth = srcWidth ? srcWidth.toIntValue()._value : screen.copyWidth;
-			srcHeight = srcHeight ? srcHeight.toIntValue()._value : screen.copyHeight;
-			mode = mode ? mode.toIntValue()._value : 0;
-			var srcScreen = this.getScreen(srcScreenId);
-
-			if(srcWidth == 0 || srcHeight == 0) return;
-			
-			var signX = 1, signY = 1; // 反転させるとき -1
-			var destOffsetX = 0, destOffsetY = 0;
-			if(srcWidth < 0) {
-				srcWidth *= -1;
-				srcX -= srcWidth;
-				if(srcX < 0) {
-					destWidth = Math.round((1 + srcX / srcWidth) * destWidth);
-					srcWidth += srcX;
-					if(srcWidth <= 0) return;
-					srcX = 0;
-				}
-				destOffsetX = destWidth;
-				signX *= -1;
-			}
-			if(srcHeight < 0) {
-				srcHeight *= -1;
-				srcY -= srcHeight;
-				if(srcY < 0) {
-					destHeight = Math.round((1 + srcY / srcHeight) * destHeight);
-					srcHeight += srcY;
-					if(srcHeight <= 0) return;
-					srcY = 0;
-				}
-				destOffsetY = destHeight;
-				signY *= -1;
-			}
-			if(srcX > srcScreen.width) srcX = srcScreen.width;
-			if(srcY > srcScreen.height) srcY = srcScreen.height;
-			if(srcX < 0) {
-				destOffsetX = Math.round(-srcX / srcWidth * destWidth);
+				destWidth = Math.round((1 + srcX / srcWidth) * destWidth);
 				srcWidth += srcX;
 				if(srcWidth <= 0) return;
-				destWidth -= destOffsetX;
 				srcX = 0;
 			}
+			destOffsetX = destWidth;
+			signX *= -1;
+		}
+		if(srcHeight < 0) {
+			srcHeight *= -1;
+			srcY -= srcHeight;
 			if(srcY < 0) {
-				destOffsetY = Math.round(-srcY / srcHeight * destHeight);
+				destHeight = Math.round((1 + srcY / srcHeight) * destHeight);
 				srcHeight += srcY;
 				if(srcHeight <= 0) return;
-				destHeight -= destOffsetY;
 				srcY = 0;
 			}
-			if(srcWidth > srcScreen.width - srcX) {
-				destWidth = Math.round((srcScreen.width - srcX) / srcWidth * destWidth);
-				srcWidth = srcScreen.width - srcX;
-			}
-			if(srcHeight > srcScreen.height - srcY) {
-				destHeight = Math.round((srcScreen.height - srcY) / srcHeight * destHeight);
-				srcHeight = srcScreen.height - srcY;
-			}
-			if(destWidth < 0) {
-				destWidth *= -1;
-				signX *= -1;
-			}
-			if(destHeight < 0) {
-				destHeight *= -1;
-				signY *= -1;
-			}
-			var ctx = screen.ctx;
-			ctx.save();
-			ctx.translate(screen.currentX + destOffsetX, screen.currentY + destOffsetY);
-			ctx.scale(signX, signY);
-			ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
-			ctx.restore();
-		},
-		0x20: function(mode, width, height, alpha) { // gmode
-			this.scanArgs(arguments, 'NNNN');
-			mode = mode ? mode.toIntValue()._value : 0;
-			width = width ? width.toIntValue()._value : 32;
-			height = height ? height.toIntValue()._value : 32;
-			alpha = alpha ? alpha.toIntValue()._value : 0;
-			var screen = this.currentScreen;
-			
-			screen.copyMode = mode;
-			screen.copyWidth = width;
-			screen.copyHeight = height;
-			screen.copyAlpha = alpha;
-		},
-		0x22: function(h, s, v) { // hsvcolor
-			this.scanArgs(arguments, 'NNN');
-			h = h ? h.toIntValue()._value % 192 : 0;
-			s = s ? s.toIntValue()._value & 255 : 0;
-			v = v ? v.toIntValue()._value & 255 : 0;
-			this.currentScreen.selectColorByHSV(h, s, v);
-		},
-		0x23: function(v, key) { // getkey
-			this.scanArgs(arguments, 'vN');
-			key = key ? key.toIntValue()._value : 1;
-			v.assign(new IntValue(this.keyPressed[key]));
-		},
-		0x29: function(screenId, width, height) { // buffer
-			this.scanArgs(arguments, 'NNNNNNNN');
-			screenId = screenId ? screenId.toIntValue()._value : 0;
-			width = width ? width.toIntValue()._value : 640;
-			height = height ? height.toIntValue()._value : 480;
-			var screen;
-			if(!(screen = this.screens[screenId])) {
-				screen = this.screens[screenId] = new Screen;
-			}
-			screen.changeToNewCanvas(width, height);
-			this.currentScreen = screen;
-			this.currentScreenId = screenId;
-		},
-		0x2a: function(screenId, width, height) { // screen
-			this.scanArgs(arguments, 'NNNNNNNN');
-			screenId = screenId ? screenId.toIntValue()._value : 0;
-			width = width ? width.toIntValue()._value : 640;
-			height = height ? height.toIntValue()._value : 480;
-			if(screenId == 0) {
-				this.mainScreen.changeToNewCanvas(width, height);
-				this.currentScreen = this.mainScreen;
-				this.currentScreenId = 0;
+			destOffsetY = destHeight;
+			signY *= -1;
+		}
+		if(srcX > srcScreen.width) srcX = srcScreen.width;
+		if(srcY > srcScreen.height) srcY = srcScreen.height;
+		if(srcX < 0) {
+			destOffsetX = Math.round(-srcX / srcWidth * destWidth);
+			srcWidth += srcX;
+			if(srcWidth <= 0) return;
+			destWidth -= destOffsetX;
+			srcX = 0;
+		}
+		if(srcY < 0) {
+			destOffsetY = Math.round(-srcY / srcHeight * destHeight);
+			srcHeight += srcY;
+			if(srcHeight <= 0) return;
+			destHeight -= destOffsetY;
+			srcY = 0;
+		}
+		if(srcWidth > srcScreen.width - srcX) {
+			destWidth = Math.round((srcScreen.width - srcX) / srcWidth * destWidth);
+			srcWidth = srcScreen.width - srcX;
+		}
+		if(srcHeight > srcScreen.height - srcY) {
+			destHeight = Math.round((srcScreen.height - srcY) / srcHeight * destHeight);
+			srcHeight = srcScreen.height - srcY;
+		}
+		if(destWidth < 0) {
+			destWidth *= -1;
+			signX *= -1;
+		}
+		if(destHeight < 0) {
+			destHeight *= -1;
+			signY *= -1;
+		}
+		var ctx = screen.ctx;
+		ctx.save();
+		ctx.translate(screen.currentX + destOffsetX, screen.currentY + destOffsetY);
+		ctx.scale(signX, signY);
+		ctx.drawImage(srcScreen.ctx.canvas, srcX, srcY, srcWidth, srcHeight, 0, 0, destWidth, destHeight);
+		ctx.restore();
+	};
+
+	defineInlineBuiltinFunc('gmode', [false, false, false, false], function(g, paramInfos) {
+		g.push('this.currentScreen.copyMode = '+g.getIntParamNativeValueExpr(paramInfos[0], 0)+';');
+		g.push('this.currentScreen.copyWidth = '+g.getIntParamNativeValueExpr(paramInfos[1], 32)+';');
+		g.push('this.currentScreen.copyHeight = '+g.getIntParamNativeValueExpr(paramInfos[2], 32)+';');
+		g.push('this.currentScreen.copyAlpha = '+g.getIntParamNativeValueExpr(paramInfos[3], 0)+';');
+	});
+
+	defineInlineBuiltinFunc('hsvcolor', [false, false, false], function(g, paramInfos) {
+		var HExpr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var SExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var VExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
+		g.push('this.currentScreen.selectColorByHSV('+HExpr+', '+SExpr+', '+VExpr+');');
+	});
+
+	defineInlineBuiltinFunc('getkey', [true, false], function(g, paramInfos) {
+		var agentExpr = g.getVariableAgentParamExpr(paramInfos[0]);
+		var keyCodeExpr = g.getIntParamNativeValueExpr(paramInfos[0], 1);
+		g.push(agentExpr+'.assign(IntValue.of(this.keyPressed['+keyCodeExpr+']));');
+	});
+
+	defineInlineBuiltinFunc('buffer', [false, false, false, false], function(g, paramInfos) {
+		var idExpr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var widthExpr = g.getIntParamNativeValueExpr(paramInfos[1], 640);
+		var heightExpr = g.getIntParamNativeValueExpr(paramInfos[2], 480);
+		var modeExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+		g.push(g.getRegisteredObjectExpr(buffer_internal)+'(this, '+idExpr+', '+widthExpr+', '+heightExpr+', '+modeExpr+');');
+	});
+
+	var buffer_internal = function(e, id, width, height, mode) {
+		var screen;
+		if(!(screen = e.screens[id])) {
+			screen = e.screens[id] = new Screen;
+		}
+		screen.changeToNewCanvas(width, height);
+		e.currentScreen = screen;
+		e.currentScreenId = id;
+	};
+
+	defineInlineBuiltinFunc('screen', [false, false, false, false], function(g, paramInfos) {
+		var idExpr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var widthExpr = g.getIntParamNativeValueExpr(paramInfos[1], 640);
+		var heightExpr = g.getIntParamNativeValueExpr(paramInfos[2], 480);
+		var modeExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
+		g.push(g.getRegisteredObjectExpr(screen_internal)+'(this, '+idExpr+', '+widthExpr+', '+heightExpr+', '+modeExpr+');');
+	});
+
+	var screen_internal = function(e, id, width, height, mode) {
+		if(id == 0) {
+			e.mainScreen.changeToNewCanvas(width, height);
+			e.currentScreen = this.mainScreen;
+			e.currentScreenId = 0;
+		} else {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ID 0 以外の screen は未対応');
+		}
+	};
+
+	defineInlineBuiltinFunc('line', [false, false, false, false], function(g, paramInfos) {
+		var x1Expr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var y1Expr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var x2Expr = g.getIntParamNativeValueExpr(paramInfos[2], 'this.currentScreen.currentX');
+		var y2Expr = g.getIntParamNativeValueExpr(paramInfos[3], 'this.currentScreen.currentY');
+		g.push('this.currentScreen.drawLine('+x1Expr+', '+y1Expr+', '+x2Expr+', '+y2Expr+');');
+	});
+
+	defineInlineBuiltinFunc('boxf', [false, false, false, false], function(g, paramInfos) {
+		var x1Expr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var y1Expr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var x2Expr = g.getIntParamNativeValueExpr(paramInfos[2], 'this.currentScreen.width');
+		var y2Expr = g.getIntParamNativeValueExpr(paramInfos[3], 'this.currentScreen.height');
+		g.push('this.currentScreen.drawRect('+x1Expr+', '+y1Expr+', '+x2Expr+', '+y2Expr+');');
+	});
+
+	defineInlineBuiltinFunc('stick', [true, false, false], function(g, paramInfos) {
+		var agentExpr = g.getVariableAgentParamExpr(paramInfos[0]);
+		var maskExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var activeCheckExpr = g.getIntParamNativeValueExpr(paramInfos[2], 1);
+		g.push(g.getRegisteredObjectExpr(stick_internal)+'(this, '+agentExpr+', '+maskExpr+', '+activeCheckExpr+');');
+	});
+
+	var stick_internal = function(e, v, notrigerMask) {
+		var state = 0;
+		var keyPressed = e.keyPressed;
+		if(keyPressed[37]) state |= 1;     // カーソルキー左(←)
+		if(keyPressed[38]) state |= 2;     // カーソルキー上(↑)
+		if(keyPressed[39]) state |= 4;     // カーソルキー右(→)
+		if(keyPressed[40]) state |= 8;     // カーソルキー下(↓)
+		if(keyPressed[32]) state |= 16;    // スペースキー
+		if(keyPressed[13]) state |= 32;    // Enterキー
+		if(keyPressed[17]) state |= 64;    // Ctrlキー
+		if(keyPressed[27]) state |= 128;   // ESCキー
+		if(keyPressed[1])  state |= 256;   // マウスの左ボタン
+		if(keyPressed[2])  state |= 512;   // マウスの右ボタン
+		if(keyPressed[9])  state |= 1024;  // TABキー
+		var lastState = e.lastStickState || 0;
+		var trigger = state & ~lastState;
+		e.lastStickState = state;
+		v.assign(new IntValue(trigger | state & notrigerMask));
+	};
+
+	defineInlineBuiltinFunc('grect', [false, false, false, false, false], function(g, paramInfos) {
+		var XExpr = g.getIntParamNativeValueExpr(paramInfos[0], 0);
+		var YExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
+		var radExpr = g.getDoubleParamNativeValueExpr(paramInfos[2], 0);
+		var widthExpr = 'Math.abs('+g.getIntParamNativeValueExpr(paramInfos[3], 'this.currentScreen.copyWidth')+')';
+		var heightExpr = 'Math.abs('+g.getIntParamNativeValueExpr(paramInfos[4], 'this.currentScreen.copyHeight')+')';
+		g.push(g.getRegisteredObjectExpr(grect_internal)+'(this.currentScreen, '+XExpr+', '+YExpr+', '+radExpr+', '+widthExpr+', '+heightExpr+');');
+	});
+
+	var grect_internal = function(screen, x, y, rad, width, height) {
+		var ctx = screen.ctx;
+		ctx.save();
+		switch(screen.copyMode) {
+		case 3: // gmode_alpha
+			ctx.globalAlpha = screen.copyAlpha / 256;
+			break;
+		case 5: // gmode_add
+			ctx.globalAlpha = screen.copyAlpha / 256;
+			ctx.globalCompositeOperation = 'lighter';
+			break;
+		}
+		ctx.translate(x, y);
+		ctx.rotate(rad);
+		ctx.fillRect(-width / 2, -height / 2, width, height);
+		ctx.restore();
+	};
+	
+	defineSysVar('mousex', VarType.INT, 'new IntValue(this.currentScreen.mouseX)');
+	defineSysVar('mousey', VarType.INT, 'new IntValue(this.currentScreen.mouseY)');
+	defineInlineExprBuiltinFunc('mousew', [], VarType.INT, function(g, paramInfos) {
+		return g.getRegisteredObjectExpr(mousew_internal)+'(this.currentScreen)';
+	});
+	
+	var mousew_internal = function(screen) {
+		var result = screen.mouseW;
+		screen.mouseW = 0;
+		return new IntValue(result);
+	};
+	
+	(function() {
+		var exprs = getExprs();
+		var internalFunc = createInternalFunc();
+		
+		defineInlineExprBuiltinFunc('ginfo', [], VarType.INT, function() {
+			if(ommitable(paramInfos[0])) {
+				return exprs[paramInfos[0].node.val._value]('this');
 			} else {
-				throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ID 0 以外の screen は未対応');
+				return g.getRegisteredObjectExpr(internalFunc)+'(this, '+g.getIntParamNativeValueExpr(paramInfos[0])+')';
 			}
-		},
-		0x2f: function(x1, y1, x2, y2) { // line
-			this.scanArgs(arguments, 'NNNN');
-			x1 = x1 ? x1.toIntValue()._value : 0;
-			y1 = y1 ? y1.toIntValue()._value : 0;
-			x2 = x2 ? x2.toIntValue()._value : this.currentScreen.currentX;
-			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.currentY;
-			this.currentScreen.drawLine(x1, y1, x2, y2);
-		},
-		0x31: function(x1, y1, x2, y2) { // boxf
-			this.scanArgs(arguments, 'NNNN');
-			x1 = x1 ? x1.toIntValue()._value : 0;
-			y1 = y1 ? y1.toIntValue()._value : 0;
-			x2 = x2 ? x2.toIntValue()._value : this.currentScreen.width;
-			y2 = y2 ? y2.toIntValue()._value : this.currentScreen.height;
-			this.currentScreen.drawRect(x1, y1, x2, y2);
-		},
-		0x34: function(v, notrigerMask) { // stick
-			this.scanArgs(arguments, 'vNN');
-			notrigerMask = notrigerMask ? notrigerMask.toIntValue()._value : 0;
-			var state = 0;
-			if(this.keyPressed[37]) state |= 1;     // カーソルキー左(←)
-			if(this.keyPressed[38]) state |= 2;     // カーソルキー上(↑)
-			if(this.keyPressed[39]) state |= 4;     // カーソルキー右(→)
-			if(this.keyPressed[40]) state |= 8;     // カーソルキー下(↓)
-			if(this.keyPressed[32]) state |= 16;    // スペースキー
-			if(this.keyPressed[13]) state |= 32;    // Enterキー
-			if(this.keyPressed[17]) state |= 64;    // Ctrlキー
-			if(this.keyPressed[27]) state |= 128;   // ESCキー
-			if(this.keyPressed[1])  state |= 256;   // マウスの左ボタン
-			if(this.keyPressed[2])  state |= 512;   // マウスの右ボタン
-			if(this.keyPressed[9])  state |= 1024;  // TABキー
-			var lastState = this.lastStickState || 0;
-			var trigger = state & ~lastState;
-			this.lastStickState = state;
-			v.assign(new IntValue(trigger | state & notrigerMask));
-		},
-		0x35: function(x, y, rad, width, height) { // grect
-			this.scanArgs(arguments, 'NNNNN');
-			var screen = this.currentScreen;
-			x = x ? x.toIntValue()._value : 0;
-			y = y ? y.toIntValue()._value : 0;
-			rad = rad ? rad.toDoubleValue()._value : 0;
-			width = width ? Math.abs(width.toIntValue()._value) : screen.copyWidth;
-			height = height ? Math.abs(height.toIntValue()._value) : screen.copyHeight;
-			var ctx = screen.ctx;
-			ctx.save();
-			switch(screen.copyMode) {
-			case 3: // gmode_alpha
-				ctx.globalAlpha = screen.copyAlpha / 256;
-				break;
-			case 5: // gmode_add
-				ctx.globalAlpha = screen.copyAlpha / 256;
-				ctx.globalCompositeOperation = 'lighter';
-				break;
-			}
-			ctx.translate(x, y);
-			ctx.rotate(rad);
-			ctx.fillRect(-width / 2, -height / 2, width, height);
-			ctx.restore();
+		});
+		function ommitable(paramInfo) {
+			if(!paramInfo) return false;
+			var node = paramInfo.node;
+			if(!node.isLiteralNode()) return false;
+			var val = node.val;
+			return val.getType() == VarType.INT && val._value in exprs;
 		}
-	});
-	Utils.objectExtend(BuiltinFuncs[Token.Type.EXTSYSVAR], {
-		0x000: function() { // mousex
-			return new IntValue(this.currentScreen.mouseX);
-		},
-		0x001: function() { // mousey
-			return new IntValue(this.currentScreen.mouseY);
-		},
-		0x002: function() { // mousew
-			var result = this.currentScreen.mouseW;
-			this.currentScreen.mouseW = 0;
-			return new IntValue(result);
-		},
-		0x100: function(type) { // ginfo
-			this.scanArgs(arguments, 'n');
-			type = type.toIntValue()._value;
-			switch(type) {
-			case 3: // ginfo_sel
-				return new IntValue(this.currentScreenId);
-			case 12: // ginfo_winx
-				return new IntValue(this.currentScreen.width);
-			case 13: // ginfo_winy
-				return new IntValue(this.currentScreen.height);
-			case 14: // ginfo_mesx
-				return new IntValue(this.currentScreen.mesX);
-			case 15: // ginfo_mesy
-				return new IntValue(this.currentScreen.mesY);
-			case 16: // ginfo_r
-				return new IntValue(this.currentScreen.currentR);
-			case 17: // ginfo_g
-				return new IntValue(this.currentScreen.currentG);
-			case 18: // ginfo_b
-				return new IntValue(this.currentScreen.currentB);
-			case 22: // ginfo_cx
-				return new IntValue(this.currentScreen.currentX);
-			case 23: // ginfo_cy
-				return new IntValue(this.currentScreen.currentY);
-			case 26: // ginfo_sx
-				return new IntValue(this.currentScreen.width);
-			case 27: // ginfo_sy
-				return new IntValue(this.currentScreen.height);
-			default:
-				throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
+		function createInternalFunc() {
+			var code = '';
+			code += 'var IntValue = HSPonJS.IntValue;\n';
+			code += 'var throwHSPError = HSPonJS.throwHSPError;\n';
+			code += 'return function(e, n) {\n';
+			code += 'switch(n) {\n';
+			for(var i = 0; i <= 27; i ++) {
+				if(i in exprs) {
+					code += 'case '+i+':\n';
+					code += '    return '+exprs[i]('e')+';\n';
+				}
 			}
+			code += 'default:\n';
+			code += '    throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);\n';
+			code += '}\n'
+			code += '};';
+			return new Function(code)();
 		}
+		function getExprs() {
+			return {
+			 3: function ginfo_sel(e)  { return 'new IntValue('+e+'.currentScreenId)'; },
+			12: function ginfo_winx(e) { return 'new IntValue('+e+'.currentScreen.width)'; },
+			13: function ginfo_winy(e) { return 'new IntValue('+e+'.currentScreen.height)'; },
+			14: function ginfo_mesx(e) { return 'new IntValue('+e+'.currentScreen.mesX)'; },
+			15: function ginfo_mesy(e) { return 'new IntValue('+e+'.currentScreen.mesY)'; },
+			16: function ginfo_r(e)    { return 'new IntValue('+e+'.currentScreen.currentR)'; },
+			17: function ginfo_g(e)    { return 'new IntValue('+e+'.currentScreen.currentG)'; },
+			18: function ginfo_b(e)    { return 'new IntValue('+e+'.currentScreen.currentB)'; },
+			22: function ginfo_cx(e)   { return 'new IntValue('+e+'.currentScreen.currentX)'; },
+			23: function ginfo_cy(e)   { return 'new IntValue('+e+'.currentScreen.currentY)'; },
+			26: function ginfo_sx(e)   { return 'new IntValue('+e+'.currentScreen.width)'; },
+			27: function ginfo_sy(e)   { return 'new IntValue('+e+'.currentScreen.height)'; }
+			};
+		}
+	})();
+	
+	defineInlineBuiltinFunc('logmes', [false], function(g, paramInfos) {
+		g.push(g.getRegisteredObjectExpr(logmes_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+');');
 	});
-	BuiltinFuncs[Token.Type.PROGCMD][0x1c] = function(text) { // logmes
-		this.scanArgs(arguments, 's');
-		text = CP932.decode(text.toStrValue()._value);
+	
+	var logmes_internal = function(text) {
 		if(typeof console != 'undefined' && typeof console.log == 'function') {
 			console.log(text);
 		}

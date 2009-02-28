@@ -68,15 +68,13 @@ $(function() {
 					alert(data.message);
 					return;
 				}
-				var axdata = new HSPonJS.AXData(data.ax);
 				try {
-					var sequence = new HSPonJS.Compiler(axdata).compile();
+					var evaluator = HSPonJS.compileAndCreateEvaluator(data.ax);
 				} catch(e) {
 					if(!(e instanceof HSPonJS.CompileError)) throw e;
 					alert('コンパイルエラー:\n'+e.message+'\nat '+e.hspFileName+':'+e.hspLineNumber);
 					return;
 				}
-				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
 				quitEvaluator(i);
 				evaluators[i] = evaluator;
 				iframe.style.display = 'block';

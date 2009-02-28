@@ -43,7 +43,7 @@ with(HSPonJS) {
 		onInternalError: function(e) {
 			var insn = this.sequence[this.pc];
 			var msg = 'JavaScript Error!\n';
-			msg += e.name+': '+e.message+'\n';
+			msg += e+'\n';
 			msg += e.fileName+':'+e.lineNumber+'\n';
 			msg += 'pc = '+this.pc+'\n';
 			if(insn) {
@@ -97,18 +97,13 @@ with(HSPonJS) {
 			this.quited = true;
 		}
 	});
-	BuiltinFuncs[Token.Type.EXTCMD][0x0f] = function(val) { // mes
-		this.scanArgs(arguments, '.?');
-		if(val) {
-			this.resultTextarea.value += CP932.decode(val.toStrValue()._value) + "\n";
-		} else {
-			this.resultTextarea.value += "\n";
-		}
-	};
-	BuiltinFuncs[Token.Type.EXTCMD][0x13] = function(n) { // cls
-		this.scanArgs(arguments, 'N');
-		this.resultTextarea.value = '';
-	};
+	defineInlineBuiltinFunc('mes', [false], function(g, paramInfos) {
+		g.push('this.resultTextarea.value += CP932.decode('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+') + "\\n";');
+	});
+	defineInlineBuiltinFunc('cls', [false], function(g, paramInfos) {
+		g.push('('+g.getIntParamNativeValueExpr(paramInfos[0], 0)+');');
+		g.push('this.resultTextarea.value = "";');
+	});
 }
 
 
@@ -156,15 +151,13 @@ $(function() {
 					alert(data.message);
 					return;
 				}
-				var axdata = new HSPonJS.AXData(data.ax);
 				try {
-					var sequence = new HSPonJS.Compiler(axdata).compile();
+					var evaluator = HSPonJS.compileAndCreateEvaluator(data.ax);
 				} catch(e) {
 					if(!(e instanceof HSPonJS.CompileError)) throw e;
 					alert('コンパイルエラー:\n'+e.message+'\nat '+e.hspFileName+':'+e.hspLineNumber);
 					return;
 				}
-				var evaluator = new HSPonJS.Evaluator(axdata, sequence);
 				evaluator.resultTextarea = resultTextarea;
 				evaluator.onQuit = function() {
 					resultTextarea.style.display = 'none';
