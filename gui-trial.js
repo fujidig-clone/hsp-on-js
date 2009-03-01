@@ -837,7 +837,7 @@ with(HSPonJS) {
 		var exprs = getExprs();
 		var internalFunc = createInternalFunc();
 		
-		defineInlineExprBuiltinFunc('ginfo', [], VarType.INT, function() {
+		defineInlineExprBuiltinFunc('ginfo', [false], VarType.INT, function(g, paramInfos) {
 			if(ommitable(paramInfos[0])) {
 				return exprs[paramInfos[0].node.val._value]('this');
 			} else {
