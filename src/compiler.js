@@ -168,7 +168,7 @@ Compiler.prototype = {
 				insn.alive = true;
 				var code = insn.code;
 				var opts = insn.opts;
-				if(code == Insn.Code.GOTO) {
+				if(code == Insn.Code.GOTO || code == Insn.Code.CONTINUE || code == Insn.Code.BREAK) {
 					insn = insn.opts[0].getInsn();
 					continue;
 				}
