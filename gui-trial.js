@@ -629,6 +629,9 @@ with(HSPonJS) {
 	var gzoom_internal = function(screen, srcScreen, destWidth, destHeight, srcX, srcY, srcWidth, srcHeight, mode) {
 		if(srcWidth == 0 || srcHeight == 0) return;
 		
+		// (src|dest)(Width|Height) が負のときや、 src のコピーする領域がはみ出しているときに
+		// そのままだとエラーになるので調節する
+		
 		var signX = 1, signY = 1; // 反転させるとき -1
 		var destOffsetX = 0, destOffsetY = 0;
 		if(srcWidth < 0) {
@@ -674,10 +677,12 @@ with(HSPonJS) {
 		if(srcWidth > srcScreen.width - srcX) {
 			destWidth = Math.round((srcScreen.width - srcX) / srcWidth * destWidth);
 			srcWidth = srcScreen.width - srcX;
+			if(srcWidth == 0) return;
 		}
 		if(srcHeight > srcScreen.height - srcY) {
 			destHeight = Math.round((srcScreen.height - srcY) / srcHeight * destHeight);
 			srcHeight = srcScreen.height - srcY;
+			if(srcHeight == 0) return;
 		}
 		if(destWidth < 0) {
 			destWidth *= -1;
