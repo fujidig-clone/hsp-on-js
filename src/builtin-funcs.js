@@ -570,6 +570,7 @@ defineCompileTimeBuiltinFunc('vartype', function(name) {
 	function createInternalFunc() {
 		var code = '';
 		code += 'var IntValue = HSPonJS.IntValue;\n';
+		code += 'var HSPError = HSPonJS.HSPError;\n';
 		code += 'return function(n) {\n';
 		code += 'var date = new Date;\n';
 		code += 'switch(n) {\n';

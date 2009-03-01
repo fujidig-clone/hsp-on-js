@@ -859,7 +859,7 @@ with(HSPonJS) {
 		function createInternalFunc() {
 			var code = '';
 			code += 'var IntValue = HSPonJS.IntValue;\n';
-			code += 'var throwHSPError = HSPonJS.throwHSPError;\n';
+			code += 'var HSPError = HSPonJS.HSPError;\n';
 			code += 'return function(e, n) {\n';
 			code += 'switch(n) {\n';
 			for(var i = 0; i <= 27; i ++) {
