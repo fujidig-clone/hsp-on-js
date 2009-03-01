@@ -871,18 +871,21 @@ with(HSPonJS) {
 		}
 		function getExprs() {
 			return {
-			 3: function ginfo_sel(e)  { return 'new IntValue('+e+'.currentScreenId)'; },
-			12: function ginfo_winx(e) { return 'new IntValue('+e+'.currentScreen.width)'; },
-			13: function ginfo_winy(e) { return 'new IntValue('+e+'.currentScreen.height)'; },
-			14: function ginfo_mesx(e) { return 'new IntValue('+e+'.currentScreen.mesX)'; },
-			15: function ginfo_mesy(e) { return 'new IntValue('+e+'.currentScreen.mesY)'; },
-			16: function ginfo_r(e)    { return 'new IntValue('+e+'.currentScreen.currentR)'; },
-			17: function ginfo_g(e)    { return 'new IntValue('+e+'.currentScreen.currentG)'; },
-			18: function ginfo_b(e)    { return 'new IntValue('+e+'.currentScreen.currentB)'; },
-			22: function ginfo_cx(e)   { return 'new IntValue('+e+'.currentScreen.currentX)'; },
-			23: function ginfo_cy(e)   { return 'new IntValue('+e+'.currentScreen.currentY)'; },
-			26: function ginfo_sx(e)   { return 'new IntValue('+e+'.currentScreen.width)'; },
-			27: function ginfo_sy(e)   { return 'new IntValue('+e+'.currentScreen.height)'; }
+			 3: function ginfo_sel(e)    { return 'new IntValue('+e+'.currentScreenId)'; },
+			12: function ginfo_winx(e)   { return 'new IntValue('+e+'.currentScreen.width)'; },
+			13: function ginfo_winy(e)   { return 'new IntValue('+e+'.currentScreen.height)'; },
+			14: function ginfo_mesx(e)   { return 'new IntValue('+e+'.currentScreen.mesX)'; },
+			15: function ginfo_mesy(e)   { return 'new IntValue('+e+'.currentScreen.mesY)'; },
+			16: function ginfo_r(e)      { return 'new IntValue('+e+'.currentScreen.currentR)'; },
+			17: function ginfo_g(e)      { return 'new IntValue('+e+'.currentScreen.currentG)'; },
+			18: function ginfo_b(e)      { return 'new IntValue('+e+'.currentScreen.currentB)'; },
+			19: function ginfo_paluse(e) { return 'IntValue.of(0)'; },
+			20: function ginfo_dispx(e)  { return 'new IntValue(window.screen.width)'; },
+			21: function ginfo_dispy(e)  { return 'new IntValue(window.screen.height)'; },
+			22: function ginfo_cx(e)     { return 'new IntValue('+e+'.currentScreen.currentX)'; },
+			23: function ginfo_cy(e)     { return 'new IntValue('+e+'.currentScreen.currentY)'; },
+			26: function ginfo_sx(e)     { return 'new IntValue('+e+'.currentScreen.width)'; },
+			27: function ginfo_sy(e)     { return 'new IntValue('+e+'.currentScreen.height)'; }
 			};
 		}
 	})();
