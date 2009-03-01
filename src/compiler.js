@@ -709,7 +709,7 @@ Compiler.prototype = {
 			case NodeType.BUILTIN_FUNCALL:
 				var paramInfos = self.compileNodes(sequence, node.paramNodes);
 				var info = BuiltinFuncInfos[node.groupId][node.subId];
-				if(info.isInlineExpr) {
+				if(info && info.isInlineExpr) {
 					parent[propname] = new InlineExprBuiltinFuncall(node.groupId, node.subId, info, paramInfos);
 					break;
 				}
