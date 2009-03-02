@@ -466,7 +466,7 @@ with(HSPonJS) {
 	};
 	
 	defineInlineBuiltinFunc('mes', [false], function(g, paramInfos) {
-		g.push('this.currentScreen.drawText('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+');');
+		g.push('this.currentScreen.drawText(CP932.decode('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+'));');
 	});
 
 	defineInlineBuiltinFunc('pos', [false, false], function(g, paramInfos) {
