@@ -424,20 +424,20 @@ with(HSPonJS) {
 	});
 
 	defineInlineBuiltinFunc('dialog', [false, false, false, false], function(g, paramInfos) {
-		var messageExpr = g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""');
+		var messageExpr = 'CP932.decode('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+')';
 		var typeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 0);
-		var optionExpr = g.getStrParamNativeValueExpr(paramInfos[2], '""');
+		var optionExpr = 'CP932.decode('+g.getStrParamNativeValueExpr(paramInfos[2], '""')+')';
 		var reservedExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
-		g.push(g.getRegisteredObjectExpr(dialog_internal)+'('+messageExpr+', '+typeExpr+', '+optionExpr+', '+reservedExpr+');');
+		g.push(g.getRegisteredObjectExpr(dialog_internal)+'(this, '+messageExpr+', '+typeExpr+', '+optionExpr+', '+reservedExpr+');');
 	});
 
-	var dialog_internal = function (message, type, option, reserved) {
+	var dialog_internal = function(e, message, type, option, reserved) {
 		if(type & ~0xf) return;
 		if(type & 2) {
-			this.stat.assign(0, new IntValue(window.confirm(message) ? 6 : 7));
+			e.stat.assign(0, IntValue.of(window.confirm(message) ? 6 : 7));
 		} else {
 			window.alert(message);
-			this.stat.assign(0, new IntValue(1));
+			e.stat.assign(0, IntValue.of(1));
 		}
 	};
 
