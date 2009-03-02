@@ -11,7 +11,7 @@ Utils.objectExtend(StructValue.prototype, {
 		return IntValue.of(this.members == rhs.toValue().members);
 	},
 	ne: function(rhs) {
-		if(rhs.getType() != VarType.STRUCT) return IntValue.of(false);
+		if(rhs.getType() != VarType.STRUCT) return IntValue.of(true);
 		return IntValue.of(this.members != rhs.toValue().members);
 	},
 	getType: function() {
