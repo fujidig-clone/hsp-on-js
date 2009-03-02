@@ -53,22 +53,22 @@ Utils.objectExtend(IntValue.prototype, {
 		return new IntValue(this._value ^ rhs.toIntValue()._value);
 	},
 	eq: function(rhs) {
-		return new IntValue(this._value == rhs.toIntValue()._value);
+		return IntValue.of(this._value == rhs.toIntValue()._value);
 	},
 	ne: function(rhs) {
-		return new IntValue(this._value != rhs.toIntValue()._value);
+		return IntValue.of(this._value != rhs.toIntValue()._value);
 	},
 	gt: function(rhs) {
-		return new IntValue(this._value > rhs.toIntValue()._value);
+		return IntValue.of(this._value > rhs.toIntValue()._value);
 	},
 	lt: function(rhs) {
-		return new IntValue(this._value < rhs.toIntValue()._value);
+		return IntValue.of(this._value < rhs.toIntValue()._value);
 	},
 	gteq: function(rhs) {
-		return new IntValue(this._value >= rhs.toIntValue()._value);
+		return IntValue.of(this._value >= rhs.toIntValue()._value);
 	},
 	lteq: function(rhs) {
-		return new IntValue(this._value <= rhs.toIntValue()._value);
+		return IntValue.of(this._value <= rhs.toIntValue()._value);
 	},
 	rsh: function(rhs) {
 		return new IntValue(this._value >> rhs.toIntValue()._value);

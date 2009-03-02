@@ -21,29 +21,29 @@ Utils.objectExtend(StrValue.prototype, {
 		return new StrValue(this._value + rhs.toStrValue()._value);
 	},
 	eq: function(rhs) {
-		return new IntValue(this._value == rhs.toStrValue()._value);
+		return IntValue.of(this._value == rhs.toStrValue()._value);
 	},
 	ne: function(rhs) {
 		var l = this._value, r = rhs.toStrValue()._value;
 		if(l == r) {
-			return new IntValue(0);
+			return IntValue.of(0);
 		} else if(l > r) {
-			return new IntValue(1);
+			return IntValue.of(1);
 		} else {
-			return new IntValue(-1);
+			return IntValue.of(-1);
 		}
 	},
 	gt: function(rhs) {
-		return new IntValue(this._value > rhs.toStrValue()._value);
+		return IntValue.of(this._value > rhs.toStrValue()._value);
 	},
 	lt: function(rhs) {
-		return new IntValue(this._value < rhs.toStrValue()._value);
+		return IntValue.of(this._value < rhs.toStrValue()._value);
 	},
 	gteq: function(rhs) {
-		return new IntValue(this._value >= rhs.toStrValue()._value);
+		return IntValue.of(this._value >= rhs.toStrValue()._value);
 	},
 	lteq: function(rhs) {
-		return new IntValue(this._value <= rhs.toStrValue()._value);
+		return IntValue.of(this._value <= rhs.toStrValue()._value);
 	},
 	getType: function() {
 		return VarType.STR;

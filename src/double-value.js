@@ -29,22 +29,22 @@ Utils.objectExtend(DoubleValue.prototype, {
 		return new DoubleValue(this._value % rhs.toDoubleValue()._value);
 	},
 	eq: function(rhs) {
-		return new IntValue(this._value == rhs.toDoubleValue()._value);
+		return IntValue.of(this._value == rhs.toDoubleValue()._value);
 	},
 	ne: function(rhs) {
-		return new IntValue(this._value != rhs.toDoubleValue()._value);
+		return IntValue.of(this._value != rhs.toDoubleValue()._value);
 	},
 	gt: function(rhs) {
-		return new IntValue(this._value > rhs.toDoubleValue()._value);
+		return IntValue.of(this._value > rhs.toDoubleValue()._value);
 	},
 	lt: function(rhs) {
-		return new IntValue(this._value < rhs.toDoubleValue()._value);
+		return IntValue.of(this._value < rhs.toDoubleValue()._value);
 	},
 	gteq: function(rhs) {
-		return new IntValue(this._value >= rhs.toDoubleValue()._value);
+		return IntValue.of(this._value >= rhs.toDoubleValue()._value);
 	},
 	lteq: function(rhs) {
-		return new IntValue(this._value <= rhs.toDoubleValue()._value);
+		return IntValue.of(this._value <= rhs.toDoubleValue()._value);
 	},
 	getType: function() {
 		return VarType.DOUBLE;
