@@ -355,6 +355,10 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		if(this.timeoutID != undefined) {
 			clearTimeout(this.timeoutID);
 		}
+		if(this.timeoutCanceller) {
+			this.timeoutCanceller();
+			this.timeoutCanceller = undefined;
+		}
 		if(this.fileReadXHR) {
 			this.fileReadXHR.abort();
 			this.fileReadXHR = null;
@@ -377,6 +381,25 @@ HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
 		}
 	}
 });
+
+function fast_timeout(callback) {
+	// see http://subtech.g.hatena.ne.jp/cho45/20090125/1232831437
+	var img = new Image();
+	var handler = function() {
+		canceller();
+		callback();
+	}
+	img.addEventListener("load", handler, false);
+	img.addEventListener("error", handler, false);
+	
+	var canceller = function () {
+		img.removeEventListener("load", handler, false);
+		img.removeEventListener("error", handler, false);
+	}
+	
+	img.src = "data:,/ _ / X";
+	return canceller;
+}
 
 with(HSPonJS) {
 	HSPonJS.Utils.objectExtend(HSPonJS.Evaluator.prototype, {
@@ -402,6 +425,14 @@ with(HSPonJS) {
 		},
 		onWait: function(e) {
 			var self = this;
+			if(e.msec == 0) {
+				this.timeoutCanceller = fast_timeout(function() {
+					self.timeoutCanceller = undefined;
+					self.lastWaitTime = +new Date;
+					self.resume();
+				});
+				return;
+			}
 			this.timeoutID = setTimeout(function() {
 				self.timeoutID = undefined;
 				self.lastWaitTime = +new Date;
