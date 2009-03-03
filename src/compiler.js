@@ -178,10 +178,10 @@ Compiler.prototype = {
 				    opts[1] == 0x11)) { // stop
 					break;
 				}
-				if(code == Insn.Code.RETURN) {
+				this.markInsnOpts(insns, code, opts);
+				if(code == Insn.Code.GOTO_EXPR || code == Insn.Code.RETURN) {
 					break;
 				}
-				this.markInsnOpts(insns, code, opts);
 				insn = insn.getNextInsn();
 			}
 		}
