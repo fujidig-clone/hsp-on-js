@@ -60,7 +60,7 @@ function XHRReadURL(url, success, error) {
 		}
 	}
 	xhr.open("GET", url, true);
-	xhr.onreadystatechange = function(){
+	xhr.onreadystatechange = function() {
 		if(!(xhr && xhr.readyState == 4)) return;
 		if(200 <= xhr.status && xhr.status < 300) {
 			var data = xhr.responseText;
@@ -388,14 +388,14 @@ function fast_timeout(callback) {
 	var handler = function() {
 		canceller();
 		callback();
-	}
+	};
 	img.addEventListener("load", handler, false);
 	img.addEventListener("error", handler, false);
 	
-	var canceller = function () {
+	var canceller = function() {
 		img.removeEventListener("load", handler, false);
 		img.removeEventListener("error", handler, false);
-	}
+	};
 	
 	img.src = "data:,/ _ / X";
 	return canceller;
