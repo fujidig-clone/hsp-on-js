@@ -523,7 +523,7 @@ with(HSPonJS) {
 	});
 
 	defineInlineBuiltinFunc('font', [false, false, false], function(g, paramInfos) {
-		var nameExpr = g.getStrParamNativeValueExpr(paramInfos[0]);
+		var nameExpr = 'CP932.decode('+g.getStrParamNativeValueExpr(paramInfos[0])+')';
 		var sizeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 18);
 		var styleExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
 		g.push('this.currentScreen.setFont('+nameExpr+', '+sizeExpr+', '+styleExpr+');');
@@ -780,7 +780,7 @@ with(HSPonJS) {
 	var screen_internal = function(e, id, width, height, mode) {
 		if(id == 0) {
 			e.mainScreen.changeToNewCanvas(width, height);
-			e.currentScreen = this.mainScreen;
+			e.currentScreen = e.mainScreen;
 			e.currentScreenId = 0;
 		} else {
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, 'ID 0 以外の screen は未対応');
