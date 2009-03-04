@@ -13,27 +13,11 @@ Utils.objectExtend(StructArray.prototype, {
 			this.searchFrom = offset;
 		}
 	},
-	expand: function(indices) {
-		var isExpanded = this.expandLen(indices);
-		if(isExpanded) {
-			var newLen = this.allLength();
-			var empty = StructValue.EMPTY;
-			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = empty;
-			}
+	fillUpElements: function(newLen) {
+		var empty = StructValue.EMPTY;
+		for(var i = this.values.length; i < newLen; i ++) {
+			this.values[i] = empty;
 		}
-		return isExpanded;
-	},
-	expand1D: function(index) {
-		var isExpanded = this.expandLen1D(index);
-		if(isExpanded) {
-			var newLen = this.l0;
-			var empty = StructValue.EMPTY;
-			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = empty;
-			}
-		}
-		return isExpanded;
 	},
 	getType: function() {
 		return VarType.STRUCT;

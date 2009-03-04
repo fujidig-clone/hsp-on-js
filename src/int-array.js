@@ -6,27 +6,11 @@ function IntArray() {
 IntArray.prototype = new HSPArray();
 
 Utils.objectExtend(IntArray.prototype, {
-	expand: function(indices) {
-		var isExpanded = this.expandLen(indices);
-		if(isExpanded) {
-			var newLen = this.allLength();
-			var zero = new IntValue(0);
-			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = zero;
-			}
+	fillUpElements: function(newLen) {
+		var zero = new IntValue(0);
+		for(var i = this.values.length; i < newLen; i ++) {
+			this.values[i] = zero;
 		}
-		return isExpanded;
-	},
-	expand1D: function(index) {
-		var isExpanded = this.expandLen1D(index);
-		if(isExpanded) {
-			var newLen = this.l0;
-			var zero = new IntValue(0);
-			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = zero;
-			}
-		}
-		return isExpanded;
 	},
 	getType: function() {
 		return VarType.INT;

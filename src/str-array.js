@@ -9,25 +9,10 @@ Utils.objectExtend(StrArray.prototype, {
 	assign: function(offset, rhs) {
 		this.values[offset].assign(rhs);
 	},
-	expand: function(indices) {
-		var isExpanded = this.expandLen(indices);
-		if(isExpanded) {
-			var newLen = this.allLength();
-			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = new StrBuffer(64);
-			}
+	fillUpElements: function(newLen) {
+		for(var i = this.values.length; i < newLen; i ++) {
+			this.values[i] = new StrBuffer(64);
 		}
-		return isExpanded;
-	},
-	expand1D: function(index) {
-		var isExpanded = this.expandLen1D(index);
-		if(isExpanded) {
-			var newLen = this.l0;
-			for(var i = this.values.length; i < newLen; i ++) {
-				this.values[i] = new StrBuffer(64);
-			}
-		}
-		return isExpanded;
 	},
 	at: function(offset) {
 		return this.values[offset].getValue();
