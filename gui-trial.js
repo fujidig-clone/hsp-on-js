@@ -857,6 +857,64 @@ with(HSPonJS) {
 		ctx.restore();
 	};
 	
+	defineInlineBuiltinFunc('gsquare', [false, true, true, true, true], function(g, paramInfos) {
+		var funcExpr = g.getRegisteredObjectExpr(gsquare_internal);
+		var idExpr = g.getIntParamNativeValueExpr(paramInfos[0]);
+		var destXsExpr = g.getNoSubscriptVariableParamExpr(paramInfos[1]);
+		var destYsExpr = g.getNoSubscriptVariableParamExpr(paramInfos[2]);
+		var srcXsExpr = g.getNoSubscriptVariableParamExpr(paramInfos[3]);
+		var srcYsExpr = g.getNoSubscriptVariableParamExpr(paramInfos[4]);
+		if(isDefaultParamInfo(paramInfos[3])) srcXsExpr = 'null';
+		if(isDefaultParamInfo(paramInfos[4])) srcYsExpr = 'null';
+		g.push(funcExpr+'(this, '+idExpr+', '+destXsExpr+', '+destYsExpr+', '+srcXsExpr+', '+srcYsExpr+');');
+	});
+	
+	var gsquare_internal = function(e, id, destXs, destYs, srcXs, srcYs) {
+		checkTypeInt(destXs.value);
+		checkTypeInt(destYs.value);
+		if(id >= 0) {
+			if(!(srcXs && srcYs)) throw new HSPError(ErrorCode.VARIABLE_REQUIRED);
+			checkTypeInt(srcXs.value);
+			checkTypeInt(srcYs.value);
+			throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION, 'gsquare は -1 以外未対応');
+		} else {
+			if(srcXs || srcYs) {
+				throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);
+			}
+			var xs = getValues(destXs);
+			var ys = getValues(destYs);
+			var screen = e.currentScreen;
+			var ctx = screen.ctx;
+			ctx.save();
+			switch(screen.copyMode) {
+			case 3: // gmode_alpha
+				ctx.globalAlpha = screen.copyAlpha / 256;
+				break;
+			case 5: // gmode_add
+				ctx.globalAlpha = screen.copyAlpha / 256;
+				ctx.globalCompositeOperation = 'lighter';
+				break;
+			}
+			ctx.beginPath();
+			ctx.moveTo(xs[0], ys[0]);
+			ctx.lineTo(xs[1], ys[1]);
+			ctx.lineTo(xs[2], ys[2]);
+			ctx.lineTo(xs[3], ys[3]);
+			ctx.fill();
+			ctx.restore();
+		}
+		function getValues(variable) {
+			var values = [0, 0, 0, 0];
+			var array = variable.value;
+			var len = array.getL0();
+			if(len > 4) len = 4;
+			for(var i = 0; i < len; i ++) {
+				values[i] = array.at(i)._value;
+			}
+			return values;
+		}
+	};
+	
 	defineSysVar('mousex', VarType.INT, 'new IntValue(this.currentScreen.mouseX)');
 	defineSysVar('mousey', VarType.INT, 'new IntValue(this.currentScreen.mouseY)');
 	defineInlineExprBuiltinFunc('mousew', [], VarType.INT, function(g, paramInfos) {
