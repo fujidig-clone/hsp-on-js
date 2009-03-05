@@ -622,8 +622,7 @@ with(HSPonJS) {
 		}
 		if(width > srcScreen.width - srcX) width = srcScreen.width - srcX;
 		if(height > srcScreen.height - srcY) height = srcScreen.height - srcY;
-		if(width < 0) width = 0;
-		if(height < 0) height = 0;
+		if(width <= 0 || height <= 0) return;
 
 		var ctx = screen.ctx;
 		ctx.save();
