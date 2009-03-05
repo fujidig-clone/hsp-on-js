@@ -139,6 +139,9 @@ Screen.prototype = {
 	},
 	selectColorByHSV: function(h, s, v) {
 		h = h % 192;
+		if(h < 0) {
+			h += 192;
+		}
 		s = s & 255;
 		v = v & 255;
 		var mv = 255 * 32;
@@ -148,10 +151,9 @@ Screen.prototype = {
 		var v1 = (v*(mv-s*32)    +mp)/mv|0;
 		var v2 = (v*(mv-s*t)     +mp)/mv|0;
 		var v3 = (v*(mv-s*(32-t))+mp)/mv|0;
-		var r = 0, g = 0, b = 0;
+		var r, g, b;
 		switch(i){
 		case 0:
-		case 6:
 			r=v;	g=v3;	b=v1;	break;
 		case 1:
 			r=v2;	g=v;	b=v1;	break;
