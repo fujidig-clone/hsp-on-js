@@ -142,6 +142,16 @@ HSPArray.prototype = {
 	dec: function(offset) {
 		throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
 		                   VarTypeNames[this.getType()]+" 型はデクリメントに対応していません");
+	},
+	getValues: function() {
+		return this.values;
+	},
+	getValuesStartOffset: function() {
+		return 0;
+	},
+	fillBytes: function(offset, val, length, bytesOffset) {
+		if(length <= 0) return;
+		this.setbytes(offset, bytesOffset, Utils.strTimes(String.fromCharCode(val), length));
 	}
 };
 

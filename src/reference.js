@@ -65,7 +65,7 @@ Reference.prototype = {
 		return this.value.expandByteSize(this.base + offset, size);
 	},
 	bufferAt: function(offset) {
-		return this.value.bufferAt(offset);
+		return this.value.bufferAt(this.base + offset);
 	},
 	ref: function(offset) {
 		if(offset == 0) {
@@ -78,6 +78,15 @@ Reference.prototype = {
 	},
 	dec: function(offset) {
 		return this.value.dec(this.base + offset);
+	},
+	getValues: function() {
+		return this.value.getValues();
+	},
+	getValuesStartOffset: function() {
+		return this.base;
+	},
+	fillBytes: function(offset, val, length, bytesOffset) {
+		return this.value.fillBytes(this.base + offset, val, length, bytesOffset);
 	}
 };
 

@@ -43,6 +43,12 @@ Utils.objectExtend(UninitializedArray.prototype, {
 	dec: function(offset) {
 		throw this.uninitializedError();
 	},
+	getValues: function() {
+		throw this.uninitializedError();
+	},
+	getValuesStartOffset: function() {
+		throw this.uninitializedError();
+	},
 	expand: function(indices) {
 		throw this.uninitializedError();
 	},

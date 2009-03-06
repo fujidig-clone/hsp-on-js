@@ -382,12 +382,8 @@ defineInlineBuiltinFunc('memset', [true, false, false, false], function(g, param
 	var valExpr    = g.getIntParamNativeValueExpr(paramInfos[1], 0) + ' & 0xff';
 	var lengthExpr = g.getIntParamNativeValueExpr(paramInfos[2], 0);
 	var offsetExpr = g.getIntParamNativeValueExpr(paramInfos[3], 0);
-	g.push(g.getRegisteredObjectExpr(memset_internal)+'('+agentExpr+', '+valExpr+', '+lengthExpr+', '+offsetExpr+');');
+	g.push(agentExpr+'.fillBytes('+valExpr+', '+lengthExpr+', '+offsetExpr+');');
 });
-
-function memset_internal(agent, val, length, offset) {
-	agent.setbytes(offset, Utils.strTimes(String.fromCharCode(val), length));
-}
 
 defineInlineBuiltinFunc('notesel', [true], function(g, paramInfos) {
 	g.push('var agent = '+g.getVariableAgentParamExpr(paramInfos[0])+';');

@@ -96,6 +96,9 @@ VariableAgent.prototype = {
 	dec: function() {
 		return this.variable.dec(this.getOffset());
 	},
+	fillBytes: function(val, length, bytesOffset) {
+		return this.variable.fillBytes(this.getOffset(), val, length, bytesOffset);
+	},
 	toValue: function() {
 		return this.variable.at(this.getOffset());
 	},

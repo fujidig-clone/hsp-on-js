@@ -1,0 +1,97 @@
+; int 型配列変数への memset 命令のテスト
+----------------------------------------
+	a = 0
+	memset a, 0xab, 4
+	is(a, 0xabababab)
+	memset a, 0xff, 4
+	is(a, 0xffffffff)
+	memset a, 0, 4
+	is(a, 0)
+----------------------------------------
+#module
+#defcfunc f int offset, int len, local result
+	result = 0x12345678
+	memset result, 0xab, len, offset
+	return result
+#global
+	is(f(0, 1), 0x123456ab)
+	is(f(0, 2), 0x1234abab)
+	is(f(0, 3), 0x12ababab)
+	is(f(0, 4), 0xabababab)
+
+	is(f(1, 1), 0x1234ab78)
+	is(f(1, 2), 0x12abab78)
+	is(f(1, 3), 0xababab78)
+
+	is(f(2, 1), 0x12ab5678)
+	is(f(2, 2), 0xabab5678)
+
+	is(f(3, 1), 0xab345678)
+----------------------------------------
+	a = 0
+	assert_error 20
+	memset a, 0, 1, -1
+----------------------------------------
+	a = 0
+	assert_error 20
+	memset a, 0, 5, 0
+----------------------------------------
+	a = 0
+	assert_error 20
+	memset a, 0, 4, 1
+----------------------------------------
+	dim a, 5
+	memset a.1, 0, 4 * 4 - 1, 1
+	memset a.1, 0, 1, 4 * 4 - 1
+	ok()
+----------------------------------------
+	dim a, 5
+	assert_error 20
+	memset a.1, 0, 4 * 4, 1
+----------------------------------------
+	dim a, 5
+	assert_error 20
+	memset a.1, 0, 1, 4 * 4
+----------------------------------------
+#module
+#defcfunc all array a, int offset, int len, int val, local result
+	result = 1
+	repeat len, offset
+		if peek(a, cnt) != val {
+			result = 0
+			break
+		}
+	loop
+	return result
+#global
+	dim a, 10
+	memset a, 0x12, 10 * 4, 0
+	ok(all(a, 0, 10 * 4, 0x12))
+	memset a, 0x23, 10 * 4 - 2, 1
+	is(peek(a, 0), 0x12)
+	ok(all(a, 1, 10 * 4 - 2, 0x23))
+	is(peek(a, 10 * 4 - 1), 0x12)
+----------------------------------------
+	dim a, 2
+	memset a.0, 0x11, 2, 6
+	memset a.1, 0x22, 2
+	is(a.1, 0x11112222)
+----------------------------------------
+	dim a, 4
+	memset a.1, 0xff, 8
+	is(a.0, 0)
+	is(a.1, -1)
+	is(a.2, -1)
+	is(a.3, 0)
+	memset a.1, 0x11, 6, 1
+	is(a.0, 0)
+	is(a.1, 0x111111ff)
+	is(a.2, 0xff111111)
+	is(a.3, 0)
+----------------------------------------
+	dim a, 3
+	dup b, a.1
+	memset b, 0x11, 2, 1
+	memset b.1, 0x22, 2, 0
+	is(a.1, 0x00111100)
+	is(a.2, 0x00002222)

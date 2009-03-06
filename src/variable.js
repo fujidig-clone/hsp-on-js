@@ -115,6 +115,9 @@ Variable.prototype = {
 	},
 	dec: function(offset) {
 		return this.value.dec(offset);
+	},
+	fillBytes: function(offset, val, length, bytesOffset) {
+		return this.value.fillBytes(offset, val, length, bytesOffset);
 	}
 };
 
