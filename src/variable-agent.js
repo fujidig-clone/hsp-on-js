@@ -52,7 +52,7 @@ VariableAgent.prototype = {
 		return this.toValue().lsh(rhs);
 	},
 	getType: function() {
-		return this.variable.getType();
+		return this.variable.value.getType();
 	},
 	toIntValue: function() {
 		return this.toValue().toIntValue();
@@ -67,40 +67,40 @@ VariableAgent.prototype = {
 		return this.toValue().isUsing();
 	},
 	getbyte: function(bytesOffset) {
-		return this.variable.getbyte(this.getOffset(), bytesOffset);
+		return this.variable.value.getbyte(this.getOffset(), bytesOffset);
 	},
 	setbyte: function(bytesOffset, val) {
-		return this.variable.setbyte(this.getOffset(), bytesOffset, val);
+		return this.variable.value.setbyte(this.getOffset(), bytesOffset, val);
 	},
 	getbytes: function(bytesOffset, length) {
-		return this.variable.getbytes(this.getOffset(), bytesOffset, length);
+		return this.variable.value.getbytes(this.getOffset(), bytesOffset, length);
 	},
 	setbytes: function(bytesOffset, buf) {
-		return this.variable.setbytes(this.getOffset(), bytesOffset, buf);
+		return this.variable.value.setbytes(this.getOffset(), bytesOffset, buf);
 	},
 	getByteSize: function() {
-		return this.variable.getByteSize(this.getOffset());
+		return this.variable.value.getByteSize(this.getOffset());
 	},
 	expandByteSize: function(size) {
-		return this.variable.expandByteSize(this.getOffset(), size);
+		return this.variable.value.expandByteSize(this.getOffset(), size);
 	},
 	ref: function() {
-		return this.variable.ref(this.getOffset());
+		return this.variable.value.ref(this.getOffset());
 	},
 	getBuffer: function() {
-		return this.variable.bufferAt(this.getOffset());
+		return this.variable.value.bufferAt(this.getOffset());
 	},
 	inc: function() {
-		return this.variable.inc(this.getOffset());
+		return this.variable.value.inc(this.getOffset());
 	},
 	dec: function() {
-		return this.variable.dec(this.getOffset());
+		return this.variable.value.dec(this.getOffset());
 	},
 	fillBytes: function(val, length, bytesOffset) {
-		return this.variable.fillBytes(this.getOffset(), val, length, bytesOffset);
+		return this.variable.value.fillBytes(this.getOffset(), val, length, bytesOffset);
 	},
 	toValue: function() {
-		return this.variable.at(this.getOffset());
+		return this.variable.value.at(this.getOffset());
 	},
 	isVariable: function() {
 		return true;
@@ -119,7 +119,7 @@ Utils.objectExtend(VariableAgent0D.prototype, {
 		return 0;
 	},
 	toValue: function() {
-		return this.variable.at(0);
+		return this.variable.value.at(0);
 	},
 	assign: function(rhs) {
 		var type = rhs.getType();
