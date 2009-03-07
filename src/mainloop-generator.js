@@ -434,7 +434,7 @@ MainLoopGenerator.prototype = {
 		this.push('continue;');
 	},
 	pushBranchCode: function(label, paramInfo, reverse) {
-		var expr = this.getParamExpr(paramInfo)+'.toIntValue()._value';
+		var expr = this.getIntParamNativeValueExpr(paramInfo);
 		if(reverse) {
 			expr = '!' + expr;
 		}
