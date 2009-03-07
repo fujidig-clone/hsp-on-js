@@ -2,6 +2,23 @@ function Variable() {
 	this.value = new IntArray();
 }
 
+function newArray(type) {
+	switch(type) {
+	case 1: // VarType.LABEL
+		return new LabelArray();
+	case 2: // VarType.STR
+		return new StrArray();
+	case 3: // VarType.DOUBLE
+		return new DoubleArray();
+	case 4: // VarType.INT
+		return new IntArray();
+	case 5: // VarType.STRUCT
+		return new StructArray();
+	default:
+		return null;
+	}
+}
+
 Variable.prototype = {
 	assign: function(indices, rhs) {
 		this.value.expand(indices);
@@ -17,25 +34,11 @@ Variable.prototype = {
 		return this.value.assign(offset, rhs);
 	},
 	reset: function(type) {
-		switch(type) {
-		case VarType.LABEL:
-			this.value = new LabelArray();
-			break;
-		case VarType.STR:
-			this.value = new StrArray();
-			break;
-		case VarType.DOUBLE:
-			this.value = new DoubleArray();
-			break;
-		case VarType.INT:
-			this.value = new IntArray();
-			break;
-		case VarType.STRUCT:
-			this.value = new StructArray();
-			break;
-		default:
+		var ary = newArray(type);
+		if(!ary) {
 			throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[type]+' 型の値は変数に代入できません');
 		}
+		this.value = ary;
 	},
 	expand: function(indices) {
 		return this.value.expand(indices);
@@ -62,24 +65,8 @@ Variable.prototype = {
 		return this.value.getL3();
 	},
 	dim: function(type, l0, l1, l2, l3) {
-		var ary;
-		switch(type) {
-		case VarType.LABEL:
-			ary = new LabelArray();
-			break;
-		case VarType.STR:
-			ary = new StrArray();
-			break;
-		case VarType.DOUBLE:
-			ary = new DoubleArray();
-			break;
-		case VarType.INT:
-			ary = new IntArray();
-			break;
-		case VarType.STRUCT:
-			ary = new StructArray();
-			break;
-		default:
+		var ary = newArray(type);
+		if(!ary) {
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '異常な変数型の値です');
 		}
 		ary.setLength(l0, l1, l2, l3);
@@ -123,6 +110,7 @@ Variable.prototype = {
 
 if(typeof HSPonJS != 'undefined') {
 	HSPonJS.Variable = Variable;
+	HSPonJS.newArray = newArray;
 }
 
 
