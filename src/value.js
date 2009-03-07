@@ -49,9 +49,7 @@ Value.prototype = {
 	lsh: function(rhs) {
 		throw this._unsupportedError('<<');
 	},
-	getType: function() {
-		return VarType.NONE;
-	},
+	type: VarType.NONE,
 	toIntValue: function() {
 		throw this._convertError("int");
 	},
@@ -66,11 +64,11 @@ Value.prototype = {
 	},
 	_unsupportedError: function(op) {
 		return new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
-		                    VarTypeNames[this.getType()]+" 型は `"+op+"' 演算子をサポートしていません");
+		                    VarTypeNames[this.type]+" 型は `"+op+"' 演算子をサポートしていません");
 	},
 	_convertError: function(type) {
 		return new HSPError(ErrorCode.UNSUPPORTED_FUNCTION,
-		                    VarTypeNames[this.getType()]+" 型は "+type + " に変換できません");
+		                    VarTypeNames[this.type]+" 型は "+type + " に変換できません");
 	},
 	toString: function() {
 		return '<Value>';

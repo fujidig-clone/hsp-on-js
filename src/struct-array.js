@@ -8,7 +8,7 @@ StructArray.prototype = new HSPArray();
 
 Utils.objectExtend(StructArray.prototype, {
 	assign: function(offset, rhs) {
-		this.values[offset] = rhs.toValue();
+		this.values[offset] = rhs;
 		if(rhs == StructValue.EMPTY && offset < this.searchFrom) {
 			this.searchFrom = offset;
 		}
@@ -19,9 +19,7 @@ Utils.objectExtend(StructArray.prototype, {
 			this.values[i] = empty;
 		}
 	},
-	getType: function() {
-		return VarType.STRUCT;
-	},
+	type: VarType.STRUCT,
 	// 配列インデックスを返す
 	newmod: function(module) {
 		var len = this.l0;

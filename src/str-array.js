@@ -17,11 +17,9 @@ Utils.objectExtend(StrArray.prototype, {
 	at: function(offset) {
 		return this.values[offset].getValue();
 	},
-	getType: function() {
-		return VarType.STR;
-	},
+	type: VarType.STR,
 	strDim: function(strLength, l0, l1, l2, l3) {
-		if(strLength == undefined || strLength <= 64) {
+		if(strLength < 64) {
 			strLength = 64;
 		}
 		this.setLength(l0, l1, l2, l3);

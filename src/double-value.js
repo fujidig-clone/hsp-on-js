@@ -46,9 +46,7 @@ Utils.objectExtend(DoubleValue.prototype, {
 	lteq: function(rhs) {
 		return IntValue.of(this._value <= rhs.toDoubleValue()._value);
 	},
-	getType: function() {
-		return VarType.DOUBLE;
-	},
+	type: VarType.DOUBLE,
 	toIntValue: function() {
 		return new IntValue(this._value);
 	},

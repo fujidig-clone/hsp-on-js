@@ -45,9 +45,7 @@ Utils.objectExtend(StrValue.prototype, {
 	lteq: function(rhs) {
 		return IntValue.of(this._value <= rhs.toStrValue()._value);
 	},
-	getType: function() {
-		return VarType.STR;
-	},
+	type: VarType.STR,
 	toIntValue: function() {
 		if(this._value.charAt(0) == '$') {
 			var n = 0;

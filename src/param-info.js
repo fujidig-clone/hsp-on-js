@@ -87,7 +87,7 @@ Utils.objectExtend(LiteralNode.prototype, {
 		return '<LiteralNode:'+this.val+'>';
 	},
 	getValueType: function() {
-		return this.val.getType();
+		return this.val.type;
 	}
 });
 

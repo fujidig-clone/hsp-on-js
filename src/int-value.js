@@ -76,9 +76,7 @@ Utils.objectExtend(IntValue.prototype, {
 	lsh: function(rhs) {
 		return new IntValue(this._value << rhs.toIntValue()._value);
 	},
-	getType: function() {
-		return VarType.INT;
-	},
+	type: VarType.INT,
 	toIntValue: function() {
 		return this;
 	},

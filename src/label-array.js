@@ -12,9 +12,7 @@ Utils.objectExtend(LabelArray.prototype, {
 			this.values[i] = empty;
 		}
 	},
-	getType: function() {
-		return VarType.LABEL;
-	}
+	type: VarType.LABEL
 });
 
 if(typeof HSPonJS != 'undefined') {

@@ -943,8 +943,7 @@ with(HSPonJS) {
 			if(!paramInfo) return false;
 			var node = paramInfo.node;
 			if(!node.isLiteralNode()) return false;
-			var val = node.val;
-			return val.getType() == VarType.INT && val._value in exprs;
+			return node.getValueType() == VarType.INT && node.val._value in exprs;
 		}
 		function createInternalFunc() {
 			var code = '';

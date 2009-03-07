@@ -12,9 +12,7 @@ Utils.objectExtend(DoubleArray.prototype, {
 			this.values[i] = zero;
 		}
 	},
-	getType: function() {
-		return VarType.DOUBLE;
-	},
+	type: VarType.DOUBLE,
 	inc: function(offset) {
 		this.values[offset] = new DoubleValue(this.values[offset]._value + 1);
 	},

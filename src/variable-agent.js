@@ -51,9 +51,6 @@ VariableAgent.prototype = {
 	lsh: function(rhs) {
 		return this.toValue().lsh(rhs);
 	},
-	getType: function() {
-		return this.variable.value.getType();
-	},
 	toIntValue: function() {
 		return this.toValue().toIntValue();
 	},
@@ -122,9 +119,9 @@ Utils.objectExtend(VariableAgent0D.prototype, {
 		return this.variable.value.at(0);
 	},
 	assign: function(rhs) {
-		var type = rhs.getType();
+		var type = rhs.type;
 		var variable = this.variable;
-		if(variable.value.getType() != type) {
+		if(variable.value.type != type) {
 			variable.reset(type);
 		}
 		variable.value.assign(0, rhs);
@@ -156,8 +153,8 @@ Utils.objectExtend(VariableAgent1D.prototype, {
 		var offset = this.offset;
 		var variable = this.variable;
 		var array = variable.value;
-		var type = rhs.getType();
-		if(array.getType() != type) {
+		var type = rhs.type;
+		if(array.type != type) {
 		    if(offset == 0) {
 		        variable.reset(type);
 		        array = variable.value;

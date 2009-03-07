@@ -64,21 +64,21 @@ _assert(VarType.DOUBLE === 3);
 _assert(VarType.INT === 4);
 
 function checkTypeInt(val) {
-	if(val.getType() != 4) { // VarType.INT
-		throw typeMismatchError(val.getType(), 4);
+	if(val.type != 4) { // VarType.INT
+		throw typeMismatchError(val.type, 4);
 	}
 	return val;
 }
 
 function checkTypeDouble(val) {
-	if(val.getType() != 3) { // VarType.DOUBLE
-		throw typeMismatchError(val.getType(), 3);
+	if(val.type != 3) { // VarType.DOUBLE
+		throw typeMismatchError(val.type, 3);
 	}
 	return val;
 }
 
 function checkTypeNumber(val) {
-	var type = val.getType();
+	var type = val.type;
 	if(type != 4 && // VarType.INT
 	   type != 3) { // VarType.DOUBLE
 		throw typeMismatchErrorIntOrDouble(type);
@@ -87,14 +87,14 @@ function checkTypeNumber(val) {
 }
 
 function checkTypeStr(val) {
-	if(val.getType() != 2) { // VarType.STR
-		throw typeMismatchError(val.getType(), 2);
+	if(val.type != 2) { // VarType.STR
+		throw typeMismatchError(val.type, 2);
 	}
 	return val;
 }
 
 function checkTypeLabel(val) {
-	if(val.getType() != 1 || // VarType.LABEL
+	if(val.type != 1 || // VarType.LABEL
 	   !val.isUsing()) {
 		throw new HSPError(ErrorCode.LABEL_REQUIRED);
 	}
@@ -265,7 +265,7 @@ Evaluator.prototype = {
 	},
 	getThismod: function() {
 		var thismod = this.getArg(0);
-		if(!(thismod instanceof VariableAgent && thismod.getType() == VarType.STRUCT && thismod.isUsing())) {
+		if(!(thismod instanceof VariableAgent && thismod.variable.value.type == VarType.STRUCT && thismod.isUsing())) {
 			throw new HSPError(ErrorCode.INVALID_STRUCT_SOURCE);
 		}
 		return thismod;

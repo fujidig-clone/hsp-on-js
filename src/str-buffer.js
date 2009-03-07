@@ -8,7 +8,6 @@ function StrBuffer(length) {
 
 StrBuffer.prototype = {
 	assign: function(val) {
-		val = val.toStrValue();
 		if(val._value.length + 1 >= this._length) {
 			this._length = val._value.length + 1;
 			this._str = val._value;

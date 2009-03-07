@@ -22,12 +22,12 @@ function newArray(type) {
 Variable.prototype = {
 	assign: function(indices, rhs) {
 		this.value.expand(indices);
-		if(this.getType() != rhs.getType()) {
+		if(this.value.type != rhs.type) {
 			if(this.value.getOffset(indices) != 0) {
 				throw new HSPError(ErrorCode.INVALID_ARRAYSTORE,
-				VarTypeNames[this.getType()]+' 型の配列変数に '+VarTypeNames[rhs.getType()]+' 型の値を代入しました');
+				VarTypeNames[this.value.type]+' 型の配列変数に '+VarTypeNames[rhs.type]+' 型の値を代入しました');
 			}
-			this.reset(rhs.getType());
+			this.reset(rhs.type);
 			this.value.expand(indices);
 		}
 		var offset = this.value.getOffset(indices);
@@ -45,9 +45,6 @@ Variable.prototype = {
 	},
 	expand1D: function(index) {
 		return this.value.expand1D(index);
-	},
-	getType: function() {
-		return this.value.getType();
 	},
 	at: function(offset) {
 		return this.value.at(offset);

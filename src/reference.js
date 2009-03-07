@@ -2,6 +2,7 @@ function Reference(value, offset) {
 	this.value = value;
 	this.base = offset;
 	this.l0 = value.values.length - offset;
+	this.type = value.type;
 }
 
 Reference.prototype = {
@@ -27,9 +28,6 @@ Reference.prototype = {
 			return null;
 		}
 		return offset;
-	},
-	getType: function() {
-		return this.value.getType();
 	},
 	at: function(offset) {
 		return this.value.at(this.base + offset);

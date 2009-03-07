@@ -12,9 +12,7 @@ Utils.objectExtend(LabelValue.prototype, {
 	toString: function() {
 		return '<LabelValue:'+this.pos+'>';
 	},
-	getType: function() {
-		return VarType.LABEL;
-	},
+	type: VarType.LABEL,
 	isUsing: function() {
 		return true;
 	}

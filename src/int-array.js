@@ -12,9 +12,7 @@ Utils.objectExtend(IntArray.prototype, {
 			this.values[i] = zero;
 		}
 	},
-	getType: function() {
-		return VarType.INT;
-	},
+	type: VarType.INT,
 	getbyte: function(offset, bytesOffset) {
 		var i = offset + (bytesOffset >> 2);
 		if(!(0 <= i && i < this.values.length)) {

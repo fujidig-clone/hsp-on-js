@@ -630,7 +630,7 @@ Compiler.prototype = {
 			// if の条件式がリテラルのとき最適化
 			var node = paramInfo.node;
 			if(node.isLiteralNode() &&
-			   (node.val.getType() == VarType.INT || node.val.getType() == VarType.DOUBLE)) {
+			   (node.val.type == VarType.INT || node.val.type == VarType.DOUBLE)) {
 				if(!node.val._value) {
 					this.pushNewInsn(sequence, Insn.Code.GOTO, [label], token);
 				}

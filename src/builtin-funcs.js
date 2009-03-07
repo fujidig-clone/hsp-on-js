@@ -125,7 +125,7 @@ defineInlineBuiltinFunc('stop', [false], function(g, paramInfos) {
 
 defineInlineBuiltinFunc('delmod', [true], function(g, paramInfos) {
 	g.push('var agent = '+g.getVariableAgentParamExpr(paramInfos[0])+';');
-	g.push('if(agent.getType() != '+VarType.STRUCT+') {');
+	g.push('if(agent.variable.value.type != '+VarType.STRUCT+') {');
 	g.push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 	g.push('}');
 	g.push('agent.assign(StructValue.EMPTY);');
@@ -184,7 +184,7 @@ defineInlineBuiltinFunc('onerror', [false, false], function(g, paramInfos) {
 		setPos();
 	} else {
 		g.push('var val = '+g.getParamExpr(paramInfo)+';');
-		g.push('switch(val.getType()) {');
+		g.push('switch(val.type) {');
 		g.push('case '+VarType.LABEL+':');
 		setPos();
 		g.push('break;');
@@ -279,7 +279,7 @@ defineInlineBuiltinFunc('poke', [true, false, false], function(g, paramInfos) {
 		return;
 	}
 	g.push('var val = '+g.getParamExpr(valueParamInfo)+';');
-	g.push('switch(val.getType()) {');
+	g.push('switch(val.type) {');
 	g.push('case '+VarType.STR+':');
 	g.push('    '+arrayExpr+'.setbytes('+arrayIndexArg+offsetExpr+', val._value + "\\0");');
 	g.push('    this.strsize = val._value.length;');
@@ -387,7 +387,7 @@ defineInlineBuiltinFunc('memset', [true, false, false, false], function(g, param
 
 defineInlineBuiltinFunc('notesel', [true], function(g, paramInfos) {
 	g.push('var agent = '+g.getVariableAgentParamExpr(paramInfos[0])+';');
-	g.push('if(agent.getType() != VarType.STR) {');
+	g.push('if(agent.variable.value.type != VarType.STR) {');
 	g.push('    agent.assign(StrValue.EMPTY_STR);');
 	g.push('}');
 	g.push('this.selectNote(agent);');
@@ -527,7 +527,7 @@ defineInlineExprBuiltinFunc('length4', [true], VarType.INT, function(g, paramInf
 
 defineInlineExprBuiltinFunc('vartype', [true], VarType.INT, function(g, paramInfos) {
 	if(paramInfos[0] && paramInfos[0].getPureNode().isVarNode()) {
-		return 'new IntValue('+g.getVariableParamExpr(paramInfos[0])+'.getType())';
+		return 'new IntValue('+g.getVariableParamExpr(paramInfos[0])+'.value.type)';
 	} else {
 		return g.getRegisteredObjectExpr(vartype_internal)+'('+g.getStrParamNativeValueExpr(paramInfos[0])+')';
 	}
@@ -561,7 +561,7 @@ defineCompileTimeBuiltinFunc('vartype', function(name) {
 		var node = paramInfo.node;
 		if(!node.isLiteralNode()) return false;
 		var val = node.val;
-		return val.getType() == VarType.INT && -1 <= val._value && val._value <= 7;
+		return val.type == VarType.INT && -1 <= val._value && val._value <= 7;
 	}
 	function createInternalFunc() {
 		var code = '';
@@ -646,7 +646,7 @@ defineInlineExprBuiltinFunc('varuse', [false], VarType.INT, function(g, paramInf
 function varuse_internal(v) {
 	var using = v.isUsing();
 	if(using == null) {
-		throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[v.getType()] + ' 型は varuse をサポートしていません');
+		throw new HSPError(ErrorCode.TYPE_MISMATCH, VarTypeNames[v.type] + ' 型は varuse をサポートしていません');
 	}
 	return new IntValue(using);
 }

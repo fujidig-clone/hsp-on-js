@@ -224,7 +224,7 @@ MainLoopGenerator.prototype = {
 		}
 		var variableExpr = this.getNoSubscriptVariableParamExpr(varParamInfo);
 		this.push('var variable = '+variableExpr+';');
-		this.push('if(variable.getType() != '+VarType.STRUCT+') {');
+		this.push('if(variable.value.type != '+VarType.STRUCT+') {');
 		this.push('    variable.value = new StructArray();');
 		this.push('}');
 		this.push('var array = variable.value;');
@@ -245,15 +245,15 @@ MainLoopGenerator.prototype = {
 			this.push('stack.push(val);');
 			this.push('} else {');
 			this.incIndent();
-			this.push('switch(val.getType()) {');
+			this.push('switch(val.type) {');
 			this.push('case '+VarType.STR+':');
-			this.push('    this.refstr.assign(0, val.toStrValue());');
+			this.push('    this.refstr.assign(0, val);');
 			this.push('    break;');
 			this.push('case '+VarType.DOUBLE+':');
-			this.push('    this.refdval.assign(0, val.toDoubleValue());');
+			this.push('    this.refdval.assign(0, val);');
 			this.push('    break;');
 			this.push('case '+VarType.INT+':');
-			this.push('    this.stat.assign(0, val.toIntValue());');
+			this.push('    this.stat.assign(0, val);');
 			this.push('    break;');
 			this.push('default:');
 			this.push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
@@ -533,14 +533,14 @@ MainLoopGenerator.prototype = {
 	push0DAssignCode: function(paramInfos) {
 		if(paramInfos.length == 1) {
 			this.push('var rhs = '+this.getParamExpr(paramInfos[0])+';');
-			this.push('if(variable.value.getType() != rhs.getType()) {');
-			this.push('    variable.reset(rhs.getType());');
+			this.push('if(variable.value.type != rhs.type) {');
+			this.push('    variable.reset(rhs.type);');
 			this.push('}');
 			this.push('variable.value.assign(0, rhs);');
 		} else {
 			this.push('var rhs = '+this.getParamExpr(paramInfos[0])+';');
-			this.push('var type = rhs.getType();');
-			this.push('if(variable.value.getType() != type) {');
+			this.push('var type = rhs.type;');
+			this.push('if(variable.value.type != type) {');
 			this.push('    variable.reset(type);');
 			this.push('}');
 			this.push('var array = variable.value;');
@@ -548,7 +548,7 @@ MainLoopGenerator.prototype = {
 			this.push('array.assign(0, rhs);');
 			for(var i = 1; i < paramInfos.length; i ++) {
 				this.push('var rhs = '+this.getParamExpr(paramInfos[i])+';');
-				this.push('if(rhs.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+				this.push('if(rhs.type != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 				this.push('array.assign('+i+', rhs);');
 			}
 		}
@@ -557,9 +557,9 @@ MainLoopGenerator.prototype = {
 		this.push('var offset = '+this.getStrictIntParamNativeValueExpr(indexParamInfo)+';');
 		if(rhsParamInfos.length == 1) {
 			this.push('var rhs = '+this.getParamExpr(rhsParamInfos[0])+';');
-			this.push('if(variable.value.getType() != rhs.getType()) {');
+			this.push('if(variable.value.type != rhs.type) {');
 			this.push('    if(offset == 0) {');
-			this.push('        variable.reset(rhs.getType());');
+			this.push('        variable.reset(rhs.type);');
 			this.push('    } else {');
 			this.push('        throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 			this.push('    }');
@@ -582,8 +582,8 @@ MainLoopGenerator.prototype = {
 	push1DMultipleAssignCode: function(paramInfos) {
 		this.push('if(offset < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 		this.push('var rhs = '+this.getParamExpr(paramInfos[0])+';');
-		this.push('var type = rhs.getType();');
-		this.push('if(variable.value.getType() != type) {');
+		this.push('var type = rhs.type;');
+		this.push('if(variable.value.type != type) {');
 		this.push('    if(offset == 0) {');
 		this.push('        variable.reset(type);');
 		this.push('    } else {');
@@ -595,14 +595,14 @@ MainLoopGenerator.prototype = {
 		this.push('array.assign(offset, rhs);');
 		for(var i = 1; i < paramInfos.length; i ++) {
 			this.push('var rhs = '+this.getParamExpr(paramInfos[i])+';');
-			this.push('if(rhs.getType() != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
+			this.push('if(rhs.type != type) throw new HSPError(ErrorCode.INVALID_ARRAYSTORE);');
 			this.push('array.assign(offset + '+i+', rhs);');
 		}
 	},
 	pushCompoundAssignCode: function(calcCode, varData, indexParamInfos, rhsParamInfo) {
 		if(varData.isVariableAgentVarData()) {
 			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
-			this.push('agent.assign(agent.'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
+			this.push('agent.assign(agent.toValue().'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
 			return;
 		}
 		if(!isCompareCalcCode(calcCode)) {
@@ -623,13 +623,13 @@ MainLoopGenerator.prototype = {
 		} 
 		this.push('var array = '+this.getVariableExpr(varData)+'.value;');
 		if(indexParamInfos.length == 0) {
-			this.push('if(array.getType() != '+VarType.INT+') {');
+			this.push('if(array.type != '+VarType.INT+') {');
 			this.push('    throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 			this.push('}');
 			this.push('array.assign(0, array.at(0).'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
 		} else if(indexParamInfos.length == 1) {
 			this.push('var offset = '+this.getStrictIntParamNativeValueExpr(indexParamInfos[0])+';');
-			this.push('if(array.getType() != '+VarType.INT+') {');
+			this.push('if(array.type != '+VarType.INT+') {');
 			this.push('    if(offset == 0) {');
 			this.push('        throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 			this.push('    } else {');
@@ -642,7 +642,7 @@ MainLoopGenerator.prototype = {
 			this.pushGettingIndicesCode(indexParamInfos);
 			this.push('array.expand(indices);');
 			this.push('var offset = array.getOffset(indices);');
-			this.push('if(array.getType() != '+VarType.INT+') {');
+			this.push('if(array.type != '+VarType.INT+') {');
 			this.push('    if(offset == 0) {');
 			this.push('        throw new HSPError(ErrorCode.TYPE_MISMATCH);');
 			this.push('    } else {');
@@ -851,7 +851,7 @@ MainLoopGenerator.prototype = {
 		if(node.getValueType() == VarType.INT) {
 			return this.getParamExpr(paramInfo);
 		}
-		if(node.isLiteralNode() && node.val.getType() == VarType.DOUBLE) {
+		if(node.isLiteralNode() && node.val.type == VarType.DOUBLE) {
 			return this.getParamExpr(new ParamInfo(new LiteralNode(node.val.toIntValue())));
 		}
 		if(node.getValueType() == VarType.DOUBLE) {
@@ -865,7 +865,7 @@ MainLoopGenerator.prototype = {
 		if(node.getValueType() == VarType.DOUBLE) {
 			return this.getParamExpr(paramInfo);
 		}
-		if(node.isLiteralNode() && node.val.getType() == VarType.INT) {
+		if(node.isLiteralNode() && node.val.type == VarType.INT) {
 			return this.getParamExpr(new ParamInfo(new LiteralNode(node.val.toDoubleValue())));
 		}
 		if(node.getValueType() == VarType.INT) {
@@ -885,7 +885,7 @@ MainLoopGenerator.prototype = {
 		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
 		if(node.isLiteralNode() && 
-		   (node.val.getType() == VarType.INT || node.val.getType() == VarType.DOUBLE)) {
+		   (node.val.type == VarType.INT || node.val.type == VarType.DOUBLE)) {
 			return '' + node.val.toIntValue()._value;
 		}
 		if(node.getValueType() == VarType.INT) {
@@ -899,7 +899,7 @@ MainLoopGenerator.prototype = {
 	getStrictIntParamNativeValueExpr: function(paramInfo, defaultExpr) {
 		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
 		var node = paramInfo.node;
-		if(node.isLiteralNode() && node.val.getType() == VarType.INT) {
+		if(node.isLiteralNode() && node.val.type == VarType.INT) {
 			return '' + node.val._value;
 		}
 		if(node.getValueType() == VarType.INT) {
@@ -1030,7 +1030,7 @@ MainLoopGenerator.prototype = {
 		var node = paramInfo.node;
 		if(!node.isLiteralNode()) return null;
 		var value = node.val;
-		var type = value.getType();
+		var type = value.type;
 		if(type == VarType.INT || type == VarType.DOUBLE) {
 			return value._value | 0;
 		}

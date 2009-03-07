@@ -6,7 +6,7 @@ function UninitializedArray(varName) {
 UninitializedArray.prototype = new HSPArray;
 
 Utils.objectExtend(UninitializedArray.prototype, {
-	getType: function() { return 0; },
+	type: 0,
 	assign: function(offset, rhs) {
 		throw this.uninitializedError();
 	},
