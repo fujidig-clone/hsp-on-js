@@ -958,7 +958,7 @@ with(HSPonJS) {
 				}
 			}
 			code += 'default:\n';
-			code += '    throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);\n';
+			code += '    throw new HSPError('+ErrorCode.ILLEGAL_FUNCTION+');\n';
 			code += '}\n'
 			code += '};';
 			return new Function(code)();
