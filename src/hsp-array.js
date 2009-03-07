@@ -94,6 +94,22 @@ HSPArray.prototype = {
 		if(this.l3) length *= this.l3;
 		return length;
 	},
+	setLength: function(l0, l1, l2, l3) {
+		if(l0 < 0 || l1 < 0 || l2 < 0 || l3 < 0) {
+			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '配列の要素数に負の数が指定されています');
+		}
+		if(l3) {
+			if(!l2) l2 = 1;
+			if(!l1) l1 = 1;
+		} else if(l2) {
+			if(!l1) l1 = 1;
+		}
+		if(!l0) l0 = 1;
+		this.l0 = l0;
+		this.l1 = l1;
+		this.l2 = l2;
+		this.l3 = l3;
+	},
 	at: function(offset) {
 		return this.values[offset];
 	},
@@ -153,26 +169,6 @@ HSPArray.prototype = {
 		if(length <= 0) return;
 		this.setbytes(offset, bytesOffset, Utils.strTimes(String.fromCharCode(val), length));
 	}
-};
-
-HSPArray.lengthToIndices = function(l0, l1, l2, l3) {
-	var indices = [l0, l1, l2, l3];
-	// 後ろから 0 を取り除く
-	var i = indices.length - 1;
-	while(i >= 0) {
-		if(indices[i]) break;
-		indices.pop();
-		i --;
-	}
-	for(var i = 0; i < indices.length; i ++) {
-		if(indices[i] < 0) {
-			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '配列の要素数に負の数が指定されています');
-		}
-		if(indices[i] != 0) {
-			indices[i] --;
-		}
-	}
-	return indices;
 };
 
 if(typeof HSPonJS != 'undefined') {

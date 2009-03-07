@@ -82,8 +82,8 @@ Variable.prototype = {
 		default:
 			throw new HSPError(ErrorCode.ILLEGAL_FUNCTION, '異常な変数型の値です');
 		}
-		var indices = HSPArray.lengthToIndices(l0, l1, l2, l3);
-		ary.expand(indices);
+		ary.setLength(l0, l1, l2, l3);
+		ary.fillUpElements(ary.allLength());
 		this.value = ary;
 	},
 	getbyte: function(offset, bytesOffset) {

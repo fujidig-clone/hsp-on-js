@@ -24,8 +24,7 @@ Utils.objectExtend(StrArray.prototype, {
 		if(strLength == undefined || strLength <= 64) {
 			strLength = 64;
 		}
-		var indices = HSPArray.lengthToIndices(l0, l1, l2, l3);
-		this.expandLen(indices);
+		this.setLength(l0, l1, l2, l3);
 		var len = this.allLength();
 		for(var i = 0; i < len; i ++) {
 			this.values[i] = new StrBuffer(strLength);
