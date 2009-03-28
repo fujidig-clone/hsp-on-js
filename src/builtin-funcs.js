@@ -802,7 +802,7 @@ defineInlineExprBuiltinFunc('logf', [false], VarType.DOUBLE, function(g, paramIn
 });
 
 defineInlineExprBuiltinFunc('limitf', [false, false, false], VarType.DOUBLE, function(g, paramInfos) {
-	return 'new IntValue('+g.getRegisteredObjectExpr(limitf_internal)+'('+g.getDoubleParamNativeValueExpr(paramInfos[0])+', '+g.getDoubleParamNativeValueExpr(paramInfos[1])+', '+g.getDoubleParamNativeValueExpr(paramInfos[2])+'))';
+	return 'new DoubleValue('+g.getRegisteredObjectExpr(limitf_internal)+'('+g.getDoubleParamNativeValueExpr(paramInfos[0])+', '+g.getDoubleParamNativeValueExpr(paramInfos[1])+', '+g.getDoubleParamNativeValueExpr(paramInfos[2])+'))';
 });
 
 function limitf_internal(val, min, max) {
