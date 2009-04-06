@@ -360,8 +360,8 @@ MainLoopGenerator.prototype = {
 		this.push('}');
 	},
 	pushCode_GOSUB: function(insn, pc, label) {
-		this.pushJumpingSubroutineCode(pc);
 		this.push('this.pc = '+label.getPos()+';');
+		this.pushJumpingSubroutineCode(pc);
 		this.push('continue;');
 	},
 	pushCode_GOTO_EXPR: function(insn, pc, paramInfo) {
@@ -369,8 +369,8 @@ MainLoopGenerator.prototype = {
 		this.push('continue;');
 	},
 	pushCode_GOSUB_EXPR: function(insn, pc, paramInfo) {
-		this.pushJumpingSubroutineCode(pc);
 		this.push('this.pc = '+this.getLabelParamNativeValueExpr(paramInfo)+';');
+		this.pushJumpingSubroutineCode(pc);
 		this.push('continue;');
 	},
 	pushCode_EXGOTO: function(insn, pc, paramInfos) {
@@ -426,7 +426,7 @@ MainLoopGenerator.prototype = {
 		for(var i = 0; i < labelParamInfos.length; i ++) {
 			this.push('case '+i+': this.pc = '+labelExprs[i]+'; break;');
 		}
-		this.push('default: this.pc ++;');
+		this.push('default: this.pc ++; continue;');
 		this.push('}');
 		if(isGosub) {
 			this.pushJumpingSubroutineCode(pc);
@@ -465,10 +465,13 @@ MainLoopGenerator.prototype = {
 		}
 		this.push('throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
 	},
-	pushJumpingSubroutineCode: function(pc) {
+	pushCheckSublevCode: function() {
 		this.push('if(this.frameStack.length >= 256) {');
 		this.push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 		this.push('}');
+	},
+	pushJumpingSubroutineCode: function(pc) {
+		this.pushCheckSublevCode();
 		this.push('this.frameStack.push(new Frame('+(pc + 1)+', null, this.args));');
 	},
 	pushGettingArrayValueCode: function(varData, indexParamInfos) {
@@ -704,9 +707,7 @@ MainLoopGenerator.prototype = {
 		}
 		this.push('var args = [];');
 		this.pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr);
-		this.push('if(this.frameStack.length >= 256) {');
-		this.push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
-		this.push('}');
+		this.pushCheckSublevCode();
 		this.push('this.frameStack.push(new Frame('+(pc + 1)+', '+userDefFuncExpr+', args, this.args));');
 		this.push('this.args = args;');
 		this.push('this.pc = '+userDefFunc.label.getPos()+';');
@@ -1065,25 +1066,37 @@ MainLoopGenerator.prototype = {
 			return '('+this.getParamExpr0(node.lhsNode)+').'+getCalcCodeName(node.calcCode)+'('+this.getParamExpr0(node.rhsNode)+')';
 		case NodeType.INLINE_EXPR_BUILTIN_FUNCALL:
 			var info = node.builtinFuncInfo;
-			return this.pushBuiltinFuncInlineCode(info, node.paramInfos);
+			return this.getBuiltinFuncInlineExpr(info, node.paramInfos);
 		case NodeType.GET_STACK:
 			return 'stack.pop()';
 		default:
 			throw new Error('must not happen');
 		}
 	},
-	pushBuiltinFuncInlineCode: function(builtinFuncInfo, paramInfos) {
+	getBuiltinFuncInlineExpr: function(builtinFuncInfo, paramInfos) {
 		var len = paramInfos.length;
 		var argsMax = builtinFuncInfo.argsMax;
 		if(argsMax != null && argsMax < len) {
-			this.push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);');
-			return void 0;
+			return 'throwHSPError('+ErrorCode.TOO_MANY_PARAMETERS+')';
 		}
 		paramInfos = paramInfos.concat();
 		for(var i = len; i < argsMax; i++) {
 			paramInfos[i] = null;
 		}
 		return builtinFuncInfo.func(this, paramInfos);
+	},
+	pushBuiltinFuncInlineCode: function(builtinFuncInfo, paramInfos) {
+		var len = paramInfos.length;
+		var argsMax = builtinFuncInfo.argsMax;
+		if(argsMax != null && argsMax < len) {
+			this.push('throw new HSPError(ErrorCode.TOO_MANY_PARAMETERS);');
+			return;
+		}
+		paramInfos = paramInfos.concat();
+		for(var i = len; i < argsMax; i++) {
+			paramInfos[i] = null;
+		}
+		builtinFuncInfo.func(this, paramInfos);
 	},
 	getNewVariableAgentExpr: function(varData) {
 		if(varData.isVariableAgentVarData()) {
