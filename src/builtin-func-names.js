@@ -30,7 +30,8 @@ BuiltinFuncNames[Token.Type.INTCMD] = {
 	0x026: 'notesave',
 	0x027: 'randomize',
 	0x028: 'noteunsel',
-	0x029: 'noteget'
+	0x029: 'noteget',
+	0x02a: 'split'
 };
 
 BuiltinFuncNames[Token.Type.EXTCMD] = {
@@ -85,7 +86,11 @@ BuiltinFuncNames[Token.Type.EXTCMD] = {
 	0x034: 'stick',
 	0x035: 'grect',
 	0x036: 'grotate',
-	0x037: 'gsquare'
+	0x037: 'gsquare',
+	0x038: 'gradf',
+	0x039: 'objimage',
+	0x03a: 'objskip',
+	0x03b: 'objenable'
 };
 
 BuiltinFuncNames[Token.Type.EXTSYSVAR] = {
@@ -129,6 +134,7 @@ BuiltinFuncNames[Token.Type.INTFUNC] = {
 	0x101: 'strmid',
 	0x103: 'strf',
 	0x104: 'getpath',
+	0x105: 'strtrim',
 	0x180: 'sin',
 	0x181: 'cos',
 	0x182: 'tan',
