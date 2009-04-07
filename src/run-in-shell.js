@@ -1,14 +1,12 @@
-var main;
-(function() {
-var nameSpace = {};
-with(nameSpace) {
+with(HSPonJS) {
 
-main = function() {
+var main = function() {
 	var options = runInShellOptions;
 	var axBinary = options.axBinary;
 	var showSequence = options.showSequence;
 	var showMainLoop = options.showMainLoop;
 	var compileOnly = options.compileOnly;
+	var reportAllocationProfile = options.reportAllocationProfile;
 	
 	var axdata = new AXData(axBinary);
 	var compiler = new Compiler(axdata);
@@ -44,14 +42,16 @@ main = function() {
 	}
 	if(compileOnly) return null;
 
+	var F = function() {};
+	var profiler = reportAllocationProfile ? AllocationProfiler : {start: F, clear: F, report: F};
+
+	profiler.start();
 	var evaluator = new Evaluator(sequence, generator.generate());
+	profiler.clear();
 	evaluator.evaluate();
+	profiler.report();
 	return evaluator;
 };
-
-if(typeof HSPonJS != 'undefined') {
-	HSPonJS.Utils.objectExtend(nameSpace, HSPonJS);
-}
 
 defineInlineBuiltinFunc('mes', [false], function(g, paramInfos) {
 	g.push('print(CP932.decode('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+'));');
@@ -66,7 +66,7 @@ Evaluator.prototype.onEnd = function(e) {
 };
 
 }
-})();
+
 
 try {
 	main();

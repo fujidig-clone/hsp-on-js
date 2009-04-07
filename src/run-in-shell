@@ -6,6 +6,7 @@ package_path = nil
 show_sequence = false
 show_main_loop = false
 compile_only = false
+report_allocation_profile = false
 js_type = 'spider-monkey'
 js = nil
 
@@ -15,6 +16,7 @@ opt.on('--package=PATH') {|v| package_path = v }
 opt.on('--[no-]show-sequence') {|v| show_sequence = v }
 opt.on('--[no-]show-main-loop') {|v| show_main_loop = v }
 opt.on('--[no-]compile-only') {|v| compile_only = v }
+opt.on('--allocation-profile') {|v| report_allocation_profile = v }
 opt.on('--js=COMMAND') {|v| js = v }
 opt.on('--v8') {|v| js ||= js_type = 'v8' }
 opt.on('--rhino') {|v| js ||= js_type = 'rhino' }
@@ -39,7 +41,8 @@ open('t.ax.js', 'wb') do |f|
   f.puts "axBinary: [\n#{dump}\n].join(''),"
   f.puts "showSequence: #{show_sequence},"
   f.puts "showMainLoop: #{show_main_loop},"
-  f.puts "compileOnly: #{compile_only}"
+  f.puts "compileOnly: #{compile_only},"
+  f.puts "reportAllocationProfile: #{report_allocation_profile}"
   f.puts "};"
 end
 
@@ -83,6 +86,7 @@ else
     mainloop-generator.js
     builtin-funcs.js
     evaluator.js
+    allocation-profiler.js
   ]
 end
 
