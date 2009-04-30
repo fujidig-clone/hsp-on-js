@@ -167,16 +167,16 @@ MainLoopGenerator.prototype = {
 	pushCode_NOP: function(insn, pc) {
 	},
 	pushCode_PUSH_VAR: function(insn, pc, varData, indexParamInfos) {
-		this.pushGettingVariableCode(varData, indexParamInfos);
+		this.pushCodeToGetVariable(varData, indexParamInfos);
 	},
 	pushCode_GET_VAR: function(insn, pc, varData, indexParamInfos) {
-		this.pushGettingArrayValueCode(varData, indexParamInfos);
+		this.pushCodeToGetArrayValue(varData, indexParamInfos);
 	},
 	pushCode_POP: function(insn, pc) {
 		this.push('stack.pop();');
 	},
 	pushCode_POP_N: function(insn, pc, n) {
-		this.pushStackPopCode(n);
+		this.pushCodeToStackPop(n);
 	},
 	pushCode_DUP: function(insn, pc) {
 		this.push('stack.push(stack[stack.length-1]);');
@@ -186,34 +186,34 @@ MainLoopGenerator.prototype = {
 		this.push('continue;');
 	},
 	pushCode_IFNE: function(insn, pc, label, paramInfo) {
-		this.pushBranchCode(label, paramInfo, false);
+		this.pushCodeToBranch(label, paramInfo, false);
 	},
 	pushCode_IFEQ: function(insn, pc, label, paramInfo) {
-		this.pushBranchCode(label, paramInfo, true);
+		this.pushCodeToBranch(label, paramInfo, true);
 	},
 	pushCode_ASSIGN: function(insn, pc, varData, indexParamInfos, rhsParamInfos) {
-		this.pushAssignCode(varData, indexParamInfos, rhsParamInfos);
+		this.pushCodeToAssign(varData, indexParamInfos, rhsParamInfos);
 	},
 	pushCode_COMPOUND_ASSIGN: function(insn, pc, calcCode, varData, indexParamInfos, rhsParamInfo) {
-		this.pushCompoundAssignCode(calcCode, varData, indexParamInfos, rhsParamInfo);
+		this.pushCodeToCompoundAssign(calcCode, varData, indexParamInfos, rhsParamInfo);
 	},
 	pushCode_INC: function(insn, pc, varData, indexParamInfos) {
-		this.pushIncCode(varData, indexParamInfos);
+		this.pushCodeToInc(varData, indexParamInfos);
 	},
 	pushCode_DEC: function(insn, pc, varData, indexParamInfos) {
-		this.pushDecCode(varData, indexParamInfos);
+		this.pushCodeToDec(varData, indexParamInfos);
 	},
 	pushCode_CALL_BUILTIN_CMD: function(insn, pc, type, subid, paramInfos) {
-		this.pushCallBuiltinFuncCode(type, subid, paramInfos, false);
+		this.pushCodeToCallBuiltinFunc(type, subid, paramInfos, false);
 	},
 	pushCode_CALL_BUILTIN_FUNC: function(insn, pc, type, subid, paramInfos) {
-		this.pushCallBuiltinFuncCode(type, subid, paramInfos, true);
+		this.pushCodeToCallBuiltinFunc(type, subid, paramInfos, true);
 	},
 	pushCode_CALL_USERDEF_CMD: function(insn, pc, userDefFunc, paramInfos) {
-		this.pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
+		this.pushCodeToCallUserdefFunc(userDefFunc, paramInfos, pc);
 	},
 	pushCode_CALL_USERDEF_FUNC: function(insn, pc, userDefFunc, paramInfos) {
-		this.pushCallingUserdefFuncCode(userDefFunc, paramInfos, pc);
+		this.pushCodeToCallUserdefFunc(userDefFunc, paramInfos, pc);
 	},
 	pushCode_NEWMOD: function(insn, pc, varParamInfo, module, paramInfos, argc) {
 		var moduleExpr = this.getRegisteredObjectExpr(module);
@@ -230,7 +230,7 @@ MainLoopGenerator.prototype = {
 		this.push('var array = variable.value;');
 		this.push('var offset = array.newmod('+moduleExpr+');');
 		if(constructor) {
-			this.pushCallingUserdefFuncCode(constructor, paramInfos, pc, 'new VariableAgent1D(variable, offset)');
+			this.pushCodeToCallUserdefFunc(constructor, paramInfos, pc, 'new VariableAgent1D(variable, offset)');
 		}
 	},
 	pushCode_RETURN: function(insn, pc, paramInfo) {
@@ -271,7 +271,7 @@ MainLoopGenerator.prototype = {
 		this.push('continue;');
 	},
 	pushCode_REPEAT: function(insn, pc, label, paramInfos) {
-		this.pushStartLoopCode();
+		this.pushCodeToStartLoop();
 		if(paramInfos.length >= 1 && !paramInfos[0].node.isDefaultNode()) {
 			this.push('this.cntEnd = '+this.getIntParamNativeValueExpr(paramInfos[0])+';');
 			this.push('if(this.cntEnd < 0) this.cntEnd = Infinity;');
@@ -300,7 +300,7 @@ MainLoopGenerator.prototype = {
 		this.push('    this.pc = this.loopStartPos;');
 		this.push('    continue;');
 		this.push('}');
-		this.pushEndLoopCode();
+		this.pushCodeToEndLoop();
 	},
 	pushCode_CONTINUE: function(insn, pc, label, paramInfo) {
 		this.push('if(this.looplev == 0) {');
@@ -314,7 +314,7 @@ MainLoopGenerator.prototype = {
 		}
 		this.push('if('+newCntExpr+' >= this.cntEnd) {');
 		this.incIndent();
-		this.pushEndLoopCode();
+		this.pushCodeToEndLoop();
 		this.push('this.pc = '+label.getPos()+';');
 		this.decIndent();
 		this.push('} else {');
@@ -326,12 +326,12 @@ MainLoopGenerator.prototype = {
 		this.push('if(this.looplev == 0) {');
 		this.push('    throw new HSPError(ErrorCode.LOOP_WITHOUT_REPEAT);');
 		this.push('}');
-		this.pushEndLoopCode();
+		this.pushCodeToEndLoop();
 		this.push('this.pc = '+label.getPos()+';');
 		this.push('continue;');
 	},
 	pushCode_FOREACH: function(insn, pc) {
-		this.pushStartLoopCode();
+		this.pushCodeToStartLoop();
 		this.push('this.cnt = 0;');
 		this.push('this.cntEnd = Infinity;');
 		this.push('this.loopStartPos = '+(pc + 1)+';');
@@ -344,14 +344,14 @@ MainLoopGenerator.prototype = {
 		this.push('}')
 		this.push('var array = '+this.getNoSubscriptVariableParamExpr(paramInfo)+'.value;');
 		this.push('if(this.cnt >= array.getL0()) {')
-		this.pushEndLoopCode();
+		this.pushCodeToEndLoop();
 		this.push('    this.pc = '+pos+';');
 		this.push('    continue;');
 		this.push('}');
 		this.push('if(array.at(this.cnt).isUsing() == false) {'); // label 型 や struct 型の empty を飛ばす
 		this.push('    this.cnt ++;');
 		this.push('    if(this.cnt >= this.cntEnd) {');
-		this.pushEndLoopCode();
+		this.pushCodeToEndLoop();
 		this.push('        this.pc = '+pos+';');
 		this.push('    } else {');
 		this.push('        this.pc = this.loopStartPos;');
@@ -361,7 +361,7 @@ MainLoopGenerator.prototype = {
 	},
 	pushCode_GOSUB: function(insn, pc, label) {
 		this.push('this.pc = '+label.getPos()+';');
-		this.pushJumpingSubroutineCode(pc);
+		this.pushCodeToJumpSubroutine(pc);
 		this.push('continue;');
 	},
 	pushCode_GOTO_EXPR: function(insn, pc, paramInfo) {
@@ -370,7 +370,7 @@ MainLoopGenerator.prototype = {
 	},
 	pushCode_GOSUB_EXPR: function(insn, pc, paramInfo) {
 		this.push('this.pc = '+this.getLabelParamNativeValueExpr(paramInfo)+';');
-		this.pushJumpingSubroutineCode(pc);
+		this.pushCodeToJumpSubroutine(pc);
 		this.push('continue;');
 	},
 	pushCode_EXGOTO: function(insn, pc, paramInfos) {
@@ -429,11 +429,11 @@ MainLoopGenerator.prototype = {
 		this.push('default: this.pc ++; continue;');
 		this.push('}');
 		if(isGosub) {
-			this.pushJumpingSubroutineCode(pc);
+			this.pushCodeToJumpSubroutine(pc);
 		}
 		this.push('continue;');
 	},
-	pushBranchCode: function(label, paramInfo, reverse) {
+	pushCodeToBranch: function(label, paramInfo, reverse) {
 		var expr = this.getIntParamNativeValueExpr(paramInfo);
 		if(reverse) {
 			expr = '!' + expr;
@@ -443,7 +443,7 @@ MainLoopGenerator.prototype = {
 		this.push('    continue;');
 		this.push('}');
 	},
-	pushStartLoopCode: function() {
+	pushCodeToStartLoop: function() {
 		this.push('if(this.looplev >= 31) {');
 		this.push('    throw new HSPError(ErrorCode.TOO_MANY_NEST);');
 		this.push('}');
@@ -451,36 +451,36 @@ MainLoopGenerator.prototype = {
 		this.push('this.cntEndStack[this.looplev] = this.cntEnd;');
 		this.push('this.loopStartPosStack[this.looplev] = this.loopStartPos;');
 	},
-	pushEndLoopCode: function() {
+	pushCodeToEndLoop: function() {
 		this.push('this.looplev --;');
 		this.push('this.cnt = this.cntStack[this.looplev];');
 		this.push('this.cntEnd = this.cntEndStack[this.looplev];');
 		this.push('this.loopStartPos = this.loopStartPosStack[this.looplev];');
 	},
-	pushCallBuiltinFuncCode: function(type, subid, paramInfos, ctype) {
+	pushCodeToCallBuiltinFunc: function(type, subid, paramInfos, ctype) {
 		var info = BuiltinFuncInfos[type][subid];
 		if(info && info.func) {
-			this.pushBuiltinFuncInlineCode(info, paramInfos);
+			this.pushCodeToBuiltinFuncInline(info, paramInfos);
 			return;
 		}
 		this.push('throw new HSPError(ErrorCode.UNSUPPORTED_FUNCTION);');
 	},
-	pushCheckSublevCode: function() {
+	pushCodeToCheckSublev: function() {
 		this.push('if(this.frameStack.length >= 256) {');
 		this.push('    throw new HSPError(ErrorCode.STACK_OVERFLOW);');
 		this.push('}');
 	},
-	pushJumpingSubroutineCode: function(pc) {
-		this.pushCheckSublevCode();
+	pushCodeToJumpSubroutine: function(pc) {
+		this.pushCodeToCheckSublev();
 		this.push('this.frameStack.push(new Frame('+(pc + 1)+', null, this.args));');
 	},
-	pushGettingArrayValueCode: function(varData, indexParamInfos) {
+	pushCodeToGetArrayValue: function(varData, indexParamInfos) {
 		var result = this.getArrayAndOffsetExpr(varData, indexParamInfos);
 		var arrayExpr = result[0];
 		var offsetExpr = result[1];
 		this.push('stack.push('+arrayExpr+'.at('+offsetExpr+'));');
 	},
-	pushGettingVariableCode: function(varData, indexParamInfos) {
+	pushCodeToGetVariable: function(varData, indexParamInfos) {
 		var result;
 		if(varData.isVariableAgentVarData()) {
 			result = this.getVariableAgentExpr(varData);
@@ -493,27 +493,27 @@ MainLoopGenerator.prototype = {
 				this.push('var offset = '+this.getStrictIntParamNativeValueExpr(paramInfo)+';');
 				result = 'new VariableAgent1D('+variableExpr+', offset)';
 			} else {
-				this.pushGettingIndicesCode(indexParamInfos);
+				this.pushCodeToGetIndices(indexParamInfos);
 				result = 'new VariableAgentMD('+variableExpr+', indices)';
 			}
 		}
 		this.push('stack.push('+result+');');
 	},
-	pushAssignCode: function(varData, indexParamInfos, rhsParamInfos) {
+	pushCodeToAssign: function(varData, indexParamInfos, rhsParamInfos) {
 		if(varData.isVariableAgentVarData()) {
-			this.pushVariableAgentAssignCode(varData, rhsParamInfos);
+			this.pushCodeToVariableAgentAssign(varData, rhsParamInfos);
 		} else {
 			this.push('var variable = '+this.getVariableExpr(varData)+';');
 			if(indexParamInfos.length == 0) {
-				this.push0DAssignCode(rhsParamInfos);
+				this.pushCodeTo0DAssign(rhsParamInfos);
 			} else if(indexParamInfos.length == 1) {
-				this.push1DAssignCode(indexParamInfos[0], rhsParamInfos);
+				this.pushCodeTo1DAssign(indexParamInfos[0], rhsParamInfos);
 			} else {
-				this.pushMDAssignCode(indexParamInfos, rhsParamInfos);
+				this.pushCodeToMDAssign(indexParamInfos, rhsParamInfos);
 			}
 		}
 	},
-	pushVariableAgentAssignCode: function(varData, paramInfos) {
+	pushCodeToVariableAgentAssign: function(varData, paramInfos) {
 		if(paramInfos.length == 1) {
 			this.push(this.getVariableAgentExpr(varData)+'.assign('+this.getParamExpr(paramInfos[0])+');');
 		} else {
@@ -529,11 +529,11 @@ MainLoopGenerator.prototype = {
 			}
 			this.push('} else {'); this.incIndent();
 			this.push('var offset = agent.offset;');
-			this.push1DMultipleAssignCode(paramInfos);
+			this.pushCodeTo1DMultipleAssign(paramInfos);
 			this.decIndent(); this.push('}');
 		}
 	},
-	push0DAssignCode: function(paramInfos) {
+	pushCodeTo0DAssign: function(paramInfos) {
 		if(paramInfos.length == 1) {
 			this.push('var rhs = '+this.getParamExpr(paramInfos[0])+';');
 			this.push('if(variable.value.type != rhs.type) {');
@@ -556,7 +556,7 @@ MainLoopGenerator.prototype = {
 			}
 		}
 	},
-	push1DAssignCode: function(indexParamInfo, rhsParamInfos) {
+	pushCodeTo1DAssign: function(indexParamInfo, rhsParamInfos) {
 		this.push('var offset = '+this.getStrictIntParamNativeValueExpr(indexParamInfo)+';');
 		if(rhsParamInfos.length == 1) {
 			this.push('var rhs = '+this.getParamExpr(rhsParamInfos[0])+';');
@@ -570,11 +570,11 @@ MainLoopGenerator.prototype = {
 			this.push('variable.value.expand1D(offset);');
 			this.push('variable.value.assign(offset, rhs);');
 		} else {
-			this.push1DMultipleAssignCode(rhsParamInfos);
+			this.pushCodeTo1DMultipleAssign(rhsParamInfos);
 		}
 	},
-	pushMDAssignCode: function(indexParamInfos, rhsParamInfos) {
-		this.pushGettingIndicesCode(indexParamInfos);
+	pushCodeToMDAssign: function(indexParamInfos, rhsParamInfos) {
+		this.pushCodeToGetIndices(indexParamInfos);
 		for(var i = 0; i < rhsParamInfos.length; i ++) {
 			this.push('variable.assign(indices, '+this.getParamExpr(rhsParamInfos[i])+');');
 			if(i != rhsParamInfos.length - 1) {
@@ -582,7 +582,7 @@ MainLoopGenerator.prototype = {
 			}
 		}
 	},
-	push1DMultipleAssignCode: function(paramInfos) {
+	pushCodeTo1DMultipleAssign: function(paramInfos) {
 		this.push('if(offset < 0) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 		this.push('var rhs = '+this.getParamExpr(paramInfos[0])+';');
 		this.push('var type = rhs.type;');
@@ -602,7 +602,7 @@ MainLoopGenerator.prototype = {
 			this.push('array.assign(offset + '+i+', rhs);');
 		}
 	},
-	pushCompoundAssignCode: function(calcCode, varData, indexParamInfos, rhsParamInfo) {
+	pushCodeToCompoundAssign: function(calcCode, varData, indexParamInfos, rhsParamInfo) {
 		if(varData.isVariableAgentVarData()) {
 			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
 			this.push('agent.assign(agent.toValue().'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
@@ -617,7 +617,7 @@ MainLoopGenerator.prototype = {
 				this.push('array.expand1D(offset);');
 				this.push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
 			} else {
-				this.pushGettingIndicesCode(indexParamInfos);
+				this.pushCodeToGetIndices(indexParamInfos);
 				this.push('array.expand(indices);');
 				this.push('var offset = array.getOffset(indices);');
 				this.push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
@@ -642,7 +642,7 @@ MainLoopGenerator.prototype = {
 			this.push('array.expand1D(offset);');
 			this.push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
 		} else {
-			this.pushGettingIndicesCode(indexParamInfos);
+			this.pushCodeToGetIndices(indexParamInfos);
 			this.push('array.expand(indices);');
 			this.push('var offset = array.getOffset(indices);');
 			this.push('if(array.type != '+VarType.INT+') {');
@@ -655,7 +655,7 @@ MainLoopGenerator.prototype = {
 			this.push('array.assign(offset, array.at(offset).'+getCalcCodeName(calcCode)+'('+this.getParamExpr(rhsParamInfo)+'));');
 		}
 	},
-	pushIncDecCode: function(methodName, varData, indexParamInfos) {
+	pushCodeToIncDec: function(methodName, varData, indexParamInfos) {
 		if(varData.isVariableAgentVarData()) {
 			this.push('var agent = '+this.getVariableAgentExpr(varData)+';');
 			this.push('agent.expand().'+methodName+'();');
@@ -669,19 +669,19 @@ MainLoopGenerator.prototype = {
 			this.push('array.expand1D(offset);');
 			this.push('array.'+methodName+'(offset);');
 		} else {
-			this.pushGettingIndicesCode(indexParamInfos);
+			this.pushCodeToGetIndices(indexParamInfos);
 			this.push('array.expand(indices);');
 			this.push('var offset = array.getOffset(indices);');
 			this.push('array.'+methodName+'(offset);');
 		}
 	},
-	pushIncCode: function(varData, indexParamInfos) {
-		this.pushIncDecCode('inc', varData, indexParamInfos);
+	pushCodeToInc: function(varData, indexParamInfos) {
+		this.pushCodeToIncDec('inc', varData, indexParamInfos);
 	},
-	pushDecCode: function(varData, indexParamInfos) {
-		this.pushIncDecCode('dec', varData, indexParamInfos);
+	pushCodeToDec: function(varData, indexParamInfos) {
+		this.pushCodeToIncDec('dec', varData, indexParamInfos);
 	},
-	pushCallingUserdefFuncCode: function(userDefFunc, paramInfos, pc, constructorThismodExpr) {
+	pushCodeToCallUserdefFunc: function(userDefFunc, paramInfos, pc, constructorThismodExpr) {
 		var userDefFuncExpr = this.getRegisteredObjectExpr(userDefFunc);
 		var paramMax = paramInfos.length;
 		var mptypes = userDefFunc.paramTypes;
@@ -706,14 +706,14 @@ MainLoopGenerator.prototype = {
 			return;
 		}
 		this.push('var args = [];');
-		this.pushCallingUserdefFuncCode0(mptypes, paramInfos, constructorThismodExpr);
-		this.pushCheckSublevCode();
+		this.pushCodeToSetupArguments(mptypes, paramInfos, constructorThismodExpr);
+		this.pushCodeToCheckSublev();
 		this.push('this.frameStack.push(new Frame('+(pc + 1)+', '+userDefFuncExpr+', args, this.args));');
 		this.push('this.args = args;');
 		this.push('this.pc = '+userDefFunc.label.getPos()+';');
 		this.push('continue;');
 	},
-	pushCallingUserdefFuncCode0: function(mptypes, paramInfos, constructorThismodExpr) {
+	pushCodeToSetupArguments: function(mptypes, paramInfos, constructorThismodExpr) {
 		var argMax = mptypes.length;
 		var origArgsCount = 0;
 		for(var i = 0; i < argMax; i ++) {
@@ -766,7 +766,7 @@ MainLoopGenerator.prototype = {
 			origArgsCount ++;
 		}
 	},
-	pushGettingIndicesCode: function(indexParamInfos) {
+	pushCodeToGetIndices: function(indexParamInfos) {
 		this.push('var indices = [];');
 		for(var i = 0; i < indexParamInfos.length; i ++) {
 			this.push('indices['+i+'] = '+this.getStrictIntParamNativeValueExpr(indexParamInfos[i])+';');
@@ -792,7 +792,7 @@ MainLoopGenerator.prototype = {
 		} else {
 			this.push('var array = '+arrayExpr+';');
 			arrayExpr = 'array';
-			this.pushGettingIndicesCode(indexParamInfos);
+			this.pushCodeToGetIndices(indexParamInfos);
 			this.push('var offset = array.getOffset(indices);');
 			this.push('if(offset == null) throw new HSPError(ErrorCode.ARRAY_OVERFLOW);');
 		}
@@ -1085,7 +1085,7 @@ MainLoopGenerator.prototype = {
 		}
 		return builtinFuncInfo.func(this, paramInfos);
 	},
-	pushBuiltinFuncInlineCode: function(builtinFuncInfo, paramInfos) {
+	pushCodeToBuiltinFuncInline: function(builtinFuncInfo, paramInfos) {
 		var len = paramInfos.length;
 		var argsMax = builtinFuncInfo.argsMax;
 		if(argsMax != null && argsMax < len) {
@@ -1170,7 +1170,7 @@ MainLoopGenerator.prototype = {
 			delete objects[i][propname];
 		}
 	},
-	pushStackPopCode: function(size) {
+	pushCodeToStackPop: function(size) {
 		if(size == 0) {
 			// nothing
 		} else if(size == 1) {
