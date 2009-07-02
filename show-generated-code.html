@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="ja">
+<head profile="http://purl.org/net/ns/metaprof">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link rev="made" href="mailto:fuji.rosen@gmail.com">
+<title>HSP on JS 生成されるコードの表示</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.2/jquery.min.js"></script>
+<script type="text/javascript" src="hsp-on-js-core-0.0.21.js" charset="utf-8"></script>
+<script type="text/javascript">
+function resizeTextarea(textarea) {
+	textarea.setAttribute('rows', textarea.value.split("\n").length);
+}
+
+HSPonJS.defineInlineBuiltinFunc('mes', [false], function(g, paramInfos) {
+	g.push('print(CP932.decode('+g.getStrConvertedNativeValueParamExpr(paramInfos[0], '""')+'));');
+});
+
+$(function() {
+	function compile(ax) {	
+		var axdata = new HSPonJS.AXData(ax);
+		var compiler = new HSPonJS.Compiler(axdata);
+		var sequence = compiler.compile();
+		var generator = new HSPonJS.MainLoopGenerator(sequence);
+		return generator.generateMainLoopSrc();
+	}
+	$('textarea').each(function(i) {
+		var textarea = this;
+		resizeTextarea(textarea);
+		var runButton = document.createElement('button');
+		runButton.setAttribute('type', 'button');
+		runButton.appendChild(document.createTextNode('表示'));
+		var messageSpan = document.createElement('span');
+		messageSpan.appendChild(document.createTextNode('コンパイル中...'));
+		messageSpan.style.display = 'none';
+		var resetButton = document.createElement('button');
+		resetButton.setAttribute('type', 'button');
+		resetButton.style.display = 'none';
+		resetButton.appendChild(document.createTextNode('リセット'));
+		var resultTextarea = document.createElement('textarea');
+		resultTextarea.setAttribute('cols', 100);
+		resultTextarea.setAttribute('rows', 2);
+		resultTextarea.style.display = 'none';
+		var compileCount = 0;
+		$(runButton).click(function() {
+			var script = textarea.value;
+			resultTextarea.value = '';
+			messageSpan.style.display = '';
+			var curCount = ++ compileCount;
+			$.post('compile.cgi', {script: script}, function(jsonData) {
+				if(curCount != compileCount) return;
+				messageSpan.style.display = 'none';
+				var data = eval('('+jsonData+')');
+				if (!data.success) {
+					alert(data.message);
+					return;
+				}
+				try {
+					var mainLoop = compile(data.ax);
+				} catch(e) {
+					if(!(e instanceof HSPonJS.CompileError)) throw e;
+					alert('コンパイルエラー:\n'+e.message+'\nat '+e.hspFileName+':'+e.hspLineNumber);
+					return;
+				}
+				resultTextarea.style.display = '';
+				resultTextarea.value = mainLoop;
+				resizeTextarea(resultTextarea);
+				resetButton.style.display = '';
+			});
+		});
+		$(resetButton).click(function() {
+			resultTextarea.style.display = 'none';
+			resetButton.style.display = 'none';
+			resultTextarea.value = '';
+		});
+		$(textarea)
+			.after(resultTextarea)
+			.after(resetButton)
+			.after(messageSpan)
+			.after(runButton)
+			.keyup(function(){resizeTextarea(this);});
+	});
+});
+</script>
+<style type="text/css">
+textarea { width: 100%; }
+</style>
+</head>
+<body>
+<h1>HSP on JS 生成されるコードの表示</h1>
+<ul>
+<li><a href="samples.html">HSP on JS</a> で、生成されるコードを表示します。</li>
+</ul>
+<div>
+<textarea cols="100" rows="10">
+mes "Hello, world!"</textarea>
+</div>
+</body>
+</html>
