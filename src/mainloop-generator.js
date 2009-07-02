@@ -906,6 +906,7 @@ MainLoopGenerator.prototype = {
 	},
 	getStructParamExpr: function(paramInfo, defaultExpr) {
 		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
 		if(node.getValueType() == VarType.STRUCT) {
 			return this.getParamExpr(paramInfo);
 		}
