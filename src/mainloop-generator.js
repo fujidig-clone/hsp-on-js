@@ -8,6 +8,7 @@ function MainLoopGenerator(sequence) {
 	this.indent_ = 0;
 	this.id = MainLoopGenerator.count++;
 	this.registerPropName = '_hsponjs_mainloop_registered_id_' + this.id;
+	this.staticVarTagsPropName = 'staticvartags_id_' + this.id;
 }
 
 MainLoopGenerator.count = 0;
@@ -1169,12 +1170,13 @@ MainLoopGenerator.prototype = {
 		return 'literals['+pos+']';
 	},
 	registerStaticVarTags: function(staticVarTag) {
-		if(typeof staticVarTag.id != 'undefined') {
-			return staticVarTag.id;
+		var propname = this.staticVarTagsPropName;
+		if(typeof staticVarTag[propname] != 'undefined') {
+			return staticVarTag[propname];
 		}
 		var staticVarTags = this.staticVarTags_;
 		var id = staticVarTags.length;
-		staticVarTag.id = id;
+		staticVarTag[propname] = id;
 		staticVarTags[id] = staticVarTag;
 		return id;
 	},
@@ -1194,8 +1196,10 @@ MainLoopGenerator.prototype = {
 		return 'registeredObjects['+id+']';
 	},
 	removeRegisteredObjectsPropName: function() {
-		var propname = this.registerPropName;
-		var objects = this.registeredObjectTags_;
+		this.removeObjectsPropName(this.registeredObjectTags_, this.registerPropName);
+		this.removeObjectsPropName(this.staticVarTags_, this.staticVarTagsPropName);
+	},
+	removeObjectsPropName: function(objects, propname) {
 		for(var i = 0; i < objects.length; i ++) {
 			delete objects[i][propname];
 		}
