@@ -652,18 +652,18 @@ function varuse_internal(v) {
 }
 
 defineInlineExprBuiltinFunc('noteinfo', [false], VarType.INT, function(g, paramInfos) {
-	return g.getRegisteredObjectExpr(noteinfo_internal)+'('+g.getIntParamNativeValueExpr(paramInfos[0])+')';
+	return g.getRegisteredObjectExpr(noteinfo_internal)+'(this, '+g.getIntParamNativeValueExpr(paramInfos[0])+')';
 });
 
 function noteinfo_internal(evaluator, n) {
 	switch(n) {
 	case 0: // notemax
-		var lines = this.getNote().getValue()._value.split(/\r\n|[\r\n]/);
+		var lines = evaluator.getNote().getValue()._value.split(/\r\n|[\r\n]/);
 		var len = lines.length;
 		if(!lines[len-1]) len --;
 		return new IntValue(len);
 	case 1: // notesize
-		return new IntValue(this.getNote().getValue()._value.length);
+		return new IntValue(evaluator.getNote().getValue()._value.length);
 	default:
 		throw new HSPError(ErrorCode.ILLEGAL_FUNCTION);
 	}
