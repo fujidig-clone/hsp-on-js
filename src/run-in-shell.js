@@ -36,10 +36,10 @@ var main = function() {
 		});
 	}
 
-	var generator = new MainLoopGenerator(sequence);
 	if(showMainLoop) {
-		print(generator.generateMainLoopSrc());
+		print(new MainLoopGenerator(sequence).generateMainLoopSrc());
 	}
+	var generator = new MainLoopGenerator(sequence);
 	if(compileOnly) return null;
 
 	var F = function() {};
