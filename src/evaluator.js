@@ -62,6 +62,7 @@ _assert(VarType.LABEL === 1);
 _assert(VarType.STR === 2);
 _assert(VarType.DOUBLE === 3);
 _assert(VarType.INT === 4);
+_assert(VarType.STRUCT === 5);
 
 function checkTypeInt(val) {
 	if(val.type != 4) { // VarType.INT
@@ -97,6 +98,20 @@ function checkTypeLabel(val) {
 	if(val.type != 1 || // VarType.LABEL
 	   !val.isUsing()) {
 		throw new HSPError(ErrorCode.LABEL_REQUIRED);
+	}
+	return val;
+}
+
+function checkTypeLabelAllowNull(val) {
+	if(val.type != 1) { // VarType.LABEL
+		throw new HSPError(ErrorCode.LABEL_REQUIRED);
+	}
+	return val;
+}
+
+function checkTypeStruct(val) {
+	if(val.type != 5) { // VarType.STRUCT
+		throw typeMismatchError(val.type, 5);
 	}
 	return val;
 }

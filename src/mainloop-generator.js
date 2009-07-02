@@ -730,6 +730,12 @@ MainLoopGenerator.prototype = {
 					this.push('args['+i+'] = '+this.getIntParamExpr(paramInfo)+';');
 				}
 				break;
+			case MPType.STRUCT:
+				this.push('args['+i+'] = '+this.getStructParamExpr(paramInfo)+';');
+				break;
+			case MPType.LABEL:
+				this.push('args['+i+'] = '+this.getLabelParamExprAllowNull(paramInfo)+';');
+				break;
 			case MPType.LOCALVAR:
 				this.push('args['+i+'] = new Variable;');
 				continue;
@@ -881,6 +887,29 @@ MainLoopGenerator.prototype = {
 			return this.getParamExpr(paramInfo);
 		}
 		return 'checkTypeStr('+this.getParamExpr(paramInfo)+')';
+	},
+	getLabelParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.getValueType() == VarType.LABEL) {
+			return this.getParamExpr(paramInfo);
+		}
+		return 'checkTypeLabel('+this.getParamExpr(paramInfo)+')';
+	},
+	getLabelParamExprAllowNull: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		var node = paramInfo.node;
+		if(node.getValueType() == VarType.LABEL) {
+			return this.getParamExpr(paramInfo);
+		}
+		return 'checkTypeLabelAllowNull('+this.getParamExpr(paramInfo)+')';
+	},
+	getStructParamExpr: function(paramInfo, defaultExpr) {
+		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
+		if(node.getValueType() == VarType.STRUCT) {
+			return this.getParamExpr(paramInfo);
+		}
+		return 'checkTypeStruct('+this.getParamExpr(paramInfo)+')';
 	},
 	getIntParamNativeValueExpr: function(paramInfo, defaultExpr) {
 		if(_isDefault(paramInfo)) return _defaultExpr(defaultExpr);
