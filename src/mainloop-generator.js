@@ -43,15 +43,15 @@ MainLoopGenerator.prototype = {
 			src += 'var '+prop+' = HSPonJS.'+prop+';\n';
 		}
 		src += 'return function() {\n';
+		src += 'var stack = this.stack;\n';
+		src += 'var literals = this.literals;\n';
+		src += 'var variables = this.variables;\n';
+		src += 'var registeredObjects = this.registeredObjects;\n';
 		src += this.generateMainLoopSrc() + '\n};';
 		return Function(src)();
 	},
 	generateMainLoopSrc: function() {
 		var sequence = this.sequence_;
-		this.push('var stack = this.stack;');
-		this.push('var literals = this.literals;');
-		this.push('var variables = this.variables;');
-		this.push('var registeredObjects = this.registeredObjects;');
 		this.push('for(;;) {');
 		this.incIndent();
 		this.push('switch(this.pc) {');
