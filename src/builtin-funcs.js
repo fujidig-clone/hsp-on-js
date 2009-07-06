@@ -658,10 +658,8 @@ defineInlineExprBuiltinFunc('noteinfo', [false], VarType.INT, function(g, paramI
 function noteinfo_internal(evaluator, n) {
 	switch(n) {
 	case 0: // notemax
-		var lines = evaluator.getNote().getValue()._value.split(/\r\n|[\r\n]/);
-		var len = lines.length;
-		if(!lines[len-1]) len --;
-		return new IntValue(len);
+		var str = evaluator.getNote().getValue()._value;
+		return new IntValue((str.match(/\r\n|[\r\n]|.$/g) || []).length);
 	case 1: // notesize
 		return new IntValue(evaluator.getNote().getValue()._value.length);
 	default:
