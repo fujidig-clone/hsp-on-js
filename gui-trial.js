@@ -748,7 +748,7 @@ with(HSPonJS) {
 
 	defineInlineBuiltinFunc('getkey', [true, false], function(g, paramInfos) {
 		var agentExpr = g.getVariableAgentParamExpr(paramInfos[0]);
-		var keyCodeExpr = g.getIntParamNativeValueExpr(paramInfos[0], 1);
+		var keyCodeExpr = g.getIntParamNativeValueExpr(paramInfos[1], 1);
 		g.push(agentExpr+'.assign(IntValue.of(this.keyPressed['+keyCodeExpr+']));');
 	});
 
